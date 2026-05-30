@@ -1,0 +1,67 @@
+/* ==========================================================================
+   Dark Mode Mobile Control Button
+   ========================================================================== */
+.darkmode-mobile-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  border: none;
+  background: transparent; /* No hardcoded color shapes to break navbar header line */
+  color: var(--icon-color, currentColor);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.darkmode-mobile-btn:hover {
+  background-color: var(--btn-bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+/* Active/Press State physics spacing */
+.darkmode-mobile-btn:active {
+  transform: scale(0.92);
+}
+
+/* ==========================================================================
+   Icon Handling Elements Configurations
+   ========================================================================== */
+.darkmode-icon {
+  transition: color 0.2s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
+}
+
+/* Specific mode customizations if needed via explicit cascading */
+.sun-icon {
+  color: #f59e0b; /* Golden tone override for dark screens sun visibility */
+}
+
+/* ==========================================================================
+   Mobile Responsive Screen Scaling Breakpoints
+   ========================================================================== */
+@media (max-width: 480px) {
+  .darkmode-mobile-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Focus States for Keyboard Accessibility */
+.darkmode-mobile-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #0ea5e9);
+  outline-offset: 2px;
+}
+
+/* Motion Suppression Configuration Wrapper */
+@media (prefers-reduced-motion: reduce) {
+  .darkmode-mobile-btn,
+  .darkmode-icon {
+    transition: none;
+  }
+  .darkmode-mobile-btn:active {
+    transform: none;
+  }
+}

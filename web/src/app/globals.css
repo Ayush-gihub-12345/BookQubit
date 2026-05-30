@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap');
+
+.font-urdu {
+  font-family: 'Noto Nastaliq Urdu', serif;
+}
+
+html[dir="rtl"] {
+  direction: rtl;
+}
+
+html[dir="ltr"] {
+  direction: ltr;
+}
+
+/* RTL support for dropdown */
+[dir="rtl"] .navbar-desktop-dropdown-menu {
+  right: 0;
+  left: auto;
+}
+
+[dir="ltr"] .navbar-desktop-dropdown-menu {
+  left: 0;
+  right: auto;
+}
+
+
+/* src/app/globals.css - Add these RTL styles */
+
+/* RTL Transition Animation */
+.rtl-transition,
+.rtl-transition *,
+.rtl-transition *::before,
+.rtl-transition *::after {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition-property: transform, translate, left, right, margin, padding, text-align, flex-direction, border-radius !important;
+}
+
+/* RTL Mode Container */
+.rtl-mode {
+  --direction: rtl;
+  --text-align: right;
+}
+
+.ltr-mode {
+  --direction: ltr;
+  --text-align: left;
+}
+
+/* RTL CSS Variables */
+:root {
+  --direction: ltr;
+  --start: left;
+  --end: right;
+  --transform-origin: left;
+  --text-align: left;
+  --padding-start: 0 1rem 0 0;
+  --padding-end: 0 0 0 1rem;
+  --margin-start: 0 auto 0 0;
+  --margin-end: 0 0 0 auto;
+}
+
+[dir="rtl"] {
+  --direction: rtl;
+  --start: right;
+  --end: left;
+  --transform-origin: right;
+  --text-align: right;
+  --padding-start: 0 0 0 1rem;
+  --padding-end: 0 1rem 0 0;
+  --margin-start: 0 0 0 auto;
+  --margin-end: 0 auto 0 0;
+}
+
+/* RTL-aware utility classes */
+.rtl-aware-flex {
+  display: flex;
+  flex-direction: var(--direction);
+}
+
+.rtl-aware-text {
+  text-align: var(--text-align);
+}
+
+.rtl-aware-margin-start {
+  margin: var(--margin-start);
+}
+
+.rtl-aware-margin-end {
+  margin: var(--margin-end);
+}
+
+.rtl-aware-padding-start {
+  padding: var(--padding-start);
+}
+
+.rtl-aware-padding-end {
+  padding: var(--padding-end);
+}
+
+/* RTL-aware transforms */
+[dir="rtl"] .transform-right {
+  transform: translateX(-100%);
+}
+
+[dir="ltr"] .transform-right {
+  transform: translateX(100%);
+}
+
+[dir="rtl"] .transform-left {
+  transform: translateX(100%);
+}
+
+[dir="ltr"] .transform-left {
+  transform: translateX(-100%);
+}
+
+/* RTL-aware border radius */
+[dir="rtl"] .rounded-l {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+[dir="rtl"] .rounded-r {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+/* RTL-aware icons */
+[dir="rtl"] .icon-flip {
+  transform: scaleX(-1);
+  display: inline-block;
+}
+
+/* RTL-aware sliders and carousels */
+[dir="rtl"] .slick-slider {
+  direction: ltr;
+}
+
+[dir="rtl"] .slick-slide {
+  direction: rtl;
+}
+
+/* RTL-aware dropdown menus */
+[dir="rtl"] .dropdown-menu {
+  right: auto;
+  left: 0;
+}
+
+/* RTL-aware tooltips */
+[dir="rtl"] .tooltip {
+  transform-origin: var(--transform-origin);
+}
+
+/* Performance optimizations */
+.rtl-transition {
+  will-change: transform, left, right, margin, padding;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* RTL-aware scrollbar */
+[dir="rtl"] ::-webkit-scrollbar {
+  width: 8px;
+}
+
+[dir="rtl"] ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+[dir="rtl"] ::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+/* Dark mode RTL scrollbar */
+[dir="rtl"] .dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+[dir="rtl"] .dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* Font size transitions */
+.font-size-transition,
+.font-size-transition *,
+.font-size-transition *::before,
+.font-size-transition *::after {
+  transition: font-size 0.2s ease-out, line-height 0.2s ease-out !important;
+}
+
+.font-size-provider {
+  font-size: var(--font-size-base, 16px);
+}
+
+/* Responsive font sizes using clamp */
+:root {
+  --font-size-base: 16px;
+  --font-size-scale: 1;
+}
+
+/* Type scale based on base font size */
+h1 {
+  font-size: calc(var(--font-size-base) * 2.5);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: calc(var(--font-size-base) * 2);
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: calc(var(--font-size-base) * 1.75);
+  line-height: 1.3;
+}
+
+h4 {
+  font-size: calc(var(--font-size-base) * 1.5);
+  line-height: 1.35;
+}
+
+h5 {
+  font-size: calc(var(--font-size-base) * 1.25);
+  line-height: 1.4;
+}
+
+h6 {
+  font-size: calc(var(--font-size-base) * 1.125);
+  line-height: 1.45;
+}
+
+body {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+
+.small-text {
+  font-size: calc(var(--font-size-base) * 0.875);
+}
+
+.caption {
+  font-size: calc(var(--font-size-base) * 0.75);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  h1 {
+    font-size: calc(var(--font-size-base) * 2);
+  }
+  
+  h2 {
+    font-size: calc(var(--font-size-base) * 1.75);
+  }
+  
+  h3 {
+    font-size: calc(var(--font-size-base) * 1.5);
+  }
+}

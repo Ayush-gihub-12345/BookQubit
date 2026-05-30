@@ -1,0 +1,139 @@
+/* Navbar_Desktop_First_Row.css */
+
+.navbar-desktop-first-row {
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-radius: 0 !important; /* Force no rounded corners */
+}
+
+.navbar-desktop-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.navbar-desktop-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.navbar-desktop-logo-img {
+  height: 32px;
+  width: auto;
+}
+
+.navbar-desktop-logo-text {
+  font-size: 1.25rem;
+  font-weight: bold;
+  letter-spacing: -0.5px;
+}
+
+.navbar-desktop-search {
+  flex: 1;
+  max-width: 500px;
+  min-width: 200px;
+}
+
+.navbar-desktop-snap-dropdown {
+  flex-shrink: 0;
+}
+
+.navbar-desktop-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.navbar-desktop-darkmode-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.navbar-desktop-darkmode-button:hover {
+  transform: scale(1.05);
+}
+
+.navbar-desktop-ai-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.navbar-desktop-ai-button:hover {
+  transform: scale(1.05);
+}
+
+.navbar-desktop-ai-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.navbar-desktop-signup-button {
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.navbar-desktop-signup-button:hover {
+  transform: scale(1.05);
+  opacity: 0.95;
+}
+
+.navbar-desktop-notification {
+  display: flex;
+  align-items: center;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .navbar-desktop-top-row {
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .navbar-desktop-search {
+    max-width: 350px;
+  }
+  
+  .navbar-desktop-ai-text {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-desktop-top-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .navbar-desktop-search {
+    order: 3;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .navbar-desktop-logo-text {
+    display: none;
+  }
+}
+
+/* Remove any border radius from all navbar elements */
+.navbar-desktop-first-row,
+.navbar-desktop-first-row * {
+  border-radius: 0 !important;
+}

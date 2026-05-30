@@ -1,0 +1,242 @@
+/* LangSwitchDropdown.css */
+
+/* Base styles with sharp corners (no border radius) */
+.lang-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.lang-dropdown-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+  border-radius: 0px !important;
+}
+
+.lang-dropdown-button:hover {
+  opacity: 0.8;
+}
+
+/* Desktop Dropdown Menu */
+.lang-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  margin-top: 8px;
+  min-width: 520px;
+  z-index: 1000;
+  border-width: 1px;
+  border-style: solid;
+  overflow: hidden;
+  border-radius: 0px !important;
+}
+
+/* Search Section */
+.lang-dropdown-search-section {
+  padding: 12px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+.lang-dropdown-search-wrapper {
+  position: relative;
+}
+
+.lang-dropdown-search-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+}
+
+.lang-dropdown-search-icon.rtl {
+  right: 12px;
+}
+
+.lang-dropdown-search-icon.ltr {
+  left: 12px;
+}
+
+.lang-dropdown-search-input {
+  width: 100%;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-width: 1px;
+  border-style: solid;
+  outline: none;
+  transition: all 0.2s ease;
+  border-radius: 0px !important;
+}
+
+.lang-dropdown-search-input.rtl {
+  padding-right: 36px;
+  padding-left: 12px;
+}
+
+.lang-dropdown-search-input.ltr {
+  padding-left: 36px;
+  padding-right: 12px;
+}
+
+.lang-dropdown-search-input:focus {
+  ring: 2px solid;
+  ring-color: #0ea5e9;
+}
+
+/* Languages Grid */
+.lang-dropdown-languages {
+  padding: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.lang-dropdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+/* Language Button */
+.lang-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-width: 1px;
+  border-style: solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  border-radius: 0px !important;
+}
+
+.lang-dropdown-item.rtl {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.lang-dropdown-item.ltr {
+  flex-direction: row;
+  text-align: left;
+}
+
+.lang-dropdown-item:hover {
+  transform: scale(1.02);
+}
+
+.lang-dropdown-item.active {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: transparent !important;
+}
+
+.lang-flag {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.lang-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lang-native-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lang-native-name.urdu {
+  font-family: 'Noto Nastaliq Urdu', serif;
+}
+
+.lang-english-name {
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lang-check-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Empty State */
+.lang-dropdown-empty {
+  grid-column: span 4;
+  text-align: center;
+  padding: 32px;
+}
+
+/* Mobile Styles */
+.lang-mobile-dropdown {
+  width: 100%;
+}
+
+.lang-mobile-dropdown-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 0px !important;
+}
+
+.lang-mobile-dropdown-content {
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 0px !important;
+}
+
+.lang-mobile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 12px;
+}
+
+/* Scrollbar Styling */
+.lang-dropdown-languages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.lang-dropdown-languages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lang-dropdown-languages::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 0px;
+}
+
+.lang-dropdown-languages::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .lang-dropdown-menu {
+    min-width: 300px;
+    right: 0;
+    left: auto !important;
+  }
+  
+  .lang-dropdown-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .lang-dropdown-menu {
+    min-width: 280px;
+  }
+  
+  .lang-dropdown-grid {
+    grid-template-columns: 1fr;
+  }
+}

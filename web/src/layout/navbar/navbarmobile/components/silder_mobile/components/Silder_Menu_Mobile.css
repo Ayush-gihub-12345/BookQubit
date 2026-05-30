@@ -1,0 +1,269 @@
+/* ==========================================================================
+   Slider Menu Mobile Base Layer Layout Rules
+   ========================================================================== */
+.silder-menu-mobile {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.menu-scroller {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Modern standards fallback cross-platform declarations */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.2)) var(--scrollbar-track, rgba(0, 0, 0, 0.05));
+}
+
+/* Custom CSS Variable-driven Webkit Scrollbar Controls */
+.menu-scroller::-webkit-scrollbar {
+  width: 4px;
+}
+
+.menu-scroller::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, rgba(0, 0, 0, 0.05));
+  border-radius: 4px;
+}
+
+.menu-scroller::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, rgba(0, 0, 0, 0.2));
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.menu-scroller::-webkit-scrollbar-thumb:hover {
+  opacity: 0.8;
+}
+
+.menu-content {
+  width: 100%;
+  padding: 8px 0;
+}
+
+/* ==========================================================================
+   Structural Nav Menu Base Interactive Items
+   ========================================================================== */
+.menu-content .navbar-mobile-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-radius: 0;
+  margin: 0;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  color: var(--text-primary, inherit);
+}
+
+.menu-content .navbar-mobile-item:hover {
+  background: var(--hover-bg, rgba(156, 163, 175, 0.12));
+}
+
+.menu-content .navbar-mobile-item:active {
+  transform: scale(0.98);
+  opacity: 0.8;
+}
+
+/* Global Content Element Icon Containers */
+.menu-content .navbar-mobile-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 18px;
+  margin-inline-end: 12px;
+  flex-shrink: 0;
+  color: var(--text-secondary, inherit);
+  opacity: 0.8;
+}
+
+/* Structural Text Flow Containers */
+.menu-content .navbar-mobile-item-text {
+  font-size: 15px;
+  font-weight: 500;
+  flex: 1;
+  text-align: start;
+  color: var(--text-primary, inherit);
+}
+
+/* ==========================================================================
+   Active State Layout System
+   ========================================================================== */
+.menu-content .navbar-mobile-item.active {
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), rgba(59, 130, 246, 0.02));
+  border-inline-start: 3px solid var(--active-border, #0ea5e9);
+}
+
+/* ==========================================================================
+   Hierarchical Dropdown Controls Layout Structure
+   ========================================================================== */
+.menu-content .navbar-mobile-dropdown {
+  width: 100%;
+}
+
+.menu-content .navbar-mobile-dropdown-button {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  width: 100%;
+  color: var(--text-primary, inherit);
+}
+
+.menu-content .navbar-mobile-dropdown-button:hover {
+  background: var(--hover-bg, rgba(156, 163, 175, 0.12));
+}
+
+.menu-content .navbar-mobile-dropdown-icon {
+  width: 24px;
+  height: 24px;
+  margin-inline-end: 12px;
+  color: var(--text-secondary, inherit);
+  opacity: 0.8;
+}
+
+.menu-content .navbar-mobile-dropdown-text {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: start;
+  color: var(--text-primary, inherit);
+}
+
+.menu-content .navbar-mobile-dropdown-chevron {
+  transition: transform 0.2s ease;
+  color: var(--text-secondary, inherit);
+  opacity: 0.7;
+}
+
+.menu-content .navbar-mobile-dropdown.open .navbar-mobile-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+/* Nested Dropdown Indent Systems */
+.menu-content .navbar-mobile-dropdown-content {
+  padding-inline-start: 32px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.menu-content .navbar-mobile-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  margin-block: 4px;
+  margin-inline: 8px;
+  color: var(--text-primary, inherit);
+  opacity: 0.85;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: calc(100% - 16px);
+}
+
+.menu-content .navbar-mobile-dropdown-item:hover {
+  background: var(--hover-bg, rgba(156, 163, 175, 0.1));
+  transform: translateX(4px);
+}
+
+/* Reverses micro-interaction translations under RTL directions */
+[dir="rtl"] .menu-content .navbar-mobile-dropdown-item:hover {
+  transform: translateX(-4px);
+}
+
+.menu-content .navbar-mobile-dropdown-item-icon {
+  width: 20px;
+  margin-inline-end: 10px;
+  font-size: 14px;
+  color: var(--text-secondary, inherit);
+}
+
+.menu-content .navbar-mobile-dropdown-item-text {
+  flex: 1;
+  text-align: start;
+  font-size: 14px;
+}
+
+/* ==========================================================================
+   Mobile Display Optimization Queries Layer 
+   ========================================================================== */
+@media (max-width: 480px) {
+  .menu-content {
+    padding: 4px 0;
+  }
+  
+  .menu-content .navbar-mobile-item,
+  .menu-content .navbar-mobile-dropdown-button {
+    padding: 12px 16px;
+  }
+  
+  .menu-content .navbar-mobile-item-text,
+  .menu-content .navbar-mobile-dropdown-text {
+    font-size: 14px;
+  }
+  
+  .menu-content .navbar-mobile-dropdown-content {
+    padding-inline-start: 28px;
+  }
+  
+  .menu-content .navbar-mobile-dropdown-item {
+    padding: 8px 14px;
+    margin-block: 2px;
+    margin-inline: 6px;
+  }
+}
+
+/* ==========================================================================
+   Reduced Motion Configuration Rules
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .menu-scroller {
+    scroll-behavior: auto;
+  }
+  
+  .menu-content .navbar-mobile-item,
+  .menu-content .navbar-mobile-dropdown-item {
+    transition: none;
+  }
+  
+  .menu-content .navbar-mobile-item:active,
+  .menu-content .navbar-mobile-dropdown-item:active {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Accessibility Keyboards Focus Visibility States
+   ========================================================================== */
+.menu-content .navbar-mobile-item:focus-visible,
+.menu-content .navbar-mobile-dropdown-button:focus-visible,
+.menu-content .navbar-mobile-dropdown-item:focus-visible {
+  outline: 2px solid var(--active-border, #0ea5e9);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
+/* ==========================================================================
+   Dark Mode Additional Styles
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  .menu-content .navbar-mobile-item.active {
+    background: linear-gradient(90deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.05));
+  }
+}

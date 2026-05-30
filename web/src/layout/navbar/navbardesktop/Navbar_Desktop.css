@@ -1,0 +1,656 @@
+/* ============================================ */
+/* Navbar Desktop Base Styles
+/* ============================================ */
+
+.navbar-desktop {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* ============================================ */
+/* Top Row - RTL Aware
+/* ============================================ */
+
+.navbar-desktop-top-row {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1536px;
+  margin: 0 auto;
+}
+
+[dir="rtl"] .navbar-desktop-top-row {
+  flex-direction: row-reverse;
+}
+
+/* ============================================ */
+/* Logo - RTL Aware
+/* ============================================ */
+
+.navbar-desktop-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-logo {
+  flex-direction: row-reverse;
+}
+
+.navbar-desktop-logo-img {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+  margin-right: 0.5rem;
+}
+
+[dir="rtl"] .navbar-desktop-logo-img {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+.navbar-desktop-logo-text {
+  font-size: clamp(1rem, 1.25rem, 1.5rem);
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .navbar-desktop-logo {
+    min-width: 150px;
+  }
+}
+
+/* ============================================ */
+/* Desktop Search - RTL Aware
+/* ============================================ */
+
+.navbar-desktop-search {
+  display: flex;
+  flex: 1;
+  margin: 0 0.75rem;
+  max-width: 36rem;
+  min-width: 200px;
+}
+
+[dir="rtl"] .navbar-desktop-search {
+  margin: 0 0.75rem;
+}
+
+.navbar-desktop-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.navbar-desktop-search-input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  padding-right: 2.5rem;
+  border-radius: 9999px;
+  border: 1px solid #bae6fd;
+  color: #374151;
+  font-size: 1rem;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+[dir="rtl"] .navbar-desktop-search-input {
+  padding-left: 2.5rem;
+  padding-right: 1rem;
+  text-align: right;
+}
+
+.dark-mode .navbar-desktop-search-input {
+  background-color: #1a1f27;
+  border-color: #2d3748;
+  color: #e5e7eb;
+}
+
+.navbar-desktop-search-input:focus {
+  outline: none;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.3);
+}
+
+.navbar-desktop-search-button {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: color 0.2s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+}
+
+[dir="rtl"] .navbar-desktop-search-button {
+  right: auto;
+  left: 0.75rem;
+}
+
+.navbar-desktop-search-button:hover {
+  color: #0284c7;
+}
+
+.navbar-desktop-search-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* ============================================ */
+/* User Actions - RTL Aware
+/* ============================================ */
+
+.navbar-desktop-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-user-actions {
+  flex-direction: row-reverse;
+}
+
+/* ============================================ */
+/* Dark Mode Button
+/* ============================================ */
+
+.navbar-desktop-darkmode-button {
+  padding: 0.5rem;
+  border-radius: 9999px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: none;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+
+.navbar-desktop-darkmode-button:hover {
+  transform: scale(1.1);
+}
+
+.navbar-desktop-darkmode-button svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* ============================================ */
+/* AI Button - RTL Aware
+/* ============================================ */
+
+.navbar-desktop-ai-button {
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  text-decoration: none;
+  background: none;
+  border: 1px solid;
+  cursor: pointer;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-ai-button {
+  flex-direction: row-reverse;
+}
+
+.navbar-desktop-ai-button:hover {
+  background-color: rgba(2, 132, 199, 0.1);
+}
+
+.navbar-desktop-ai-button svg {
+  font-size: 1.125rem;
+}
+
+.navbar-desktop-ai-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* ============================================ */
+/* Sign Up Button
+/* ============================================ */
+
+.navbar-desktop-signup-button {
+  padding: 0.5rem 1rem;
+  color: white;
+  border-radius: 9999px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  font-size: 1rem;
+  white-space: nowrap;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.navbar-desktop-signup-button:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================ */
+/* Desktop Navigation Links
+/* ============================================ */
+
+.navbar-desktop-links {
+  border-top: 1px solid;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.navbar-desktop-links-container {
+  max-width: 1536px;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 1rem;
+  position: relative;
+  min-width: min-content;
+}
+
+[dir="rtl"] .navbar-desktop-links-container {
+  flex-direction: row-reverse;
+}
+
+/* ============================================ */
+/* Desktop Nav Item
+/* ============================================ */
+
+.navbar-desktop-item {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: 0.375rem;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-item {
+  flex-direction: row-reverse;
+}
+
+.navbar-desktop-item:hover {
+  background-color: rgba(2, 132, 199, 0.1);
+}
+
+.navbar-desktop-item-icon {
+  margin-right: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-item-icon {
+  margin-right: 0;
+  margin-left: 0.375rem;
+}
+
+.navbar-desktop-item-icon svg {
+  width: 1.125em;
+  height: 1.125em;
+}
+
+/* ============================================ */
+/* Dropdown Styles - FIXED
+/* ============================================ */
+
+.navbar-desktop-dropdown-container {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.navbar-desktop-dropdown-button {
+  padding: 0.5rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  position: relative;
+  z-index: 10;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-button {
+  flex-direction: row-reverse;
+}
+
+.navbar-desktop-dropdown-button:hover {
+  background-color: rgba(2, 132, 199, 0.1);
+}
+
+.navbar-desktop-dropdown-icon {
+  margin-right: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-icon {
+  margin-right: 0;
+  margin-left: 0.375rem;
+}
+
+.navbar-desktop-dropdown-icon svg {
+  width: 1.125em;
+  height: 1.125em;
+}
+
+.navbar-desktop-dropdown-chevron {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-chevron {
+  margin-left: 0;
+  margin-right: 0.25rem;
+}
+
+/* Dropdown Menu - Hidden by default */
+.navbar-desktop-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: auto;
+  border-radius: 0.5rem;
+  min-width: 200px;
+  max-width: 280px;
+  z-index: 9999;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0;
+  border: 1px solid;
+  background: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+/* Dropdown Menu - Show on hover */
+.navbar-desktop-dropdown-container:hover .navbar-desktop-dropdown-menu {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+}
+
+/* RTL Dropdown Menu */
+[dir="rtl"] .navbar-desktop-dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+/* Prevent dropdown from going off-screen */
+.navbar-desktop-dropdown-container:nth-last-child(-n+3) .navbar-desktop-dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-container:nth-last-child(-n+3) .navbar-desktop-dropdown-menu {
+  left: 0;
+  right: auto;
+}
+
+/* ============================================ */
+/* Dropdown Items
+/* ============================================ */
+
+.navbar-desktop-dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-item {
+  flex-direction: row-reverse;
+}
+
+.navbar-desktop-dropdown-item:hover {
+  background-color: rgba(2, 132, 199, 0.1);
+}
+
+.navbar-desktop-dropdown-item-icon {
+  margin-right: 0.75rem;
+  width: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-item-icon {
+  margin-right: 0;
+  margin-left: 0.75rem;
+}
+
+.navbar-desktop-dropdown-item-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-width: 180px;
+}
+
+[dir="rtl"] .navbar-desktop-dropdown-item-content {
+  align-items: flex-end;
+}
+
+.navbar-desktop-dropdown-item-title {
+  font-weight: 500;
+  font-size: 0.875rem;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.navbar-desktop-dropdown-item-description {
+  font-size: 0.75rem;
+  margin-top: 0.125rem;
+}
+
+/* ============================================ */
+/* Language Specific Font Sizes
+/* ============================================ */
+
+/* Default font sizes */
+.navbar-desktop-item,
+.navbar-desktop-dropdown-button {
+  font-size: 0.9rem;
+}
+
+/* Tamil & Malayalam */
+html[lang="ta"] .navbar-desktop-item,
+html[lang="ta"] .navbar-desktop-dropdown-button,
+html[lang="ml"] .navbar-desktop-item,
+html[lang="ml"] .navbar-desktop-dropdown-button {
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+}
+
+/* Telugu, Kannada, Bangla */
+html[lang="te"] .navbar-desktop-item,
+html[lang="te"] .navbar-desktop-dropdown-button,
+html[lang="kn"] .navbar-desktop-item,
+html[lang="kn"] .navbar-desktop-dropdown-button,
+html[lang="bn"] .navbar-desktop-item,
+html[lang="bn"] .navbar-desktop-dropdown-button {
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+}
+
+/* Hindi, Marathi */
+html[lang="hi"] .navbar-desktop-item,
+html[lang="mr"] .navbar-desktop-item,
+html[lang="hi"] .navbar-desktop-dropdown-button,
+html[lang="mr"] .navbar-desktop-dropdown-button {
+  font-size: 0.85rem;
+}
+
+/* RTL languages */
+html[lang="ur"] .navbar-desktop-item,
+html[lang="ar"] .navbar-desktop-item,
+html[lang="fa"] .navbar-desktop-item,
+html[lang="ps"] .navbar-desktop-item {
+  font-size: 0.85rem;
+}
+
+/* Large screens */
+@media (min-width: 768px) {
+  .navbar-desktop-item,
+  .navbar-desktop-dropdown-button {
+    font-size: 0.95rem;
+    padding: 0.625rem 0.875rem;
+  }
+  
+  html[lang="ta"] .navbar-desktop-item,
+  html[lang="ta"] .navbar-desktop-dropdown-button,
+  html[lang="ml"] .navbar-desktop-item,
+  html[lang="ml"] .navbar-desktop-dropdown-button {
+    font-size: 0.9rem;
+    padding: 0.625rem 0.8rem;
+  }
+  
+  html[lang="te"] .navbar-desktop-item,
+  html[lang="kn"] .navbar-desktop-item,
+  html[lang="bn"] .navbar-desktop-item,
+  html[lang="hi"] .navbar-desktop-item,
+  html[lang="ur"] .navbar-desktop-item {
+    font-size: 0.9rem;
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1024px) {
+  .navbar-desktop-links-container {
+    gap: 1.25rem;
+  }
+  
+  html[lang="ta"] .navbar-desktop-links-container,
+  html[lang="ml"] .navbar-desktop-links-container {
+    gap: 0.85rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .navbar-desktop-links-container {
+    gap: 1.5rem;
+  }
+  
+  html[lang="ta"] .navbar-desktop-links-container,
+  html[lang="ml"] .navbar-desktop-links-container {
+    gap: 1rem;
+  }
+}
+
+/* ============================================ */
+/* Dark Mode Adjustments
+/* ============================================ */
+
+.dark-mode .navbar-desktop-darkmode-button,
+.dark-mode .navbar-desktop-ai-button,
+.dark-mode .navbar-desktop-dropdown-menu {
+  border-color: #374151;
+}
+
+.dark-mode .navbar-desktop-links-container::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+.dark-mode .navbar-desktop-links-container::-webkit-scrollbar-thumb {
+  background: #4a5568;
+}
+
+/* Dark mode dropdown background */
+.dark-mode .navbar-desktop-dropdown-menu {
+  background: #1f2937;
+}
+
+/* ============================================ */
+/* SVG Icon Color Fix
+/* ============================================ */
+
+.navbar-desktop-item svg,
+.navbar-desktop-dropdown-button svg,
+.navbar-desktop-dropdown-item-icon svg,
+.navbar-desktop-dropdown-icon svg {
+  color: inherit !important;
+  fill: currentColor !important;
+}
+
+/* ============================================ */
+/* Cursor & Link Styles
+/* ============================================ */
+
+.navbar-desktop-logo,
+.navbar-desktop-ai-button,
+.navbar-desktop-signup-button,
+.navbar-desktop-item,
+.navbar-desktop-dropdown-button,
+.navbar-desktop-dropdown-item {
+  cursor: pointer;
+}
+
+/* ============================================ */
+/* Notification
+/* ============================================ */
+
+.navbar-desktop-notification {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ============================================ */
+/* Smooth Transitions
+/* ============================================ */
+
+.navbar-desktop,
+.navbar-desktop-top-row,
+.navbar-desktop-logo,
+.navbar-desktop-user-actions,
+.navbar-desktop-ai-button,
+.navbar-desktop-links-container,
+.navbar-desktop-item,
+.navbar-desktop-dropdown-button,
+.navbar-desktop-dropdown-menu {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

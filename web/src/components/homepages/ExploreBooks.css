@@ -1,0 +1,226 @@
+/* ExploreBooks Component Styles */
+
+.explore-books-section {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Book Card Styles */
+.book-card {
+  transition: all 0.3s ease;
+}
+
+.book-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Title Styles - Made smaller */
+.book-title {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .book-title {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: bold;
+  }
+}
+
+/* Author Styles */
+.book-author {
+  font-size: 0.7rem;
+  line-height: 1rem;
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .book-author {
+    font-size: 0.75rem;
+  }
+}
+
+/* Book Cover Image */
+.book-cover {
+  height: 7rem;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .book-cover {
+    height: 10rem;
+  }
+}
+
+/* Star Rating Styles */
+.star-rating {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 0.125rem;
+}
+
+.star-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .star-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+/* Button Styles */
+.know-more-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .know-more-btn {
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+.know-more-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Browse All Button */
+.browse-all-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-height: 2.75rem;
+}
+
+@media (min-width: 640px) {
+  .browse-all-btn {
+    padding: 0.75rem 2rem;
+    font-size: 1.125rem;
+  }
+}
+
+.browse-all-btn:hover {
+  transform: scale(1.05);
+}
+
+.browse-all-btn svg {
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .browse-all-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* Slider Custom Styles */
+.slick-dots {
+  bottom: -2rem;
+}
+
+.slick-dots li button:before {
+  font-size: 0.5rem;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+@media (min-width: 768px) {
+  .slick-dots li button:before {
+    font-size: 0.5rem;
+  }
+}
+
+.slick-dots li.slick-active button:before {
+  opacity: 1;
+}
+
+.slick-prev,
+.slick-next {
+  z-index: 10;
+}
+
+.slick-prev {
+  left: -1.5rem;
+}
+
+.slick-next {
+  right: -1.5rem;
+}
+
+.slick-prev:before,
+.slick-next:before {
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .slick-prev:before,
+  .slick-next:before {
+    font-size: 1rem;
+  }
+  
+  .slick-prev {
+    left: -1rem;
+  }
+  
+  .slick-next {
+    right: -1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .slick-prev,
+  .slick-next {
+    display: none !important;
+  }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.book-card {
+  animation: fadeIn 0.5s ease-out;
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+    xmlns:atom="http://www.w3.org/2005/Atom"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>BookQubit Blog</title>
+        <link>https://bookqubit.shop/blog</link>
+        <description>Latest book summaries, reviews and insights</description>
+        <language>en-us</language>
+        <lastBuildDate>Mon, 16 Feb 2026 00:00:00 GMT</lastBuildDate>
+        <atom:link href="https://bookqubit.shop/feed.xml" rel="self" type="application/rss+xml"/>
+
+        <!-- Blog Posts -->
+        <item>
+            <title>How to Read 50 Books a Year</title>
+            <link>https://bookqubit.shop/blog/read-50-books</link>
+            <guid>https://bookqubit.shop/blog/read-50-books</guid>
+            <pubDate>Mon, 16 Feb 2026 00:00:00 GMT</pubDate>
+            <description>Learn the proven strategies to read more books without sacrificing comprehension.</description>
+        </item>
+
+        <item>
+            <title>Top 10 Books of 2026</title>
+            <link>https://bookqubit.shop/blog/top-books-2026</link>
+            <guid>https://bookqubit.shop/blog/top-books-2026</guid>
+            <pubDate>Mon, 09 Feb 2026 00:00:00 GMT</pubDate>
+            <description>Our curated list of must-read books this year across all genres.</description>
+        </item>
+    </channel>
+</rss>

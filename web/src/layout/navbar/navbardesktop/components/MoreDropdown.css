@@ -1,0 +1,343 @@
+/* MoreDropdown.css - RTL & Font Size Support */
+
+/* Base font size inheritance */
+.more-dropdown-container,
+.mobile-more-dropdown {
+  font-size: var(--font-size-base, 16px);
+}
+
+/* Button text */
+.more-button-text,
+.mobile-more-button span:first-of-type + span {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}
+
+/* Dropdown panel - structured headings */
+.more-dropdown-panel {
+  font-size: var(--font-size-base);
+}
+
+/* Category Headings - FIXED STRUCTURE */
+.dropdown-category-heading,
+.mobile-category-title {
+  font-size: calc(var(--font-size-base) * 1.125) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.375rem;
+  position: relative;
+  display: inline-block;
+}
+
+/* Underline for headings - proper structure */
+.dropdown-category-heading::after,
+.mobile-category-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 2px;
+}
+
+/* RTL support for heading underline */
+[dir="rtl"] .dropdown-category-heading::after,
+[dir="rtl"] .mobile-category-title::after {
+  left: auto;
+  right: 0;
+}
+
+/* Category cards - proper spacing */
+.dropdown-category-card {
+  height: 100%;
+  min-height: 200px;
+}
+
+.dropdown-category-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Category items list - structured */
+.dropdown-category-items-list,
+.mobile-category-items {
+  flex: 1;
+}
+
+/* Item links */
+.dropdown-item-name,
+.mobile-item-link {
+  font-size: calc(var(--font-size-base) * 0.875);
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
+  transition: all 0.15s ease;
+}
+
+/* View all button */
+.dropdown-view-all,
+.mobile-view-all {
+  font-size: calc(var(--font-size-base) * 0.875);
+  font-weight: 600;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Grid layout fix for RTL */
+[dir="rtl"] .more-dropdown-grid {
+  direction: rtl;
+}
+
+[dir="rtl"] .dropdown-category-card {
+  text-align: right;
+}
+
+/* Arrow direction for RTL */
+[dir="rtl"] .dropdown-view-all span,
+[dir="rtl"] .mobile-view-all span,
+[dir="rtl"] .browse-all-button span {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+/* Chevron rotation for RTL */
+[dir="rtl"] .more-dropdown-chevron {
+  transform: scaleX(-1);
+}
+
+/* Font size responsive scaling */
+@media (max-width: 768px) {
+  .dropdown-category-heading,
+  .mobile-category-title {
+    font-size: calc(var(--font-size-base) * 1) !important;
+  }
+  
+  .dropdown-item-name,
+  .mobile-item-link {
+    font-size: calc(var(--font-size-base) * 0.813);
+  }
+}
+
+/* Dark mode adjustments */
+.dark .dropdown-category-heading,
+.dark .mobile-category-title {
+  opacity: 0.95;
+}
+
+.dark .dropdown-category-heading::after,
+.dark .mobile-category-title::after {
+  opacity: 0.5;
+}
+
+/* Hover effects */
+.dropdown-item-link:hover .dropdown-item-name {
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .dropdown-item-link:hover .dropdown-item-name {
+  transform: translateX(-2px);
+}
+
+/* Animation for smooth font size transitions */
+.more-dropdown-container *,
+.mobile-more-dropdown * {
+  transition: font-size 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Browse all button */
+.browse-all-button {
+  font-size: calc(var(--font-size-base) * 0.938);
+  font-weight: 600;
+}
+
+/* Fix for heading structure - ensure consistent height */
+.dropdown-category-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-category-heading {
+  flex-shrink: 0;
+}
+
+.dropdown-category-items-list {
+  flex-grow: 1;
+}
+
+.dropdown-view-all {
+  flex-shrink: 0;
+}
+
+/* MoreDropdown.css */
+
+/* Base styles */
+.more-dropdown-container,
+.mobile-more-dropdown {
+  font-size: 16px;
+}
+
+/* Button text */
+.more-button-text {
+  font-weight: 500;
+}
+
+/* Dropdown panel */
+.more-dropdown-panel {
+  font-family: inherit;
+}
+
+/* Category Headings - FIXED STRUCTURE */
+.dropdown-category-heading,
+.mobile-category-title {
+  font-weight: 700 !important;
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.375rem;
+  position: relative;
+  display: inline-block;
+}
+
+/* Underline for headings */
+.dropdown-category-heading::after,
+.mobile-category-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 2px;
+}
+
+/* RTL support for heading underline */
+[dir="rtl"] .dropdown-category-heading::after,
+[dir="rtl"] .mobile-category-title::after {
+  left: auto;
+  right: 0;
+}
+
+/* Category cards */
+.dropdown-category-card {
+  height: 100%;
+  min-height: 200px;
+}
+
+.dropdown-category-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Category items list */
+.dropdown-category-items-list,
+.mobile-category-items {
+  flex: 1;
+}
+
+/* Item links */
+.dropdown-item-name,
+.mobile-item-link {
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
+  transition: all 0.15s ease;
+}
+
+/* View all button */
+.dropdown-view-all,
+.mobile-view-all {
+  font-weight: 600;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+/* Grid layout fix for RTL */
+[dir="rtl"] .more-dropdown-grid {
+  direction: rtl;
+}
+
+[dir="rtl"] .dropdown-category-card {
+  text-align: right;
+}
+
+/* Arrow direction for RTL */
+[dir="rtl"] .dropdown-view-all,
+[dir="rtl"] .mobile-view-all,
+[dir="rtl"] .browse-all-button {
+  display: inline-block;
+}
+
+[dir="rtl"] .dropdown-view-all span,
+[dir="rtl"] .mobile-view-all span {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+/* Chevron rotation for RTL */
+[dir="rtl"] .more-dropdown-chevron {
+  transform: scaleX(-1);
+}
+
+/* Mobile specific */
+@media (max-width: 768px) {
+  .dropdown-category-heading,
+  .mobile-category-title {
+    font-size: 14px !important;
+  }
+  
+  .dropdown-item-name,
+  .mobile-item-link {
+    font-size: 13px;
+  }
+}
+
+/* Dark mode adjustments */
+.dark .dropdown-category-heading,
+.dark .mobile-category-title {
+  opacity: 0.95;
+}
+
+.dark .dropdown-category-heading::after,
+.dark .mobile-category-title::after {
+  opacity: 0.5;
+}
+
+/* Hover effects */
+.dropdown-item-link:hover .dropdown-item-name {
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .dropdown-item-link:hover .dropdown-item-name {
+  transform: translateX(-2px);
+}
+
+/* Browse all button */
+.browse-all-button {
+  font-weight: 600;
+}
+
+/* Fix for heading structure */
+.dropdown-category-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-category-heading {
+  flex-shrink: 0;
+}
+
+.dropdown-category-items-list {
+  flex-grow: 1;
+}
+
+.dropdown-view-all {
+  flex-shrink: 0;
+}

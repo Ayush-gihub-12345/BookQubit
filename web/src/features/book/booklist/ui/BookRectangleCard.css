@@ -1,0 +1,141 @@
+/* Book Rectangle Card Styles */
+.book-rectangle-card {
+  transition: all 0.3s ease;
+}
+
+.book-rectangle-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Custom scrollbar for content */
+.book-card-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.book-card-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.book-card-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.book-card-content::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 10px;
+}
+
+.book-card-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Metadata tags */
+.metadata-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  min-width: 65px;
+}
+
+.metadata-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.metadata-tag:hover {
+  transform: translateY(-1px);
+}
+
+/* Rating stars */
+.star-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star-icon {
+  font-size: 14px;
+}
+
+.rating-value {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* Buttons */
+.book-action-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.book-action-button-primary {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.book-action-button-primary:hover {
+  background: linear-gradient(135deg, #0369a1, #0284c7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.book-action-button-secondary {
+  border: 2px solid #0ea5e9;
+  color: #0ea5e9;
+  background: transparent;
+}
+
+.book-action-button-secondary:hover {
+  background: rgba(14, 165, 233, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .book-action-button-secondary {
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+.dark .book-action-button-secondary:hover {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+/* RTL Support */
+.rtl .metadata-label {
+  text-align: right;
+}
+
+.rtl .flex-row-reverse-rtl {
+  flex-direction: row-reverse;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .metadata-label {
+    min-width: 55px;
+    font-size: 9px;
+  }
+  
+  .metadata-tag {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+  
+  .book-action-button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}

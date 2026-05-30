@@ -1,0 +1,173 @@
+/* Book Compact Card Styles */
+.book-compact-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.book-compact-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Card click overlay - makes entire card clickable */
+.card-click-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  border-radius: 0.75rem;
+}
+
+/* Content wrapper - sits above overlay for interactive elements */
+.card-content-wrapper {
+  position: relative;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+/* Interactive elements that should work (buttons, links) */
+.clickable-element {
+  position: relative;
+  z-index: 30;
+  pointer-events: auto;
+}
+
+/* Book cover image */
+.book-compact-cover {
+  transition: transform 0.3s ease;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.book-compact-card:hover .book-compact-cover {
+  transform: scale(1.05);
+}
+
+/* Tags and badges */
+.compact-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+.compact-tag:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+/* Rating stars */
+.compact-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.compact-star-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.compact-rating-value {
+  font-size: 11px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+/* Description text */
+.compact-description {
+  font-size: 12px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Title */
+.compact-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Author */
+.compact-author {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+/* Button inside card */
+.view-details-button {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+.view-details-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* RTL Support */
+.rtl .compact-title,
+.rtl .compact-author,
+.rtl .compact-description {
+  text-align: right;
+}
+
+.rtl .flex-row-reverse-rtl {
+  flex-direction: row-reverse;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .compact-title {
+    font-size: 14px;
+  }
+  
+  .compact-author {
+    font-size: 11px;
+  }
+  
+  .compact-description {
+    font-size: 11px;
+  }
+  
+  .compact-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .view-details-button {
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+}
+
+/* Dark mode adjustments */
+.dark .compact-tag {
+  background-color: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+}
+
+.dark .compact-tag:hover {
+  background-color: rgba(14, 165, 233, 0.25);
+}
