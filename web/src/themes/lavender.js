@@ -2,14 +2,16 @@
 const lavenderTheme = {
   name: 'lavender',
   background: {
-    section: "bg-gradient-to-b from-purple-50 to-violet-100",
-    bookCoverSide: "bg-gradient-to-br from-purple-100 to-violet-200",
+    section: "bg-slate-50",
+    card: "bg-white",
+    input: "bg-white",
+    bookCoverSide: "bg-gradient-to-br from-violet-100 to-sky-50",
     navigationDots: "bg-white"
   },
 
   textColors: {
-    primary: "text-purple-900",
-    secondary: "text-purple-700",
+    primary: "text-slate-950",
+    secondary: "text-slate-600",
     highlight: "text-violet-700",
     badge: "text-violet-800",
     wishlistSaved: "text-rose-600",
@@ -40,15 +42,15 @@ const lavenderTheme = {
   },
 
   border: {
-    default: "rounded-xl",
-    button: "rounded-lg",
+    default: "border border-violet-100 rounded-lg",
+    button: "rounded-md",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-xl",
-    container: "shadow-lg",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-violet-950/10",
+    container: "shadow-md shadow-violet-950/10",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-sm"
   },
 

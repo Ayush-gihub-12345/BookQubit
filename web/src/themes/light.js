@@ -2,14 +2,16 @@
 const lightTheme = {
   name: 'light',
   background: {
-    section: "bg-gradient-to-b from-sky-50 to-white",
-    bookCoverSide: "bg-gradient-to-br from-sky-100 to-white",
+    section: "bg-slate-50",
+    card: "bg-white",
+    input: "bg-white",
+    bookCoverSide: "bg-gradient-to-br from-slate-100 to-sky-50",
     navigationDots: "bg-white"
   },
 
   textColors: {
-    primary: "text-gray-900",
-    secondary: "text-gray-700",
+    primary: "text-slate-950",
+    secondary: "text-slate-600",
     highlight: "text-sky-700",
     badge: "text-sky-800",
     wishlistSaved: "text-rose-600",
@@ -40,15 +42,15 @@ const lightTheme = {
   },
 
   border: {
-    default: "rounded-xl",
-    button: "rounded-lg",
+    default: "border border-slate-200 rounded-lg",
+    button: "rounded-md",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-2xl",
-    container: "shadow-xl",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-slate-900/10",
+    container: "shadow-md shadow-slate-900/10",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-sm"
   },
 

@@ -5,7 +5,10 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  border-radius: 0 !important; /* Force no rounded corners */
+  border-radius: 0;
+  background: var(--bq-surface-elevated);
+  border-bottom: 1px solid var(--bq-border);
+  backdrop-filter: blur(14px);
 }
 
 .navbar-desktop-top-row {
@@ -34,8 +37,8 @@
 
 .navbar-desktop-logo-text {
   font-size: 1.25rem;
-  font-weight: bold;
-  letter-spacing: -0.5px;
+  font-weight: 750;
+  letter-spacing: 0;
 }
 
 .navbar-desktop-search {
@@ -63,7 +66,7 @@
 }
 
 .navbar-desktop-darkmode-button:hover {
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 .navbar-desktop-ai-button {
@@ -75,7 +78,7 @@
 }
 
 .navbar-desktop-ai-button:hover {
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 .navbar-desktop-ai-text {
@@ -90,7 +93,7 @@
 }
 
 .navbar-desktop-signup-button:hover {
-  transform: scale(1.05);
+  transform: translateY(-1px);
   opacity: 0.95;
 }
 
@@ -132,8 +135,3 @@
   }
 }
 
-/* Remove any border radius from all navbar elements */
-.navbar-desktop-first-row,
-.navbar-desktop-first-row * {
-  border-radius: 0 !important;
-}

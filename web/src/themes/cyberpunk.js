@@ -2,8 +2,10 @@
 const cyberpunkTheme = {
   name: 'cyberpunk',
   background: {
-    section: "bg-gradient-to-b from-[#0f0c29] via-[#302b63] to-[#24243e]",
-    bookCoverSide: "bg-gradient-to-br from-[#1a1740] to-[#2a1d5a]",
+    section: "bg-[#111827]",
+    card: "bg-[#15172a]",
+    input: "bg-[#15172a]",
+    bookCoverSide: "bg-gradient-to-br from-[#1a1740] to-[#111827]",
     navigationDots: "bg-[#1c1a3a]"
   },
 
@@ -40,15 +42,15 @@ const cyberpunkTheme = {
   },
 
   border: {
-    default: "rounded-xl border-purple-700",
-    button: "rounded-lg border-purple-600",
+    default: "border border-purple-900/70 rounded-lg",
+    button: "rounded-md border-purple-800",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-[0_0_30px_rgba(0,255,255,0.4)]",
-    container: "shadow-[0_0_20px_rgba(255,0,255,0.3)]",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-cyan-950/30",
+    container: "shadow-md shadow-purple-950/30",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-[0_0_10px_rgba(0,255,255,0.3)]"
   },
 

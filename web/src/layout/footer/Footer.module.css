@@ -40,10 +40,10 @@
 /* Trust Section Updates */
 .trustSection {
   padding: 2rem;
-  background: rgba(30, 41, 59, 0.4);
-  border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bq-surface) 82%, transparent);
+  border-radius: var(--bq-radius-xl);
+  border: 1px solid var(--bq-border);
+  backdrop-filter: blur(14px);
 }
 
 .trustCard {
@@ -51,9 +51,9 @@
   align-items: center;
   gap: 1rem;
   padding: 1.25rem;
-  background: var(--trust-card-bg, linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8)));
-  border-radius: 1rem;
-  border: 1px solid var(--trust-card-border, rgba(255, 255, 255, 0.05));
+  background: var(--trust-card-bg, var(--bq-surface));
+  border-radius: var(--bq-radius-lg);
+  border: 1px solid var(--trust-card-border, var(--bq-border));
   transition: all 0.3s ease;
   cursor: pointer;
   animation: fadeInUp 0.5s ease-out forwards;
@@ -66,10 +66,10 @@
 .trustCard:nth-child(4) { animation-delay: 0.4s; }
 
 .trustCard:hover {
-  transform: translateY(-5px);
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(145deg, rgba(30, 41, 59, 1), rgba(15, 23, 42, 1));
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--bq-accent) 28%, var(--bq-border));
+  box-shadow: var(--bq-shadow-md);
+  background: var(--bq-surface);
 }
 
 .trustIcon {
@@ -80,12 +80,12 @@
   align-items: center;
   justify-content: center;
   background: var(--icon-bg, rgba(59, 130, 246, 0.1));
-  border-radius: 0.75rem;
+  border-radius: var(--bq-radius-md);
   transition: all 0.3s ease;
 }
 
 .trustCard:hover .trustIcon {
-  transform: scale(1.1);
+  transform: translateY(-1px);
   background: rgba(59, 130, 246, 0.2);
 }
 
@@ -103,8 +103,8 @@
   display: inline-flex;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
-  border-radius: 2rem;
+  background: var(--bq-surface);
+  border-radius: var(--bq-radius-md);
   font-size: 0.9rem;
   font-weight: 500;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -119,9 +119,9 @@
 .awardBadge:nth-child(4) { animation-delay: 1.5s; }
 
 .awardBadge:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  border-color: var(--bq-border-strong);
+  box-shadow: var(--bq-shadow-md);
 }
 
 /* Footer Grid Layout */
@@ -150,7 +150,7 @@
   justify-content: center;
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.75rem;
+  border-radius: var(--bq-radius-md);
   color: white;
   font-size: 1.5rem;
   cursor: pointer;
@@ -159,7 +159,7 @@
 
 .modalCloseBtn:hover {
   background: rgba(0, 0, 0, 0.9);
-  transform: scale(1.1);
+  transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -196,16 +196,16 @@
   padding: 0.75rem;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
-  border-radius: 9999px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border-radius: var(--bq-radius-md);
+  box-shadow: var(--bq-shadow-md);
   transition: all 0.3s ease;
   cursor: pointer;
   border: none;
 }
 
 .backToTop:hover {
-  transform: scale(1.1);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: var(--bq-shadow-lg);
 }
 
 /* Animations */

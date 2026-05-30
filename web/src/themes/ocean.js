@@ -2,14 +2,16 @@
 const oceanTheme = {
   name: 'ocean',
   background: {
-    section: "bg-gradient-to-b from-blue-50 to-cyan-100",
-    bookCoverSide: "bg-gradient-to-br from-blue-100 to-cyan-200",
+    section: "bg-slate-50",
+    card: "bg-white",
+    input: "bg-white",
+    bookCoverSide: "bg-gradient-to-br from-sky-100 to-cyan-100",
     navigationDots: "bg-white"
   },
 
   textColors: {
-    primary: "text-blue-900",
-    secondary: "text-blue-700",
+    primary: "text-slate-950",
+    secondary: "text-slate-600",
     highlight: "text-cyan-700",
     badge: "text-cyan-800",
     wishlistSaved: "text-rose-600",
@@ -40,15 +42,15 @@ const oceanTheme = {
   },
 
   border: {
-    default: "rounded-xl",
-    button: "rounded-lg",
+    default: "border border-cyan-100 rounded-lg",
+    button: "rounded-md",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-xl",
-    container: "shadow-lg",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-cyan-950/10",
+    container: "shadow-md shadow-cyan-950/10",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-sm"
   },
 

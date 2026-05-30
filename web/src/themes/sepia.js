@@ -2,9 +2,11 @@
 const sepiaTheme = {
   name: 'sepia',
   background: {
-    section: "bg-gradient-to-b from-[#f4ecd8] to-[#e6d8b8]",
-    bookCoverSide: "bg-gradient-to-br from-[#f0e2c2] to-[#e2d2ac]",
-    navigationDots: "bg-[#efe2c2]"
+    section: "bg-[#f8f3e8]",
+    card: "bg-[#fffaf0]",
+    input: "bg-[#fffaf0]",
+    bookCoverSide: "bg-gradient-to-br from-[#f0e2c2] to-[#f8f3e8]",
+    navigationDots: "bg-[#fffaf0]"
   },
 
   textColors: {
@@ -42,15 +44,15 @@ const sepiaTheme = {
   },
 
   border: {
-    default: "rounded-xl border-[#d2c1a0]",
-    button: "rounded-lg",
+    default: "border border-[#d8c6a4] rounded-lg",
+    button: "rounded-md",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-xl",
-    container: "shadow-lg",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-stone-900/10",
+    container: "shadow-md shadow-stone-900/10",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-sm"
   },
 

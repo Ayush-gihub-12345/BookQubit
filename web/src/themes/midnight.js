@@ -2,7 +2,9 @@
 const midnightTheme = {
   name: 'midnight',
   background: {
-    section: "bg-gradient-to-b from-[#0a0f1f] to-[#121a33]",
+    section: "bg-[#0a0f1f]",
+    card: "bg-[#111827]",
+    input: "bg-[#111827]",
     bookCoverSide: "bg-gradient-to-br from-[#141c34] to-[#1c2546]",
     navigationDots: "bg-[#1a2138]"
   },
@@ -42,15 +44,15 @@ const midnightTheme = {
   },
 
   border: {
-    default: "rounded-xl border-gray-700",
-    button: "rounded-lg border-gray-600",
+    default: "border border-slate-800 rounded-lg",
+    button: "rounded-md border-slate-700",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-[0_0_25px_rgba(0,0,0,0.7)]",
-    container: "shadow-[0_0_20px_rgba(0,0,0,0.6)]",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-black/40",
+    container: "shadow-md shadow-black/35",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-[0_0_10px_rgba(0,0,0,0.5)]"
   },
 

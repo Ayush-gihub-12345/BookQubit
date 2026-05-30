@@ -5,11 +5,12 @@
 /* Base container styles - theme-agnostic */
 .navbar-desktop-second-row {
   width: 100%;
-  border-top: 1px solid;
+  border-top: 1px solid var(--bq-border);
   position: sticky;
   top: 60px; /* Adjust based on your first row height */
   z-index: 40;
-  background-color: inherit;
+  background-color: var(--bq-surface-elevated);
+  backdrop-filter: blur(14px);
 }
 
 /* Container for all navigation items */
@@ -20,7 +21,7 @@
   display: flex;
   flex-wrap: nowrap;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.5rem;
   position: relative;
   min-width: max-content;
   background-color: inherit;
@@ -37,15 +38,17 @@
   align-items: center;
   padding: 0.5rem 0.75rem;
   white-space: nowrap;
-  border-radius: 0.375rem;
+  border-radius: var(--bq-radius-md);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .navbar-desktop-item:hover {
-  background-color: rgba(2, 132, 199, 0.1);
+  background-color: var(--bq-accent-soft);
+  color: var(--bq-accent-strong);
 }
 
 /* Item icon styles */
@@ -132,17 +135,17 @@
 }
 
 .navbar-desktop-second-row::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bq-bg-soft);
   border-radius: 2px;
 }
 
 .navbar-desktop-second-row::-webkit-scrollbar-thumb {
-  background: #bae6fd;
+  background: var(--bq-border-strong);
   border-radius: 2px;
 }
 
 .navbar-desktop-second-row::-webkit-scrollbar-thumb:hover {
-  background: #0284c7;
+  background: var(--bq-accent);
 }
 
 /* Dark mode scrollbar - will be overridden by themes */
@@ -157,8 +160,8 @@
 /* Focus states for accessibility */
 .navbar-desktop-item:focus-visible,
 .navbar-desktop-dropdown-button:focus-visible {
-  outline: 2px solid #0284c7;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--bq-focus);
 }
 
 /* Language-specific adjustments */

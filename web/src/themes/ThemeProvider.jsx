@@ -45,6 +45,15 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     if (mounted) {
       localStorage.setItem('theme', currentTheme);
+      document.documentElement.dataset.theme = currentTheme;
+      document.documentElement.classList.toggle(
+        'dark-mode',
+        ['dark', 'midnight', 'cyberpunk'].includes(currentTheme)
+      );
+      document.documentElement.classList.toggle(
+        'dark',
+        ['dark', 'midnight', 'cyberpunk'].includes(currentTheme)
+      );
     }
   }, [currentTheme, mounted]);
 

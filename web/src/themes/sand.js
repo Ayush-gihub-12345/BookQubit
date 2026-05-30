@@ -2,14 +2,16 @@
 const sandTheme = {
   name: 'sand',
   background: {
-    section: "bg-gradient-to-b from-yellow-50 to-amber-100",
-    bookCoverSide: "bg-gradient-to-br from-yellow-100 to-amber-200",
+    section: "bg-slate-50",
+    card: "bg-white",
+    input: "bg-white",
+    bookCoverSide: "bg-gradient-to-br from-amber-100 to-stone-50",
     navigationDots: "bg-white"
   },
 
   textColors: {
-    primary: "text-amber-900",
-    secondary: "text-amber-700",
+    primary: "text-slate-950",
+    secondary: "text-slate-600",
     highlight: "text-yellow-700",
     badge: "text-yellow-800",
     wishlistSaved: "text-rose-600",
@@ -40,15 +42,15 @@ const sandTheme = {
   },
 
   border: {
-    default: "rounded-xl",
-    button: "rounded-lg",
+    default: "border border-amber-100 rounded-lg",
+    button: "rounded-md",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-xl",
-    container: "shadow-lg",
-    button: "shadow-md hover:shadow-lg",
+    book: "shadow-lg shadow-amber-950/10",
+    container: "shadow-md shadow-amber-950/10",
+    button: "shadow-sm hover:shadow-md",
     navigationDotContainer: "shadow-sm"
   },
 

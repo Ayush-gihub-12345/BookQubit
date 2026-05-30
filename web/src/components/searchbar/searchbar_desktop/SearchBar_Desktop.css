@@ -9,19 +9,23 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: 36px;
+  height: 40px;
   padding: 0 0.75rem;
-  border-radius: 8px !important;
+  border-radius: var(--bq-radius-lg) !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
   gap: 0.5rem;
   position: relative;
-  backdrop-filter: blur(0px);
+  background: var(--bq-surface);
+  border: 1px solid var(--bq-border);
+  box-shadow: var(--bq-shadow-sm);
+  backdrop-filter: blur(8px);
 }
 
 .searchbar-desktop.focused {
-  border-color: transparent !important;
-  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--bq-accent) !important;
+  background: var(--bq-surface);
+  box-shadow: var(--bq-focus);
 }
 
 /* Gradient border effect for focused state */
@@ -29,13 +33,13 @@
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 8px;
+  border-radius: var(--bq-radius-lg);
   padding: 1.5px;
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.5),
-    rgba(139, 92, 246, 0.5),
-    rgba(59, 130, 246, 0.5)
+    rgba(14, 165, 233, 0.22),
+    rgba(59, 130, 246, 0.22)
   );
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
@@ -60,7 +64,7 @@
   padding: 0;
   height: 100%;
   background: transparent !important;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   transition: all 0.2s ease;
 }
 
@@ -103,6 +107,7 @@
 
 .search-submit-button:hover {
   opacity: 1;
+  transform: translateY(-1px);
 }
 
 /* Loading Spinner with Gradient */
@@ -197,7 +202,7 @@
 
 /* Optional: Typing indicator effect */
 .search-input:focus {
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 /* Optional: Animated gradient background for dark mode on focus */

@@ -3,14 +3,14 @@
 /* Feed Container */
 .drift-feed {
   min-height: 100vh;
-  background: #f8fafc;
+  background: var(--bq-bg);
 }
 
 /* Feed Tabs */
 .drift-feed-tabs {
   display: flex;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bq-surface-elevated);
+  border-bottom: 1px solid var(--bq-border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -23,19 +23,19 @@
   border: none;
   font-size: 15px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--bq-text-soft);
   cursor: pointer;
   position: relative;
   transition: color 0.2s ease;
 }
 
 .drift-feed-tab:hover {
-  color: #0284c7;
-  background: #f8fafc;
+  color: var(--bq-accent);
+  background: var(--bq-surface-muted);
 }
 
 .drift-feed-tab.active {
-  color: #0284c7;
+  color: var(--bq-accent);
 }
 
 .drift-tab-indicator {
@@ -45,14 +45,14 @@
   transform: translateX(-50%);
   width: 56px;
   height: 3px;
-  background: #0284c7;
+  background: var(--bq-accent);
   border-radius: 3px 3px 0 0;
 }
 
 /* Create Post */
 .drift-create-post {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bq-surface);
+  border-bottom: 1px solid var(--bq-border);
   padding: 16px;
 }
 
@@ -79,8 +79,8 @@
 .drift-create-post-content textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border: 1px solid var(--bq-border);
+  border-radius: var(--bq-radius-lg);
   font-size: 15px;
   font-family: inherit;
   resize: vertical;
@@ -89,7 +89,8 @@
 }
 
 .drift-create-post-content textarea:focus {
-  border-color: #0284c7;
+  border-color: var(--bq-accent);
+  box-shadow: var(--bq-focus);
 }
 
 .drift-create-post-content textarea::placeholder {
@@ -112,15 +113,15 @@
   padding: 8px;
   background: none;
   border: none;
-  border-radius: 9999px;
-  color: #64748b;
+  border-radius: var(--bq-radius-md);
+  color: var(--bq-text-soft);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .drift-tool-btn:hover {
-  background: #f1f5f9;
-  color: #0284c7;
+  background: var(--bq-accent-soft);
+  color: var(--bq-accent);
 }
 
 .drift-tool-btn svg {
@@ -129,17 +130,17 @@
 
 .drift-submit-btn {
   padding: 8px 24px;
-  background: #0284c7;
+  background: var(--bq-accent);
   color: white;
   border: none;
-  border-radius: 9999px;
+  border-radius: var(--bq-radius-md);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .drift-submit-btn:hover:not(:disabled) {
-  background: #0369a1;
+  background: var(--bq-accent-strong);
 }
 
 .drift-submit-btn:disabled {
@@ -155,13 +156,13 @@
 
 /* Individual Post */
 .drift-post {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bq-surface);
+  border-bottom: 1px solid var(--bq-border);
   transition: background 0.2s ease;
 }
 
 .drift-post:hover {
-  background: #fafcff;
+  background: var(--bq-surface-muted);
 }
 
 .drift-post-container {
@@ -204,15 +205,15 @@
 .drift-post-name {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--bq-text);
 }
 
 .drift-verified-badge {
   font-size: 12px;
-  color: #3b82f6;
-  background: #eff6ff;
+  color: var(--bq-accent);
+  background: var(--bq-accent-soft);
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: var(--bq-radius-xs);
   margin: 0 2px;
 }
 

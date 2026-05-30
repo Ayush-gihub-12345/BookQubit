@@ -2,14 +2,16 @@
 const darkTheme = {
   name: 'dark',
   background: {
-    section: "bg-gradient-to-b from-gray-900 to-gray-800",
-    bookCoverSide: "bg-gradient-to-br from-gray-800 to-gray-900",
-    navigationDots: "bg-gray-800"
+    section: "bg-slate-950",
+    card: "bg-slate-900",
+    input: "bg-slate-900",
+    bookCoverSide: "bg-gradient-to-br from-slate-900 to-slate-800",
+    navigationDots: "bg-slate-900"
   },
 
   textColors: {
-    primary: "text-gray-100",
-    secondary: "text-gray-300",
+    primary: "text-slate-50",
+    secondary: "text-slate-300",
     highlight: "text-sky-400",
     badge: "text-sky-300",
     wishlistSaved: "text-rose-400",
@@ -40,15 +42,15 @@ const darkTheme = {
   },
 
   border: {
-    default: "rounded-xl",
-    button: "rounded-lg",
+    default: "border border-slate-800 rounded-lg",
+    button: "rounded-md",
     navigationDot: "rounded-full"
   },
 
   shadow: {
-    book: "shadow-2xl shadow-black/30",
-    container: "shadow-xl shadow-black/20",
-    button: "shadow-md hover:shadow-lg shadow-black/20",
+    book: "shadow-lg shadow-black/35",
+    container: "shadow-md shadow-black/30",
+    button: "shadow-sm hover:shadow-md shadow-black/25",
     navigationDotContainer: "shadow-sm shadow-black/10"
   },
 
