@@ -14,19 +14,9 @@ book_publication_deatil
 
 isbn
 
-
-
-
-
-  
-
 book_language
 
 original_language
 available_language
 
 summary
-
-l;dskfks
-
-

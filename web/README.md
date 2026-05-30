@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BookQubit Web
 
-## Getting Started
+Next.js app for BookQubit, configured for Cloudflare Workers deployment through the OpenNext Cloudflare adapter.
 
-First, run the development server:
+## Cloudflare Deployment
+
+This app is prepared for Cloudflare's current Next.js flow:
+
+- Adapter: `@opennextjs/cloudflare`
+- Runtime config: `wrangler.jsonc`
+- OpenNext config: `open-next.config.ts`
+- Generated output: `.open-next/`
+
+Recommended Cloudflare Git settings:
+
+- Root directory: `web`
+- Install command: `npm ci`
+- Deploy command: `npm run deploy`
+- Node.js version: use Cloudflare's current default supported Node version, or set `NODE_VERSION` to a current LTS version if your Cloudflare build image requires it.
+
+Useful local commands:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run cf:build
+npm run preview
+npm run deploy
+npm run cf-typegen
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run deploy` builds the Next.js app with OpenNext and deploys it with Wrangler. Do not run it locally unless you intend to deploy from your machine.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Notes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Cloudflare requires the `nodejs_compat` compatibility flag for this Next.js adapter.
+- Static assets are served from `.open-next/assets` through the `ASSETS` binding.
+- `.open-next/`, `.wrangler/`, and generated Cloudflare type files are ignored by Git.
