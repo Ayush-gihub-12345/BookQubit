@@ -61,6 +61,12 @@ const books = [
     "imageUrl": QubitBookData.Nexus,
     "rating": 4.7,
 
+
+
+
+
+
+    
     "geography": {
       "country": "Israel",
       "continent": "Asia",
