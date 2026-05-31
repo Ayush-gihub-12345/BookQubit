@@ -1,0 +1,394 @@
+/* Auth Mobile Container */
+.auth-mobile {
+  padding: 16px;
+  width: 100%;
+}
+
+/* User Profile */
+.auth-profile {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.auth-profile.ltr {
+  flex-direction: row;
+}
+
+.auth-profile.rtl {
+  flex-direction: row-reverse;
+}
+
+.auth-avatar-wrapper {
+  flex-shrink: 0;
+}
+
+.auth-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.auth-avatar-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-initials {
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  text-transform: uppercase;
+}
+
+.auth-info {
+  flex: 1;
+  margin: 0 12px;
+}
+
+.auth-profile.ltr .auth-info {
+  text-align: left;
+}
+
+.auth-profile.rtl .auth-info {
+  text-align: right;
+}
+
+.auth-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #111827;
+}
+
+.auth-email {
+  font-size: 12px;
+  color: #6b7280;
+  word-break: break-all;
+}
+
+/* Stats Section */
+.auth-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+/* Action Buttons */
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.auth-btn svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+}
+
+.auth-btn span {
+  flex: 1;
+  text-align: left;
+}
+
+/* RTL Support for Buttons */
+[dir="rtl"] .auth-btn svg {
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+[dir="rtl"] .auth-btn span {
+  text-align: right;
+}
+
+/* Dashboard Button */
+.dashboard-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.dashboard-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Ranking Button */
+.ranking-btn {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+
+.ranking-btn:hover {
+  background: #e5e7eb;
+}
+
+.ranking-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+[dir="rtl"] .ranking-badge {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+/* Logout Button */
+.logout-btn {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.logout-btn:hover {
+  background: rgba(220, 38, 38, 0.15);
+}
+
+/* Logged Out View */
+.auth-mobile-loggedout {
+  padding: 20px 16px;
+}
+
+.login-prompt {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.login-prompt.ltr {
+  flex-direction: row;
+}
+
+.login-prompt.rtl {
+  flex-direction: row-reverse;
+}
+
+.login-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.login-icon svg {
+  width: 32px;
+  height: 32px;
+  color: white;
+}
+
+.login-text {
+  flex: 1;
+  margin: 0 12px;
+}
+
+.login-prompt.ltr .login-text {
+  text-align: left;
+}
+
+.login-prompt.rtl .login-text {
+  text-align: right;
+}
+
+.login-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #111827;
+}
+
+.login-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.login-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .auth-name {
+    color: #f3f4f6;
+  }
+  
+  .auth-email {
+    color: #9ca3af;
+  }
+  
+  .ranking-btn {
+    background: #374151;
+    color: #f3f4f6;
+    border-color: #4b5563;
+  }
+  
+  .ranking-btn:hover {
+    background: #4b5563;
+  }
+  
+  .auth-stats {
+    border-top-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .stat-label {
+    color: #9ca3af;
+  }
+  
+  .login-title {
+    color: #f3f4f6;
+  }
+  
+  .login-subtitle {
+    color: #9ca3af;
+  }
+}
+
+/* Mobile Optimization */
+@media (max-width: 480px) {
+  .auth-mobile {
+    padding: 12px;
+  }
+  
+  .auth-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .avatar-initials {
+    font-size: 18px;
+  }
+  
+  .auth-name {
+    font-size: 14px;
+  }
+  
+  .auth-email {
+    font-size: 11px;
+  }
+  
+  .stat-value {
+    font-size: 16px;
+  }
+  
+  .auth-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .auth-mobile-loggedout {
+    padding: 16px;
+  }
+  
+  .login-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .login-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .login-title {
+    font-size: 14px;
+  }
+}
+
+/* Loading State */
+.auth-mobile-loading {
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 200px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(14, 165, 233, 0.1);
+  border-radius: 50%;
+  border-top-color: #0ea5e9;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 14px;
+  opacity: 0.7;
+}

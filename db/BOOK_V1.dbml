@@ -1,0 +1,48 @@
+Table books {
+  book_id bigint [pk, increment]
+
+  // Basic Information
+  title varchar(500) [not null]
+  subtitle varchar(500)
+  slug varchar(500) [unique]
+
+  // Author & Publisher
+  author_id bigint [not null]
+  publisher_id bigint
+
+  // Language
+  original_language_id int [not null]
+
+  // Publication
+  publication_year int
+  publication_date date
+  edition varchar(100)
+
+  // Identifiers
+  isbn_10 varchar(20)
+  isbn_13 varchar(20)
+
+  // Content
+  summary text
+  key_highlights text
+  table_of_contents text
+
+  // Classification
+  category_id bigint
+  subcategory_id bigint
+
+  // Physical Details
+  page_count int
+  cover_image_url varchar(500)
+
+  // Ratings
+  average_rating decimal(3,2)
+  review_count int
+
+  // SEO
+  meta_title varchar(255)
+  meta_description text
+
+  created_at timestamp
+  updated_at timestamp
+}

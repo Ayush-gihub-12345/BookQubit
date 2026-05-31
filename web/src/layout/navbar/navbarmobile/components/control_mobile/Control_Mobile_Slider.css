@@ -1,0 +1,158 @@
+/* ==========================================
+   CONTROL MOBILE SLIDER
+   LTR: Slides from RIGHT
+   RTL: Slides from LEFT
+========================================== */
+
+/* LOCK PAGE WHEN OPEN */
+html.slider-open,
+body.slider-open {
+  overflow: hidden !important;
+  height: 100% !important;
+  touch-action: none;
+  overscroll-behavior: none;
+  position: fixed;
+  width: 100% !important;
+}
+
+.control-mobile-slider {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 360px; /* absolute limit fallback */
+  width: min(90vw, 360px); 
+  height: 100dvh;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(105%); /* Extra padding to completely hide box shadows */
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+/* OPEN STATE - LTR */
+.control-mobile-slider.open {
+  transform: translateX(0);
+}
+
+/* ==========================================
+   RTL STATE - Slides from LEFT
+========================================== */
+[dir="rtl"] .control-mobile-slider {
+  right: auto;
+  left: 0;
+  transform: translateX(-105%);
+  box-shadow: 10px 0 35px rgba(0, 0, 0, 0.15);
+}
+
+[dir="rtl"] .control-mobile-slider.open {
+  transform: translateX(0);
+}
+
+[dir="rtl"] .control-mobile-slider h3,
+[dir="rtl"] .control-mobile-slider p {
+  text-align: right;
+}
+
+/* ==========================================
+   CONTENT AREA - STRICT CONTAINER RULES
+========================================== */
+.control-mobile-slider .slider-content-area {
+  flex: 1;
+  min-height: 0; /* Critical fix for flexbox containers with overflow scroll */
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden; /* Ban lateral bleeding entirely */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Enforce structure inside the container viewports */
+.control-mobile-slider .slider-content-area > div,
+.control-mobile-slider .slider-content-area [role="tabpanel"] {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Clean text wrapping rules without breaking UI components */
+.control-mobile-slider h1, .control-mobile-slider h2,
+.control-mobile-slider h3, .control-mobile-slider h4,
+.control-mobile-slider p, .control-mobile-slider span,
+.control-mobile-slider label {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN CONTROLS
+========================================== */
+@media (max-width: 360px) {
+  .control-mobile-slider {
+    width: 88vw;
+  }
+}
+
+@media (min-width: 769px) {
+  .control-mobile-slider {
+    max-width: 380px;
+  }
+}
+
+/* ==========================================
+   SCROLLBAR MANAGEMENT
+========================================== */
+.control-mobile-slider .slider-content-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.control-mobile-slider .slider-content-area::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.2);
+  border-radius: 4px;
+}
+
+.dark .control-mobile-slider .slider-content-area::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ==========================================
+   SAFE INSET AREAS (iPhone Notches)
+========================================== */
+@supports (padding: max(0px)) {
+  .control-mobile-slider {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* ==========================================
+   ANIMATION EFFICIENCY
+========================================== */
+.control-mobile-slider .slider-content-area > * {
+  animation: sliderFadeInUp 0.2s ease-out forwards;
+}
+
+@keyframes sliderFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control-mobile-slider,
+  .control-mobile-slider .slider-content-area > * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

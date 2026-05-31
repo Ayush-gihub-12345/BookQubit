@@ -1,0 +1,212 @@
+/* SearchBar_Desktop.css */
+
+.searchbar-desktop-container {
+  position: relative;
+  width: 100%;
+}
+
+.searchbar-desktop {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 0.75rem;
+  border-radius: 8px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  gap: 0.5rem;
+  position: relative;
+  backdrop-filter: blur(0px);
+}
+
+.searchbar-desktop.focused {
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Gradient border effect for focused state */
+.searchbar-desktop.focused::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  padding: 1.5px;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.5),
+    rgba(139, 92, 246, 0.5),
+    rgba(59, 130, 246, 0.5)
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: borderPulse 2s ease-in-out infinite;
+}
+
+@keyframes borderPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  padding: 0;
+  height: 100%;
+  background: transparent !important;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+}
+
+.search-input::placeholder {
+  transition: opacity 0.2s ease;
+  opacity: 0.5;
+}
+
+.search-input:focus::placeholder {
+  opacity: 0.3;
+}
+
+.search-icon,
+.clear-button,
+.search-submit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.search-icon {
+  min-width: 16px;
+}
+
+.clear-button {
+  min-width: 16px;
+}
+
+.search-submit-button {
+  min-width: 20px;
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.search-submit-button:hover {
+  opacity: 1;
+}
+
+/* Loading Spinner with Gradient */
+.loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(128, 128, 128, 0.2);
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+  border-radius: 50%;
+  animation: search-spin 0.6s linear infinite;
+  box-shadow: 0 0 4px currentColor;
+}
+
+@keyframes search-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Icon hover effects */
+.search-icon:hover .icon,
+.clear-button:hover .icon,
+.search-submit-button:hover .icon {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+
+/* Ripple effect on click */
+.search-submit-button::after,
+.clear-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.search-submit-button:active::after,
+.clear-button:active::after {
+  width: 30px;
+  height: 30px;
+}
+
+/* Dark mode specific enhancements */
+[data-theme="dark"] .searchbar-desktop,
+[data-theme="midnight"] .searchbar-desktop,
+[data-theme="cyberpunk"] .searchbar-desktop {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Light mode specific enhancements */
+[data-theme="light"] .searchbar-desktop {
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .searchbar-desktop.focused {
+  background: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Smooth placeholder transition */
+.search-input::placeholder {
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .searchbar-desktop {
+    height: 32px;
+    padding: 0 0.5rem;
+  }
+  
+  .search-input {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Optional: Shine effect on focus */
+.searchbar-desktop.focused .search-icon .icon {
+  filter: drop-shadow(0 0 2px currentColor);
+  transition: filter 0.2s ease;
+}
+
+/* Optional: Typing indicator effect */
+.search-input:focus {
+  letter-spacing: 0.02em;
+}
+
+/* Optional: Animated gradient background for dark mode on focus */
+@media (prefers-color-scheme: dark) {
+  .searchbar-desktop.focused {
+    background: linear-gradient(
+      135deg,
+      rgba(30, 41, 59, 0.8),
+      rgba(15, 23, 42, 0.9)
+    ) !important;
+  }
+}

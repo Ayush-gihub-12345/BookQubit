@@ -1,0 +1,271 @@
+{
+  "version": "2.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "currentViewName": null,
+  "defaultView": {
+    "detailLevel": "All",
+    "tablePositions": [
+      {
+        "name": "languages",
+        "schemaName": "public",
+        "x": 12,
+        "y": 12
+      },
+      {
+        "name": "authors",
+        "schemaName": "public",
+        "x": 12,
+        "y": 250
+      },
+      {
+        "name": "publishers",
+        "schemaName": "public",
+        "x": 12,
+        "y": 520
+      },
+      {
+        "name": "books",
+        "schemaName": "public",
+        "x": 577.7080078125,
+        "y": 53
+      },
+      {
+        "name": "book_publication_details",
+        "schemaName": "public",
+        "x": 1116.13330078125,
+        "y": 12
+      },
+      {
+        "name": "book_languages",
+        "schemaName": "public",
+        "x": 1116.13330078125,
+        "y": 410
+      },
+      {
+        "name": "book_translations",
+        "schemaName": "public",
+        "x": 1116.13330078125,
+        "y": 584
+      },
+      {
+        "name": "categories",
+        "schemaName": "public",
+        "x": 12,
+        "y": 1114
+      },
+      {
+        "name": "category_translations",
+        "schemaName": "public",
+        "x": 259.58984375,
+        "y": 1114
+      },
+      {
+        "name": "book_categories",
+        "schemaName": "public",
+        "x": 534.87451171875,
+        "y": 1114
+      }
+    ],
+    "tableGroupCollapseStates": [],
+    "stickyNoteLayouts": [],
+    "referencePaths": [
+      {
+        "firstFieldNames": [
+          "author_id"
+        ],
+        "firstTableName": "books",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "author_id"
+        ],
+        "secondTableName": "authors",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "publisher_id"
+        ],
+        "firstTableName": "books",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "publisher_id"
+        ],
+        "secondTableName": "publishers",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "original_language_id"
+        ],
+        "firstTableName": "books",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "language_id"
+        ],
+        "secondTableName": "languages",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "book_id"
+        ],
+        "firstTableName": "book_publication_details",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "book_id"
+        ],
+        "secondTableName": "books",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "language_id"
+        ],
+        "firstTableName": "book_publication_details",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "language_id"
+        ],
+        "secondTableName": "languages",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "book_id"
+        ],
+        "firstTableName": "book_languages",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "book_id"
+        ],
+        "secondTableName": "books",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "language_id"
+        ],
+        "firstTableName": "book_languages",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "language_id"
+        ],
+        "secondTableName": "languages",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "book_id"
+        ],
+        "firstTableName": "book_translations",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "book_id"
+        ],
+        "secondTableName": "books",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "language_id"
+        ],
+        "firstTableName": "book_translations",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "language_id"
+        ],
+        "secondTableName": "languages",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "category_id"
+        ],
+        "firstTableName": "category_translations",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "category_id"
+        ],
+        "secondTableName": "categories",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "language_id"
+        ],
+        "firstTableName": "category_translations",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "language_id"
+        ],
+        "secondTableName": "languages",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "book_id"
+        ],
+        "firstTableName": "book_categories",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "book_id"
+        ],
+        "secondTableName": "books",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "category_id"
+        ],
+        "firstTableName": "book_categories",
+        "firstSchemaName": "public",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "category_id"
+        ],
+        "secondTableName": "categories",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      }
+    ]
+  },
+  "views": {}
+}

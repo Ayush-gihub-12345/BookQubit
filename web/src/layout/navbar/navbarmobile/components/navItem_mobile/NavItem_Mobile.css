@@ -1,0 +1,223 @@
+/* ==========================================================================
+   NavItem Mobile - Theme-Aware Styles
+   ========================================================================== */
+
+.navbar-mobile-nav-items-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+}
+
+/* Base Nav Item Styles */
+.navbar-mobile-item {
+  position: relative;
+  border-radius: 0;
+  margin: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+/* Active State Indicator */
+.navbar-mobile-item.active {
+  background: linear-gradient(
+    90deg,
+    rgba(14, 165, 233, 0.08),
+    rgba(59, 130, 246, 0.02)
+  );
+  border-inline-start: 3px solid var(--sidebar-icon-active, #0ea5e9);
+}
+
+/* Hover Effect */
+.navbar-mobile-item:hover {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+[dir="rtl"] .navbar-mobile-item:hover {
+  padding-left: 16px;
+  padding-right: 20px;
+}
+
+/* Icon Hover Animation */
+.navbar-mobile-item:hover .navbar-mobile-item-icon {
+  transform: scale(1.1);
+}
+
+/* Text Styles */
+.navbar-mobile-item-text {
+  transition: transform 0.2s ease;
+}
+
+.navbar-mobile-item:hover .navbar-mobile-item-text {
+  transform: translateX(2px);
+}
+
+[dir="rtl"] .navbar-mobile-item:hover .navbar-mobile-item-text {
+  transform: translateX(-2px);
+}
+
+/* Active State Text */
+.navbar-mobile-item.active .navbar-mobile-item-text {
+  font-weight: 600;
+}
+
+.navbar-mobile-item.active .navbar-mobile-item-icon {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   RTL Specific Adjustments
+   ========================================================================== */
+[dir="rtl"] .navbar-mobile-item.active {
+  border-inline-start: none;
+  border-inline-end: 3px solid var(--sidebar-icon-active, #0ea5e9);
+}
+
+[dir="rtl"] .navbar-mobile-item:hover {
+  transform: translateX(-2px);
+}
+
+/* ==========================================================================
+   Animation for Menu Items
+   ========================================================================== */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.navbar-mobile-item {
+  animation: slideInFromLeft 0.3s ease-out forwards;
+  animation-delay: calc(var(--item-index, 0) * 0.03s);
+  opacity: 0;
+}
+
+[dir="rtl"] .navbar-mobile-item {
+  animation: slideInFromRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Set animation delays for each item */
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(1) { --item-index: 1; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(2) { --item-index: 2; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(3) { --item-index: 3; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(4) { --item-index: 4; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(5) { --item-index: 5; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(6) { --item-index: 6; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(7) { --item-index: 7; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(8) { --item-index: 8; }
+.navbar-mobile-nav-items-container .navbar-mobile-item:nth-child(9) { --item-index: 9; }
+
+/* ==========================================================================
+   Mobile Responsive
+   ========================================================================== */
+@media (max-width: 480px) {
+  .navbar-mobile-nav-items-container {
+    gap: 0;
+    padding: 4px 0;
+  }
+  
+  .navbar-mobile-item {
+    padding: 10px 14px;
+  }
+  
+  .navbar-mobile-item:hover {
+    padding-left: 18px;
+    padding-right: 14px;
+  }
+  
+  [dir="rtl"] .navbar-mobile-item:hover {
+    padding-left: 14px;
+    padding-right: 18px;
+  }
+  
+  .navbar-mobile-item-text {
+    font-size: 14px;
+  }
+  
+  .navbar-mobile-item-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+  }
+}
+
+/* ==========================================================================
+   Focus States for Accessibility
+   ========================================================================== */
+.navbar-mobile-item:focus-visible {
+  outline: 2px solid var(--sidebar-icon-active, #0ea5e9);
+  outline-offset: -2px;
+  border-radius: 0;
+  background: rgba(14, 165, 233, 0.05);
+}
+
+/* ==========================================================================
+   Reduced Motion
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .navbar-mobile-item,
+  .navbar-mobile-item-icon,
+  .navbar-mobile-item-text {
+    animation: none;
+    transition: none;
+  }
+  
+  .navbar-mobile-item:hover {
+    padding-left: 16px;
+    padding-right: 16px;
+    transform: none;
+  }
+  
+  .navbar-mobile-item:hover .navbar-mobile-item-text {
+    transform: none;
+  }
+  
+  .navbar-mobile-item:hover .navbar-mobile-item-icon {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Dark Mode Additional Styles
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  .navbar-mobile-item.active {
+    background: linear-gradient(
+      90deg,
+      rgba(14, 165, 233, 0.15),
+      rgba(59, 130, 246, 0.05)
+    );
+  }
+}
+
+/* ==========================================================================
+   High Contrast Mode
+   ========================================================================== */
+@media (prefers-contrast: high) {
+  .navbar-mobile-item.active {
+    border-inline-start-width: 4px;
+  }
+  
+  .navbar-mobile-item:hover {
+    outline: 1px solid currentColor;
+  }
+}

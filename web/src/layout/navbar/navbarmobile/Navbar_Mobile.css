@@ -1,0 +1,120 @@
+/* ==========================================================================
+   Base Mobile Navigation Layout Profiles - Enhanced with theme variables
+   ========================================================================== */
+.navbar-mobile {
+  border-bottom: 1px solid var(--nav-border-color, rgba(156, 163, 175, 0.15));
+  box-shadow: var(--nav-shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.05));
+  box-sizing: border-box !important;
+  width: 100vw !important;
+  max-width: 100% !important;
+  background-color: var(--nav-bg-color, transparent);
+  color: var(--nav-primary-color, inherit);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Restricts the center layout region */
+.navbar-mobile-center {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Skeleton & Loading Placeholders with theme colors
+   ========================================================================== */
+.navbar-loading-state .skeleton-loader,
+.navbar-loading-state .skeleton-logo,
+.navbar-loading-state .skeleton-icon {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: var(--nav-primary-color, currentColor) !important;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.35; }
+}
+
+/* ==========================================================================
+   Interactive Control Layout with theme transitions
+   ========================================================================== */
+.nav-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  color: var(--nav-icon-color, var(--nav-secondary-color, inherit));
+}
+
+.nav-control-btn:hover {
+  background-color: var(--nav-hover-bg, rgba(156, 163, 175, 0.08));
+  transform: scale(1.05); /* Like HeroSection hover effect */
+}
+
+.nav-control-btn:active {
+  transform: scale(0.95);
+}
+
+/* ==========================================================================
+   Login Button with theme integration
+   ========================================================================== */
+.login-btn-nav {
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-btn-nav:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.login-btn-nav:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   Notification Badge
+   ========================================================================== */
+.notification-badge {
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--nav-border-color, #ffffff);
+}
+
+/* ==========================================================================
+   Screen Scale Compaction for Small Devices
+   ========================================================================== */
+@media (max-width: 360px) {
+  .navbar-mobile {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .navbar-mobile-right {
+    gap: 4px !important;
+  }
+  .logo-text {
+    font-size: 14px !important;
+  }
+}
+
+/* ==========================================================================
+   Accessibility Focus Framework with theme colors
+   ========================================================================== */
+.nav-control-btn:focus-visible,
+.login-btn-nav:focus-visible {
+  outline: 2px solid var(--nav-avatar-bg, #0ea5e9);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Dark mode specific adjustments (if needed)
+   ========================================================================== */
+[data-theme="dark"] .navbar-mobile,
+[data-theme="midnight"] .navbar-mobile,
+[data-theme="cyberpunk"] .navbar-mobile {
+  /* Additional dark mode specific styles if needed */
+  backdrop-filter: blur(10px);
+}

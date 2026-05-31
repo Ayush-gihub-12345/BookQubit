@@ -1,0 +1,156 @@
+Table languages {
+  language_id int [pk]
+
+  code varchar(10) [unique, not null]
+  english_name varchar(100) [not null]
+  native_name varchar(100) [not null]
+
+  is_rtl boolean [default: false]
+}
+
+Table authors {
+  author_id bigint [pk, increment]
+
+  author_name varchar(255) [not null]
+  bio text
+  birth_date date
+  nationality varchar(100)
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table publishers {
+  publisher_id bigint [pk, increment]
+
+  publisher_name varchar(255) [not null]
+  website varchar(255)
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table books {
+  book_id bigint [pk, increment]
+
+  author_id bigint [not null]
+  publisher_id bigint [not null]
+
+  original_language_id int [not null]
+
+  publication_year int
+
+  cover_image_url varchar(500)
+
+  average_rating decimal(3,2)
+  rating_count int
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table book_translations {
+  translation_id bigint [pk, increment]
+
+  book_id bigint [not null]
+  language_id int [not null]
+
+  title varchar(500) [not null]
+  subtitle varchar(500)
+
+  slug varchar(500) [not null]
+
+  summary text
+  key_highlights text
+  subjects_covered text
+
+  seo_title varchar(255)
+  seo_description text
+  seo_keywords text
+
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (book_id, language_id) [unique]
+    slug [unique]
+  }
+}
+
+Table book_publication_details {
+  publication_id bigint [pk, increment]
+
+  book_id bigint [not null]
+
+  isbn_10 varchar(20)
+  isbn_13 varchar(20)
+
+  edition varchar(100)
+  publication_date date
+
+  pages int
+
+  format varchar(50)
+
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table book_languages {
+  id bigint [pk, increment]
+
+  book_id bigint [not null]
+  language_id int [not null]
+
+  indexes {
+    (book_id, language_id) [unique]
+  }
+}
+
+Table categories {
+  category_id bigint [pk, increment]
+
+  slug varchar(255) [unique]
+  created_at timestamp
+}
+
+Table category_translations {
+  id bigint [pk, increment]
+
+  category_id bigint [not null]
+  language_id int [not null]
+
+  name varchar(255) [not null]
+  description text
+
+  indexes {
+    (category_id, language_id) [unique]
+  }
+}
+
+Table book_categories {
+  book_id bigint [not null]
+  category_id bigint [not null]
+
+  indexes {
+    (book_id, category_id) [pk]
+  }
+}
+
+Ref: books.author_id > authors.author_id
+Ref: books.publisher_id > publishers.publisher_id
+Ref: books.original_language_id > languages.language_id
+
+Ref: book_publication_details.book_id > books.book_id
+
+Ref: book_languages.book_id > books.book_id
+Ref: book_languages.language_id > languages.language_id
+
+Ref: book_translations.book_id > books.book_id
+Ref: book_translations.language_id > languages.language_id
+
+Ref: category_translations.category_id > categories.category_id
+Ref: category_translations.language_id > languages.language_id
+
+Ref: book_categories.book_id > books.book_id
+Ref: book_categories.category_id > categories.category_id

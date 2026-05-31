@@ -1,0 +1,212 @@
+export const bookTranslationsRussian = {
+  // Book related translations
+  "book.by": "от",
+  "book.more": "ещё",
+  "book.view_details": "Подробнее",
+  "book.not_found": "Книга не найдена",
+  "book.not_found_message": "Книга, которую вы ищете, не существует в нашей библиотеке.",
+  "book.rating": "Рейтинг",
+  "book.pages": "Страниц",
+  "book.publisher": "Издатель",
+  "book.published": "Опубликовано",
+  "book.summary": "Краткое содержание",
+  "book.buy_now": "Купить сейчас",
+  "book.listen_audiobook": "Слушать аудиокнигу",
+  "book.share": "Поделиться",
+  "book.save": "Сохранить на потом",
+  "book.add_to_cart": "Добавить в корзину",
+  "book.preview": "Предпросмотр",
+  "book.about": "Об этой книге",
+  "book.author": "Автор",
+  "book.language": "Язык",
+  "book.isbn": "ISBN",
+  "book.reviews": "Отзывы",
+  "book.description": "Описание",
+  "book.genres": "Жанры",
+  "book.subjects": "Темы",
+  "book.tags": "Теги",
+  "book.collections": "Коллекции",
+  "book.editions": "Другие издания",
+  "book.related_books": "Похожие книги",
+  "book.similar_books": "Схожие книги",
+  "book.recommendations": "Рекомендации",
+  "book.comments": "Комментарии",
+  "book.leave_comment": "Оставить комментарий",
+  "book.no_comments": "Пока нет комментариев",
+  "book.load_more": "Загрузить ещё",
+  "book.reading_progress": "Прогресс чтения",
+  "book.mark_as_read": "Отметить как прочитанное",
+  "book.add_to_wishlist": "Добавить в список желаний",
+  "book.remove_from_wishlist": "Удалить из списка желаний",
+  "book.already_in_wishlist": "Уже в списке желаний",
+  "book.download_sample": "Скачать образец",
+  "book.read_sample": "Читать образец",
+  "book.available_formats": "Доступные форматы",
+  "book.ebook": "Электронная книга",
+  "book.paperback": "Мягкая обложка",
+  "book.hardcover": "Твёрдая обложка",
+  "book.audiobook": "Аудиокнига",
+  "book.category": "Категория",
+  "book.key_points": "Ключевые моменты",
+  "book.know_more": "Узнать больше",
+  "book.get_book": "Получить книгу",
+  "book.cover_of": "Обложка",
+  "book.singular": "книга",
+  "book.plural": "книги",
+  "book.matching_filters": "соответствует вашим фильтрам",
+
+  // Filter translations
+  "filter.filter_books": "Фильтровать книги",
+  "filter.reset_all": "Сбросить все фильтры",
+  "filter.tags": "Теги",
+  "filter.authors": "Авторы",
+  "filter.categories": "Категории",
+  "filter.collections": "Коллекции",
+  "filter.subjects": "Темы",
+  "filter.show_less": "Показать меньше",
+  "filter.show_all": "Показать всё",
+  "filter.unknown": "Неизвестно",
+  "filter.filters": "Фильтры",
+  "filter.show_filters": "Показать фильтры",
+  "filter.hide_filters": "Скрыть фильтры",
+
+  // Search translations
+  "search.search_books": "Искать книги по названию, автору или описанию...",
+
+  // Pagination translations
+  "pagination.show": "Показать",
+  "pagination.per_page": "на странице",
+  "pagination.showing": "Показано",
+  "pagination.of": "из",
+  "pagination.items": "элементов",
+  "pagination.first": "Первая",
+  "pagination.prev": "Предыдущая",
+  "pagination.next": "Следующая",
+  "pagination.last": "Последняя",
+  "pagination.go_to_top": "Наверх",
+
+  // View translations
+  "view.grid_view": "Сетка",
+  "view.grid_description": "Сетка из карточек",
+  "view.compact_view": "Компактный вид",
+  "view.compact_description": "Горизонтальные компактные карточки",
+  "view.list_view": "Список",
+  "view.list_description": "Детальный список",
+  "view.change_view": "Сменить вид",
+  "view.view_options": "Настройки вида",
+  "view.view": "Вид",
+  "view.show_advanced": "Показать расширенные настройки",
+  "view.hide_advanced": "Скрыть расширенные настройки",
+
+  // Sort translations
+  "sort.title_asc": "Название (А-Я)",
+  "sort.title_desc": "Название (Я-А)",
+  "sort.author_asc": "Автор (А-Я)",
+  "sort.author_desc": "Автор (Я-А)",
+  "sort.date_newest": "Дата (новые)",
+  "sort.date_oldest": "Дата (старые)",
+  "sort.popular": "Популярные",
+  "sort.rating": "С высоким рейтингом",
+  "sort.sort": "Сортировать",
+  "sort.sort_by": "Сортировать по",
+  "sort.sort_options": "Параметры сортировки",
+  "sort.sorted_by": "Сортировка",
+
+  // Items per page
+  "items_per_page.12": "12 на странице",
+  "items_per_page.24": "24 на странице",
+  "items_per_page.36": "36 на странице",
+  "items_per_page.48": "48 на странице",
+  "items_per_page.96": "96 на странице",
+  "items_per_page.title": "Элементов на странице",
+
+  // Density
+  "density.compact": "Компактно",
+  "density.normal": "Обычно",
+  "density.spacious": "Просторно",
+
+  // Button translations
+  "button.loading": "Загрузка...",
+
+  // Additional book translations
+  "book.not_specified": "Не указано",
+  "book.original_title": "Оригинальное название",
+  "book.original_published": "Оригинал опубликован",
+  "book.country": "Страна",
+  "book.edition": "Издание",
+  "book.format": "Формат",
+
+  // Wishlist and library translations
+  "book.liked": "Нравится",
+  "book.like": "Нравится",
+  "book.wishlisted": "В списке желаний",
+  "book.wishlist": "Список желаний",
+  "book.in_library": "В библиотеке",
+  "book.my_library": "Моя библиотека",
+  "book.read": "Прочитано",
+  "book.mark_read": "Отметить как прочитанное",
+
+  // Cover and highlights
+  "book.cover_not_available": "Обложка книги недоступна",
+  "book.key_highlights": "Основные моменты",
+  "book.key_features": "Ключевые особенности",
+
+  // Navigation
+  "book.back_to_books": "Вернуться к книгам",
+
+  // Error messages
+  "book.url_parameter": "Параметр URL",
+  "book.no_id_provided": "В URL не указан ID книги или слаг.",
+  "book.browse_all_books": "Просмотреть все книги",
+  "book.go_to_homepage": "Перейти на главную",
+
+  // Publication details
+  "book.publication_details": "Детали публикации",
+  "book.subjects_covered": "Охваченные темы",
+  "book.details": "Детали",
+
+  // Related books
+  "book.you_may_also_like": "Вам также может понравиться",
+  "book.more_by": "Ещё от",
+  "book.similar_in": "Похоже на",
+
+  // Hero section translations
+  "hero.no_books_available": "Нет доступных книг",
+  "hero.check_out": "Посмотреть",
+  "hero.by": "от",
+  "hero.link_copied": "Ссылка скопирована!",
+  "hero.previous_book": "Предыдущая книга",
+  "hero.next_book": "Следующая книга",
+  "hero.go_to_book": "Перейти к книге",
+
+  // Add to existing file
+"explore.explore_books": "Исследовать книги",
+"explore.dive_into": "Погрузитесь в нашу кураторскую подборку обязательных к прочтению книг",
+"explore.browse_all_books": "Просмотреть все книги",
+
+"collections.title": "Коллекции книг",
+"collections.search_collections": "Поиск коллекций и книг",
+"collections.search_placeholder": "Поиск по названию коллекции, заголовку, автору или описанию...",
+"collections.filter_by_collections": "Фильтровать по коллекциям",
+"collections.clear_all_filters": "Очистить все фильтры",
+"collections.select_collections": "Выберите коллекции для фильтрации:",
+"collections.active_filters": "Активные фильтры:",
+"collections.search": "Поиск",
+"collections.no_collections_found": "Коллекции, соответствующие вашим фильтрам, не найдены.",
+"collections.clear_filters": "Очистить фильтры",
+"collections.explore_collection": "Исследовать коллекцию",
+"collections.no_books_match": "Ни одна книга в этой коллекции не соответствует вашему текущему поиску.",
+
+"collections.back_to_collections": "Назад к коллекциям",
+"collections.no_books_found": "В этой коллекции не найдено книг.",
+"collections.browse_all_collections": "Просмотреть все коллекции",
+
+"collections.featured_collections": "Избранные коллекции",
+"collections.discover_collections": "Откройте для себя кураторские книжные коллекции, отобранные нашими редакторами",
+"collections.view_all_in_collection": "Посмотреть все в этой коллекции",
+"collections.explore_all_collections": "Исследовать все коллекции",
+"collections.no_collections_found_title": "Коллекции не найдены",
+"collections.no_collections_found_message": "В настоящее время мы не смогли найти ни одной книжной коллекции.",
+"collections.browse_all_books": "Просмотреть все книги",
+
+};

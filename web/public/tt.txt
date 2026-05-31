@@ -1,0 +1,260 @@
+public/
+│
+├── 📄 **Core SEO Files**
+│   ├── robots.txt
+│   ├── sitemap.xml
+│   ├── sitemap-index.xml
+│   └── feed.xml
+│
+├── 🖼️ **Favicon & Icons**
+│   ├── favicon.ico
+│   ├── favicon.svg
+│   ├── favicon-16x16.png
+│   ├── favicon-32x32.png
+│   ├── favicon-48x48.png
+│   ├── favicon-64x64.png
+│   ├── favicon-96x96.png
+│   ├── favicon-128x128.png
+│   ├── apple-touch-icon.png
+│   ├── apple-touch-icon-57x57.png
+│   ├── apple-touch-icon-60x60.png
+│   ├── apple-touch-icon-72x72.png
+│   ├── apple-touch-icon-76x76.png
+│   ├── apple-touch-icon-114x114.png
+│   ├── apple-touch-icon-120x120.png
+│   ├── apple-touch-icon-144x144.png
+│   ├── apple-touch-icon-152x152.png
+│   ├── apple-touch-icon-167x167.png
+│   ├── apple-touch-icon-180x180.png
+│   ├── android-chrome-192x192.png
+│   ├── android-chrome-256x256.png
+│   ├── android-chrome-384x384.png
+│   ├── android-chrome-512x512.png
+│   ├── mstile-70x70.png
+│   ├── mstile-144x144.png
+│   ├── mstile-150x150.png
+│   ├── mstile-310x150.png
+│   ├── mstile-310x310.png
+│   └── safari-pinned-tab.svg
+│
+├── 📱 **Manifest & Config**
+│   ├── site.webmanifest
+│   ├── browserconfig.xml
+│   └── manifest.json
+│
+├── 🏞️ **Social Media Images**
+│   ├── og-image.jpg (1200×630)
+│   ├── og-image.png (1200×630)
+│   ├── twitter-card.jpg (1200×600)
+│   ├── twitter-card.png (1200×600)
+│   ├── facebook-cover.jpg (820×312)
+│   ├── linkedin-cover.jpg (1584×396)
+│   ├── pinterest-pin.jpg (1000×1500)
+│   ├── instagram-square.jpg (1080×1080)
+│   ├── instagram-story.jpg (1080×1920)
+│   └── whatsapp-share.jpg (300×300)
+│
+├── 🎨 **Brand Assets**
+│   ├── logo.png
+│   ├── logo.svg
+│   ├── logo-white.png
+│   ├── logo-dark.png
+│   ├── logo-192x192.png
+│   ├── logo-512x512.png
+│   └── logo-transparent.png
+│
+├── 🌐 **Server Config**
+│   ├── .htaccess (Apache)
+│   ├── _redirects (Netlify)
+│   ├── vercel.json (Vercel)
+│   ├── netlify.toml (Netlify)
+│   └── web.config (IIS)
+│
+├── 📉 **Analytics & Verification**
+│   ├── google-site-verification.txt
+│   ├── bing-site-verification.txt
+│   ├── yandex-verification.txt
+│   ├── pinterest-verification.txt
+│   └── facebook-domain-verification.txt
+│
+├── 📄 **Error Pages**
+│   ├── 404.html
+│   ├── 500.html
+│   ├── 403.html
+│   └── 503.html
+│
+├── 📰 **Content**
+│   ├── feed.xml (RSS)
+│   ├── feed.json (JSON Feed)
+│   ├── podcast.xml (Podcast RSS)
+│   └── sitemap-news.xml
+│
+├── 📚 **Sitemaps (for large sites)**
+│   ├── sitemap-pages.xml
+│   ├── sitemap-books.xml
+│   ├── sitemap-authors.xml
+│   ├── sitemap-categories.xml
+│   ├── sitemap-blog.xml
+│   └── sitemap-images.xml
+│
+└── 📁 **Directories**
+    ├── images/
+    │   ├── authors/
+    │   ├── books/
+    │   ├── categories/
+    │   └── blog/
+    ├── fonts/
+    ├── css/
+    └── js/
+
+
+
+
+
+
+
+
+
+
+    bookqubit-web/
+├── public/
+│   ├── **Core SEO Files**
+│   │   ├── robots.txt
+│   │   ├── sitemap.xml
+│   │   ├── sitemap-index.xml
+│   │   └── feed.xml
+│   │
+│   ├── **Favicon & Icons**
+│   │   ├── favicon.ico
+│   │   ├── favicon.svg
+│   │   ├── favicon-16x16.png
+│   │   ├── favicon-32x32.png
+│   │   ├── favicon-48x48.png
+│   │   ├── favicon-64x64.png
+│   │   ├── favicon-96x96.png
+│   │   ├── favicon-128x128.png
+│   │   ├── apple-touch-icon.png
+│   │   ├── apple-touch-icon-57x57.png
+│   │   ├── apple-touch-icon-60x60.png
+│   │   ├── apple-touch-icon-72x72.png
+│   │   ├── apple-touch-icon-76x76.png
+│   │   ├── apple-touch-icon-114x114.png
+│   │   ├── apple-touch-icon-120x120.png
+│   │   ├── apple-touch-icon-144x144.png
+│   │   ├── apple-touch-icon-152x152.png
+│   │   ├── apple-touch-icon-167x167.png
+│   │   ├── apple-touch-icon-180x180.png
+│   │   ├── android-chrome-192x192.png
+│   │   ├── android-chrome-256x256.png
+│   │   ├── android-chrome-384x384.png
+│   │   ├── android-chrome-512x512.png
+│   │   ├── mstile-70x70.png
+│   │   ├── mstile-144x144.png
+│   │   ├── mstile-150x150.png
+│   │   ├── mstile-310x150.png
+│   │   ├── mstile-310x310.png
+│   │   └── safari-pinned-tab.svg
+│   │
+│   ├── **Manifest & Config**
+│   │   ├── site.webmanifest
+│   │   ├── browserconfig.xml
+│   │   └── manifest.json
+│   │
+│   ├── **Social Media Images**
+│   │   ├── og-image.jpg (1200×630)
+│   │   ├── og-image.png (1200×630)
+│   │   ├── twitter-card.jpg (1200×600)
+│   │   ├── twitter-card.png (1200×600)
+│   │   ├── facebook-cover.jpg (820×312)
+│   │   ├── linkedin-cover.jpg (1584×396)
+│   │   ├── pinterest-pin.jpg (1000×1500)
+│   │   ├── instagram-square.jpg (1080×1080)
+│   │   ├── instagram-story.jpg (1080×1920)
+│   │   └── whatsapp-share.jpg (300×300)
+│   │
+│   ├── **Brand Assets**
+│   │   ├── logo.png
+│   │   ├── logo.svg
+│   │   ├── logo-white.png
+│   │   ├── logo-dark.png
+│   │   ├── logo-192x192.png
+│   │   ├── logo-512x512.png
+│   │   └── logo-transparent.png
+│   │
+│   ├── **Server Config**
+│   │   ├── .htaccess
+│   │   ├── _redirects
+│   │   ├── vercel.json
+│   │   ├── netlify.toml
+│   │   └── web.config
+│   │
+│   ├── **Verification Files**
+│   │   ├── google-site-verification.txt
+│   │   ├── bing-site-verification.txt
+│   │   ├── yandex-verification.txt
+│   │   ├── pinterest-verification.txt
+│   │   └── facebook-domain-verification.txt
+│   │
+│   ├── **Error Pages**
+│   │   ├── 404.html
+│   │   ├── 500.html
+│   │   ├── 403.html
+│   │   └── 503.html
+│   │
+│   ├── **Content Feeds**
+│   │   ├── feed.xml
+│   │   ├── feed.json
+│   │   ├── podcast.xml
+│   │   └── sitemap-news.xml
+│   │
+│   ├── **Sitemaps (Large Sites)**
+│   │   ├── sitemap-pages.xml
+│   │   ├── sitemap-books.xml
+│   │   ├── sitemap-authors.xml
+│   │   ├── sitemap-categories.xml
+│   │   ├── sitemap-blog.xml
+│   │   └── sitemap-images.xml
+│   │
+│   └── **Directories**
+│       ├── images/
+│       │   ├── authors/
+│       │   ├── books/
+│       │   ├── categories/
+│       │   └── blog/
+│       ├── fonts/
+│       ├── css/
+│       └── js/
+│
+├── src/
+│   ├── **React Components**
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── layouts/
+│   │   └── utils/
+│   │
+│   ├── **SEO Components**
+│   │   └── components/
+│   │       └── SEO/
+│   │           ├── SEO.jsx
+│   │           ├── BookSEO.jsx
+│   │           ├── AuthorSEO.jsx
+│   │           └── CategorySEO.jsx
+│   │
+│   └── **Theme & Styles**
+│       ├── theme/
+│       ├── styles/
+│       └── index.css
+│
+├── scripts/
+│   ├── generate-seo-files.js
+│   ├── generate-sitemap.js
+│   ├── generate-favicons.js
+│   ├── check-links.js
+│   └── optimize-images.js
+│
+├── .env
+├── .env.production
+├── .gitignore
+├── package.json
+├── vite.config.js
+└── README.md
