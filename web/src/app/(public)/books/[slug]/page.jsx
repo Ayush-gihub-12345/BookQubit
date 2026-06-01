@@ -1,5 +1,5 @@
 import BookDetailsPage from "@/features/book/bookdeatils/bookdeatils";
-import { getBooksByLanguage } from "@/data/books";
+import { getBookBySlugFromDb } from "../../../../../v1/db/content";
 
 import { cookies } from "next/headers";
 
@@ -11,8 +11,7 @@ export async function generateMetadata({ params }) {
   const cookieStore = cookies();
   const language = cookieStore.get("language")?.value || "en";
 
-  const books = getBooksByLanguage(language);
-  const book = books?.find((b) => b.slug === slug);
+  const book = await getBookBySlugFromDb(null, slug, language).catch(() => null);
 
   if (!book) {
     return {
@@ -120,29 +119,6 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// Generate static paths
-export async function generateStaticParams() {
-  const languages = ["en", "es", "fr"];
-  const allParams = [];
-
-  for (const lang of languages) {
-    const books = getBooksByLanguage(lang);
-    if (books && books.length > 0) {
-      const params = books.map((book) => ({
-        slug: book.slug,
-      }));
-      allParams.push(...params);
-    }
-  }
-
-  // Remove duplicates
-  const uniqueParams = Array.from(
-    new Map(allParams.map((item) => [item.slug, item])).values(),
-  );
-
-  return uniqueParams;
-}
-
 // Server Component - passes book data to client component
 export default async function BookPage({ params }) {
   // Get language from cookies on the server
@@ -151,8 +127,7 @@ export default async function BookPage({ params }) {
   const { slug } = params;
 
   // Fetch book data for structured data
-  const books = getBooksByLanguage(language);
-  const book = books?.find((b) => b.slug === slug);
+  const book = await getBookBySlugFromDb(null, slug, language).catch(() => null);
 
   if (!book) {
     return <BookDetailsPage initialLanguage={language} initialSlug={slug} />;
@@ -303,4 +278,5 @@ export default async function BookPage({ params }) {
   );
 }
 
+export const dynamic = "force-dynamic";
 export const revalidate = 3600;

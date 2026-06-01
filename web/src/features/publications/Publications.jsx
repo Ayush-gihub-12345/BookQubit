@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getPublicationsDataByLanguage } from "@/data/publications";
+import { useD1Publications } from "@v1/client/content";
 import { FaSearch, FaBuilding, FaMapMarkerAlt, FaCalendarAlt, FaGlobe, FaBook } from "react-icons/fa";
 
 const Publications = () => {
@@ -19,10 +19,7 @@ const Publications = () => {
 
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
 
-  // Get publications data based on current language
-  const publicationsData = useMemo(() => {
-    return getPublicationsDataByLanguage(language);
-  }, [language]);
+  const { data: publicationsData, loading } = useD1Publications({ limit: 200 });
 
   // Get unique types
   const types = ["All", ...new Set(publicationsData.map(pub => pub.type))];
@@ -105,6 +102,12 @@ const Publications = () => {
             </div>
           )}
         </div>
+
+        {loading && (
+          <div className={`mb-6 text-sm ${theme.textColors?.secondary || (isDarkMode ? 'text-gray-400' : 'text-gray-600')}`}>
+            Loading publications...
+          </div>
+        )}
 
         {/* Results Count */}
         <div className={`mb-6 text-sm ${theme.textColors?.secondary || (isDarkMode ? 'text-gray-400' : 'text-gray-600')}`}>

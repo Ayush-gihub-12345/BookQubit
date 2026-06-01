@@ -3,13 +3,24 @@
   "name": "bookqubit",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-05-30",
-  "compatibility_flags": [
-    "nodejs_compat"
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "bookqubit_content",
+      "database_name": "bookqubit_content",
+      "database_id": "fe1e41b7-dadf-44b1-86a7-c048ebe662a4"
+    },
+    {
+      "binding": "bookqubit_users",
+      "database_name": "bookqubit_users",
+      "database_id": "c6c47a11-a0f6-4b33-bfc6-c75c81fe1283"
+    },
+    {
+      "binding": "bookqubit_analytics",
+      "database_name": "bookqubit_analytics",
+      "database_id": "34752d63-c031-402a-9607-7dcdeb47d123"
+    }
   ],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
   "observability": {
     "enabled": true
   }

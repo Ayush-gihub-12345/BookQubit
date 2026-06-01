@@ -6,11 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "cf:build": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "preview": "opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "migrate:d1": "tsx ../scripts/migrate-d1-data.ts",
-    "migrate:d1:local": "wrangler d1 execute bookqubit_content --local --file=./schema.sql",
     "start": "next start",
     "lint": "next lint"
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { getBooksByLanguage } from "@/data/books";
+import { useD1Books } from "@v1/client/content";
 import BookSquareCard from "@/features/book/booklist/ui/BookSquareCard";
 import BookRectangleCard from "@/features/book/booklist/ui/BookRectangleCard";
 import BookCompactCard from "@/features/book/booklist/ui/BookCompactCard";
@@ -18,10 +18,7 @@ const BooksPage = () => {
   const { t, language } = useLanguage();
   const { currentFont } = useFont();
   
-  // Get books based on current language
-  const booksData = useMemo(() => {
-    return getBooksByLanguage(language);
-  }, [language]);
+  const { data: booksData, loading: booksLoading } = useD1Books(language, { limit: 200 });
 
   // State for search and display
   const [searchTerm, setSearchTerm] = useState("");
@@ -198,6 +195,14 @@ const BooksPage = () => {
 
   // Determine which view to display based on viewType
   const renderBooksView = () => {
+    if (booksLoading) {
+      return (
+        <div className={`text-center py-12 ${theme.textColors?.secondary || 'text-gray-600 dark:text-gray-400'}`}>
+          Loading books...
+        </div>
+      );
+    }
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, filteredBooks.length);
     const currentBooks = filteredBooks.slice(startIndex, endIndex);

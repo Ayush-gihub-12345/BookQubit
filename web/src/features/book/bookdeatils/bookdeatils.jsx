@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { getBooksByLanguage } from "@/data/books";
+import { useD1Books } from "@v1/client/content";
 
 // Import components
 import BookNotFound from "@/features/book/bookdeatils/components/BookNotFound";
@@ -55,14 +55,13 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
   const [dynamicTags, setDynamicTags] = useState([]);
   const [relatedTags, setRelatedTags] = useState([]);
   const [categorizedTags, setCategorizedTags] = useState({});
+  const { data: dbBooks } = useD1Books(language, { limit: 200 });
 
-  // Load books based on language (only if initialBook not provided)
   useEffect(() => {
-    if (!initialBook) {
-      const books = getBooksByLanguage(language);
-      setBooksData(books);
+    if (dbBooks.length > 0) {
+      setBooksData(dbBooks);
     }
-  }, [language, initialBook]);
+  }, [dbBooks]);
 
   // Scroll to top when component mounts or slug changes
   useEffect(() => {
