@@ -15,143 +15,15 @@ import {
   FaArrowRight,
   FaCalendarAlt,
   FaUser,
+inner,
 } from "react-icons/fa";
-
-// Sample bestsellers data
-const bestsellersData = [
-  {
-    id: 1,
-    title: "The Midnight Library",
-    author: "Matt Haig",
-    slug: "the-midnight-library",
-    coverImage: "https://images.pexels.com/photos/256450/pexels-photo-256450.jpeg?w=200&h=300&fit=crop",
-    description: "Between life and death there is a library. When Nora Seed finds herself in the Midnight Library, she has a chance to make things right.",
-    rating: 4.8,
-    reviews: 15234,
-    price: "$14.99",
-    originalPrice: "$24.99",
-    category: "Fiction",
-    publishedYear: 2020,
-    weeksOnList: 156,
-    rank: 1,
-    badge: "⭐ #1 Best Seller",
-    isBestseller: true,
-    isNew: false,
-    format: ["Hardcover", "Paperback", "eBook", "Audiobook"],
-    tags: ["Contemporary", "Philosophical", "Magical Realism"],
-  },
-  {
-    id: 2,
-    title: "Atomic Habits",
-    author: "James Clear",
-    slug: "atomic-habits",
-    coverImage: "https://images.pexels.com/photos/414171/pexels-photo-414171.jpeg?w=200&h=300&fit=crop",
-    description: "No matter your goals, Atomic Habits offers a proven framework for improving every day.",
-    rating: 4.9,
-    reviews: 28765,
-    price: "$12.99",
-    originalPrice: "$22.99",
-    category: "Self-Help",
-    publishedYear: 2018,
-    weeksOnList: 242,
-    rank: 2,
-    badge: "🔥 International Bestseller",
-    isBestseller: true,
-    isNew: false,
-    format: ["Hardcover", "Paperback", "eBook", "Audiobook"],
-    tags: ["Productivity", "Habits", "Personal Growth"],
-  },
-  {
-    id: 3,
-    title: "Project Hail Mary",
-    author: "Andy Weir",
-    slug: "project-hail-mary",
-    coverImage: "https://images.pexels.com/photos/210607/pexels-photo-210607.jpeg?w=200&h=300&fit=crop",
-    description: "A lone astronaut must save humanity from extinction in this thrilling science fiction adventure.",
-    rating: 4.9,
-    reviews: 19876,
-    price: "$16.99",
-    originalPrice: "$27.99",
-    category: "Science Fiction",
-    publishedYear: 2021,
-    weeksOnList: 98,
-    rank: 3,
-    badge: "🏆 Award Winner",
-    isBestseller: true,
-    isNew: false,
-    format: ["Hardcover", "Paperback", "eBook", "Audiobook"],
-    tags: ["Sci-Fi", "Adventure", "Space"],
-  },
-  {
-    id: 4,
-    title: "It Ends With Us",
-    author: "Colleen Hoover",
-    slug: "it-ends-with-us",
-    coverImage: "https://images.pexels.com/photos/256541/pexels-photo-256541.jpeg?w=200&h=300&fit=crop",
-    description: "A brave and heartbreaking novel that combines a captivating romance with a powerful story of strength.",
-    rating: 4.7,
-    reviews: 34567,
-    price: "$11.99",
-    originalPrice: "$19.99",
-    category: "Romance",
-    publishedYear: 2016,
-    weeksOnList: 210,
-    rank: 4,
-    badge: "❤️ Readers' Choice",
-    isBestseller: true,
-    isNew: false,
-    format: ["Paperback", "eBook", "Audiobook"],
-    tags: ["Contemporary Romance", "Drama", "Emotional"],
-  },
-  {
-    id: 5,
-    title: "Fourth Wing",
-    author: "Rebecca Yarros",
-    slug: "fourth-wing",
-    coverImage: "https://images.pexels.com/photos/669615/pexels-photo-669615.jpeg?w=200&h=300&fit=crop",
-    description: "Enter the brutal and elite world of a war college for dragon riders in this epic fantasy.",
-    rating: 4.8,
-    reviews: 23456,
-    price: "$17.99",
-    originalPrice: "$28.99",
-    category: "Fantasy",
-    publishedYear: 2023,
-    weeksOnList: 52,
-    rank: 5,
-    badge: "🆕 New York Times Bestseller",
-    isBestseller: true,
-    isNew: true,
-    format: ["Hardcover", "eBook", "Audiobook"],
-    tags: ["Fantasy", "Romance", "Dragons"],
-  },
-  {
-    id: 6,
-    title: "The Silent Patient",
-    author: "Alex Michaelides",
-    slug: "the-silent-patient",
-    coverImage: "https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?w=200&h=300&fit=crop",
-    description: "A gripping psychological thriller about a woman's act of violence against her husband.",
-    rating: 4.6,
-    reviews: 18765,
-    price: "$13.99",
-    originalPrice: "$23.99",
-    category: "Thriller",
-    publishedYear: 2019,
-    weeksOnList: 145,
-    rank: 6,
-    badge: "🔪 Thriller of the Year",
-    isBestseller: true,
-    isNew: false,
-    format: ["Hardcover", "Paperback", "eBook", "Audiobook"],
-    tags: ["Psychological Thriller", "Mystery", "Suspense"],
-  },
-];
-
-const categories = ["All", "Fiction", "Self-Help", "Science Fiction", "Romance", "Fantasy", "Thriller"];
-const timeRanges = ["All Time", "This Year", "This Month", "This Week"];
 
 const BestsellersPage = () => {
   const { theme, themeName } = useTheme();
+  const [bestsellersData, setBestsellersData] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState(["All"]);
+  const [availableTimeRanges, setAvailableTimeRanges] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTimeRange, setSelectedTimeRange] = useState("All Time");
@@ -160,6 +32,25 @@ const BestsellersPage = () => {
   const [sortBy, setSortBy] = useState("rank");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  useEffect(() => {
+    const loadBestsellers = async () => {
+      setIsLoading(true);
+      try {
+        const [booksRes, metaRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/books/bestsellers`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/meta/bestsellers-config`)
+        ]);
+        
+        setBestsellersData(await booksRes.json());
+        const meta = await metaRes.json();
+        setAvailableCategories(["All", ...meta.categories]);
+        setAvailableTimeRanges(meta.timeRanges);
+      } catch (e) { console.error("API error", e); }
+      setIsLoading(false);
+    };
+    loadBestsellers();
+  }, []);
 
   if (!theme) return null;
 

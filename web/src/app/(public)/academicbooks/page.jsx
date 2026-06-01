@@ -21,7 +21,6 @@ import {
   FaDatabase,
   FaBrain,
 } from "react-icons/fa";
-import { getAcademicBooksByLanguage } from "@/data/academic_books_data";
 
 // Category icons mapping
 const categoryIcons = {
@@ -66,10 +65,10 @@ const AcademicBooks = () => {
   useEffect(() => {
     setIsLoading(true);
     try {
-      const booksData = getAcademicBooksByLanguage(language);
-      console.log("Language:", language);
-      console.log("Books data received:", booksData);
-      console.log("Books data length:", booksData?.length);
+      // Production: Fetch from dynamic API bound to D1
+      const fetchAcademicBooks = async () => {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/books/academic?lang=${language}`);
+        const booksData = await res.json();
       
       if (booksData && Array.isArray(booksData)) {
         setAcademicBooks(booksData);
@@ -77,6 +76,8 @@ const AcademicBooks = () => {
         console.error("Invalid books data format:", booksData);
         setAcademicBooks([]);
       }
+      };
+      fetchAcademicBooks();
     } catch (error) {
       console.error("Error loading academic books:", error);
       setAcademicBooks([]);

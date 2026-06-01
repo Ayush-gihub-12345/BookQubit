@@ -1,0 +1,37 @@
+# BookQubit Cloudflare Configuration
+name = "bookqubit-web"
+main = ".open-next/worker.js"
+compatibility_date = "2024-05-01"
+workers_dev = false
+
+# D1 Databases (Structured Content & Users)
+[[d1_databases]]
+binding = "DB_CONTENT"
+database_name = "bookqubit_content"
+database_id = "your-d1-content-id" # Get this from dashboard
+
+[[d1_databases]]
+binding = "DB_USERS"
+database_name = "bookqubit_users"
+database_id = "your-d1-users-id" # Get this from dashboard
+
+# KV Namespaces (Translation & Cache)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "your-kv-cache-id" # Get this from dashboard
+
+# R2 Buckets (Assets & Ebooks)
+[[r2_buckets]]
+binding = "ASSETS"
+bucket_name = "bookqubit-assets"
+
+[env.production.vars]
+NEXT_PUBLIC_API_URL = "https://api.bookqubit.com"
+NODE_ENV = "production"
+
+[env.preview.vars]
+NEXT_PUBLIC_API_URL = "https://staging-api.bookqubit.com"
+NODE_ENV = "preview"
+
+[site]
+bucket = "./public"

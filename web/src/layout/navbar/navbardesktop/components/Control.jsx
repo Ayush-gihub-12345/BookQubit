@@ -14,13 +14,10 @@ const Control = () => {
   const [dropdownPosition, setDropdownPosition] = useState({});
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
-  const { theme, themeName } = useTheme();
-  const { language } = useLanguage();
+  const { theme, isDarkMode } = useTheme(); 
+  const { isRTL } = useLanguage();
 
   if (!theme) return null;
-
-  // Check if current language is RTL
-  const isRTL = ['ur', 'ar', 'he', 'fa', 'ps', 'sd'].includes(language);
 
   const closeDropdown = () => setIsOpen(false);
 
@@ -96,7 +93,7 @@ const Control = () => {
         window.removeEventListener('scroll', updatePosition);
       };
     }
-  }, [isOpen, isRTL, language]);
+  }, [isOpen, isRTL]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -107,9 +104,6 @@ const Control = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Determine dark mode for conditional classes (same as HeroSection)
-  const isDarkMode = themeName === "dark" || themeName === "midnight" || themeName === "cyberpunk";
 
   const getButtonClasses = () => `
     flex items-center gap-2 px-4 py-2.5 rounded-xl
