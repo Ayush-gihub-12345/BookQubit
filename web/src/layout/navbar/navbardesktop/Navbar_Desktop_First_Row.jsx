@@ -17,7 +17,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useTheme } from "@/themes/useTheme";
 import { useRTL } from "@/contexts/RTLContext";
 import { useFont } from "@/contexts/FontContext";
-import { getBooksByLanguage } from "@/data/books";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 import bookqubitLogo from "@/assets/logo/bookqubitlogo.png";
@@ -55,17 +54,21 @@ const Navbar_Desktop_First_Row = () => {
   // Load book suggestions based on language
   useEffect(() => {
     if (!searchInitialized.current) {
-      const books = getBooksByLanguage(language);
-      const suggestions = books.map((book) => ({
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        slug: book.slug,
-        imageUrl: book.imageUrl,
-        category: book.category,
-        tags: book.tags,
-      }));
-      setBookSuggestions(suggestions);
+      fetch(`/api/v1/books?lang=${language}&limit=50`)
+        .then((response) => response.json())
+        .then((payload) => {
+          const suggestions = (payload?.data || []).map((book) => ({
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            slug: book.slug,
+            imageUrl: book.imageUrl || book.image || book.coverImage,
+            category: book.category,
+            tags: book.tags,
+          }));
+          setBookSuggestions(suggestions);
+        })
+        .catch(() => setBookSuggestions([]));
       searchInitialized.current = true;
     }
   }, [language]);
@@ -84,6 +87,10 @@ const Navbar_Desktop_First_Row = () => {
   useEffect(() => {
     if (authListenerInitialized.current) return;
     authListenerInitialized.current = true;
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);

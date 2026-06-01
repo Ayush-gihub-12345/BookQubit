@@ -1,16 +1,15 @@
 import { ComicsDetailsPage } from "@/features/comic/comicdeatils";
-import { getComicsByLanguage } from "@/data/comics/index";
+import { getBookBySlugFromDb, listBooksFromDb } from "../../../../../v1/db/content";
 import { cookies } from "next/headers";
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }) {
-  const { slug } = params;
+  const { slug } = await params;
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const language = cookieStore.get("language")?.value || "en";
 
-  const comics = getComicsByLanguage(language);
-  const comic = comics?.find((c) => c.slug === slug);
+  const comic = await getBookBySlugFromDb(null, slug, language).catch(() => null);
 
   if (!comic) {
     return {
@@ -127,36 +126,17 @@ export async function generateMetadata({ params }) {
 
 // Generate static paths for all comics across languages
 export async function generateStaticParams() {
-  const languages = ["en", "es", "fr"];
-  const allParams = [];
-
-  for (const lang of languages) {
-    const comics = getComicsByLanguage(lang);
-    if (comics && comics.length > 0) {
-      const params = comics.map((comic) => ({
-        slug: comic.slug,
-        lang: lang,
-      }));
-      allParams.push(...params);
-    }
-  }
-
-  // Remove duplicates by slug
-  const uniqueParams = Array.from(
-    new Map(allParams.map((item) => [item.slug, item])).values(),
-  );
-
-  return uniqueParams;
+  const comics = await listBooksFromDb(null, { language: "en", bookType: "comic", limit: 200 }).catch(() => []);
+  return comics.map((comic) => ({ slug: comic.slug }));
 }
 
 // Server Component with comprehensive structured data
 export default async function ComicDetailPage({ params }) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const language = cookieStore.get("language")?.value || "en";
-  const { slug } = params;
+  const { slug } = await params;
 
-  const comics = getComicsByLanguage(language);
-  const comic = comics?.find((c) => c.slug === slug);
+  const comic = await getBookBySlugFromDb(null, slug, language).catch(() => null);
 
   if (!comic) {
     return (

@@ -13,7 +13,7 @@ import {
   getUserReadingStatus,
   setReadingStatus 
 } from '@/lib/d1';
-import { auth } from '@/config/firebase';
+import { getRequestUserId } from '@/lib/requestAuth';
 
 /**
  * Get user's reading status
@@ -25,17 +25,13 @@ export async function GET(request) {
     const status = searchParams.get('status') || 'reading';
 
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     let books;
     if (status === 'completed') {
@@ -75,17 +71,13 @@ export async function POST(request) {
     const { bookId, status, progressPercentage } = body;
 
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     // Validate input
     if (!bookId || !status) {

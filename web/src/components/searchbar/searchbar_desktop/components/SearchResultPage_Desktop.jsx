@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { getBooksByLanguage } from "@/data/books";
 import SearchBookCard_Desktop from "./SearchBookCard_Desktop";
 import {
   FaSearch,
@@ -60,20 +59,9 @@ const SearchResultPage_Desktop = ({ initialQuery, onClose }) => {
 
       setIsLoading(true);
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const books = getBooksByLanguage(language);
-      const results = books.filter((book) => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          book.title?.toLowerCase().includes(searchLower) ||
-          book.author?.toLowerCase().includes(searchLower) ||
-          book.description?.toLowerCase().includes(searchLower) ||
-          book.category?.toLowerCase().includes(searchLower) ||
-          book.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
-        );
-      });
+      const response = await fetch(`/api/v1/books?lang=${language}&search=${encodeURIComponent(searchTerm)}&limit=100`);
+      const payload = await response.json();
+      const results = payload?.data || [];
 
       setSearchResults(results);
       setFilteredResults(results);

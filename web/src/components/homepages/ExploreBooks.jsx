@@ -5,7 +5,7 @@ import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { getBooksByLanguage } from "@/data/books";
+import { useD1Books } from "@v1/client/content";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
@@ -15,19 +15,13 @@ const ExploreBooks = () => {
   const { theme, themeName } = useTheme();
   const { t, language } = useLanguage();
   const { currentFont } = useFont();
-  const [books, setBooks] = useState([]);
+  const { data: books } = useD1Books(language, { limit: 12 });
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280);
   const [sliderKey, setSliderKey] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   // Check if current theme is dark mode
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
-
-  // Load books based on language
-  useEffect(() => {
-    const booksData = getBooksByLanguage(language);
-    setBooks(booksData);
-  }, [language]);
 
   const featuredBooks = books.slice(0, 12);
 
@@ -96,7 +90,7 @@ const ExploreBooks = () => {
                 >
                   <div className="flex justify-center mb-3">
                     <img
-                      src={book.imageUrl || fallbackImage}
+                      src={book.imageUrl || book.image || book.coverImage || fallbackImage}
                       alt={book.title}
                       className="book-cover"
                       onError={(e) => {

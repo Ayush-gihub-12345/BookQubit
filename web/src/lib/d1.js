@@ -1,11 +1,4 @@
-/**
- * D1 Database Service Layer
- * Helper functions for all database operations in BookQubit
- * 
- * Usage:
- * import { getBooks, searchBooks, addRating } from '@/lib/d1';
- * const books = await getBooks(env, 20, 0);
- */
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -14,13 +7,43 @@
 /**
  * Execute a single query
  */
-export async function queryDB(env, sql, params = []) {
+function resolveEnv(envOrRequest) {
+  if (envOrRequest?.env) return envOrRequest.env;
+  if (envOrRequest?.bookqubit_content || envOrRequest?.bookqubit_users || envOrRequest?.bookqubit_analytics) {
+    return envOrRequest;
+  }
+  return getCloudflareContext().env;
+}
+
+function getBinding(envOrRequest, names) {
+  const env = resolveEnv(envOrRequest);
+  const db = names.map((name) => env?.[name]).find(Boolean);
+  if (!db) {
+    throw new Error(`D1 binding is not configured. Expected one of: ${names.join(", ")}`);
+  }
+  return db;
+}
+
+export function getContentDb(envOrRequest) {
+  return getBinding(envOrRequest, ["bookqubit_content", "CONTENT_DB"]);
+}
+
+export function getUsersDb(envOrRequest) {
+  return getBinding(envOrRequest, ["bookqubit_users", "USERS_DB"]);
+}
+
+export function getAnalyticsDb(envOrRequest) {
+  return getBinding(envOrRequest, ["bookqubit_analytics", "ANALYTICS_DB"]);
+}
+
+export async function queryDB(env, sql, params = [], database = "users") {
   try {
-    if (!env.DB) {
-      console.warn('DB not available - using fallback');
-      return [];
-    }
-    const stmt = env.DB.prepare(sql);
+    const db = database === "content"
+      ? getContentDb(env)
+      : database === "analytics"
+        ? getAnalyticsDb(env)
+        : getUsersDb(env);
+    const stmt = db.prepare(sql);
     const bound = params.length > 0 ? stmt.bind(...params) : stmt;
     const result = await bound.all();
     return result.results || result;
@@ -33,13 +56,14 @@ export async function queryDB(env, sql, params = []) {
 /**
  * Execute a query and get first result
  */
-export async function queryFirst(env, sql, params = []) {
+export async function queryFirst(env, sql, params = [], database = "users") {
   try {
-    if (!env.DB) {
-      console.warn('DB not available');
-      return null;
-    }
-    const stmt = env.DB.prepare(sql);
+    const db = database === "content"
+      ? getContentDb(env)
+      : database === "analytics"
+        ? getAnalyticsDb(env)
+        : getUsersDb(env);
+    const stmt = db.prepare(sql);
     const bound = params.length > 0 ? stmt.bind(...params) : stmt;
     const result = await bound.first();
     return result;
@@ -52,13 +76,14 @@ export async function queryFirst(env, sql, params = []) {
 /**
  * Execute multiple statements as batch
  */
-export async function executeBatch(env, statements) {
+export async function executeBatch(env, statements, database = "users") {
   try {
-    if (!env.DB) {
-      throw new Error('DB not available');
-    }
-    const batch = env.DB.batch(statements);
-    return await batch;
+    const db = database === "content"
+      ? getContentDb(env)
+      : database === "analytics"
+        ? getAnalyticsDb(env)
+        : getUsersDb(env);
+    return await db.batch(statements);
   } catch (error) {
     console.error('Batch Error:', error.message);
     throw new Error(`Batch execution failed: ${error.message}`);
@@ -80,7 +105,8 @@ export async function getBooks(env, limit = 50, offset = 0) {
   return await queryDB(
     env,
     'SELECT * FROM books WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    ['available', limit, offset]
+    ['published', limit, offset],
+    "content"
   );
 }
 
@@ -88,14 +114,14 @@ export async function getBooks(env, limit = 50, offset = 0) {
  * Get single book by slug
  */
 export async function getBookBySlug(env, slug) {
-  return await queryFirst(env, 'SELECT * FROM books WHERE slug = ?', [slug]);
+  return await queryFirst(env, 'SELECT * FROM books WHERE canonical_slug = ?', [slug], "content");
 }
 
 /**
  * Get single book by ID
  */
 export async function getBook(env, bookId) {
-  return await queryFirst(env, 'SELECT * FROM books WHERE id = ?', [bookId]);
+  return await queryFirst(env, 'SELECT * FROM books WHERE id = ?', [bookId], "content");
 }
 
 /**
@@ -104,12 +130,14 @@ export async function getBook(env, bookId) {
 export async function searchBooks(env, query, limit = 50) {
   return await queryDB(
     env,
-    `SELECT * FROM books 
-     WHERE (title LIKE ? OR author LIKE ? OR description LIKE ?) 
+    `SELECT b.* FROM books b
+     LEFT JOIN authors a ON a.id = b.author_id
+     WHERE (b.title LIKE ? OR a.name LIKE ? OR b.description LIKE ?) 
      AND status = ?
-     ORDER BY rating DESC 
+     ORDER BY b.created_at DESC 
      LIMIT ?`,
-    [`%${query}%`, `%${query}%`, `%${query}%`, 'available', limit]
+    [`%${query}%`, `%${query}%`, `%${query}%`, 'published', limit],
+    "content"
   );
 }
 
@@ -120,11 +148,12 @@ export async function getBooksByGenre(env, genre, limit = 50) {
   return await queryDB(
     env,
     `SELECT DISTINCT b.* FROM books b
-     INNER JOIN book_genres bg ON b.id = bg.book_id
-     WHERE bg.genre = ? AND b.status = ?
-     ORDER BY b.rating DESC
+     INNER JOIN metadata bg ON bg.entity_type = 'book' AND bg.entity_id = b.id
+     WHERE bg.key IN ('genre', 'category') AND bg.value = ? AND b.status = ?
+     ORDER BY b.created_at DESC
      LIMIT ?`,
-    [genre, 'available', limit]
+    [genre, 'published', limit],
+    "content"
   );
 }
 
@@ -134,8 +163,11 @@ export async function getBooksByGenre(env, genre, limit = 50) {
 export async function getBooksByAuthor(env, author, limit = 50) {
   return await queryDB(
     env,
-    'SELECT * FROM books WHERE author = ? AND status = ? ORDER BY created_at DESC LIMIT ?',
-    [author, 'available', limit]
+    `SELECT b.* FROM books b
+     JOIN authors a ON a.id = b.author_id
+     WHERE a.name = ? AND b.status = ? ORDER BY b.created_at DESC LIMIT ?`,
+    [author, 'published', limit],
+    "content"
   );
 }
 
@@ -147,9 +179,10 @@ export async function getTopRatedBooks(env, limit = 20) {
     env,
     `SELECT * FROM books 
      WHERE status = ? 
-     ORDER BY rating DESC, review_count DESC 
+     ORDER BY created_at DESC 
      LIMIT ?`,
-    ['available', limit]
+    ['published', limit],
+    "content"
   );
 }
 
@@ -159,12 +192,13 @@ export async function getTopRatedBooks(env, limit = 20) {
 export async function getTrendingBooks(env, limit = 20, days = 7) {
   return await queryDB(
     env,
-    `SELECT DISTINCT b.* FROM books b
-     INNER JOIN ratings r ON b.id = r.book_id
-     WHERE b.status = ? AND r.created_at > datetime('now', '-' || ? || ' days')
-     ORDER BY b.rating DESC
+    `SELECT * FROM books b
+     WHERE b.status = ?
+       AND b.created_at > datetime('now', '-' || ? || ' days')
+     ORDER BY b.created_at DESC
      LIMIT ?`,
-    ['available', days, limit]
+    ['published', days, limit],
+    "content"
   );
 }
 
@@ -172,7 +206,7 @@ export async function getTrendingBooks(env, limit = 20, days = 7) {
  * Get book with ratings
  */
 export async function getBookWithRatings(env, bookId) {
-  const book = await queryFirst(env, 'SELECT * FROM books WHERE id = ?', [bookId]);
+  const book = await queryFirst(env, 'SELECT * FROM books WHERE id = ?', [bookId], "content");
   if (!book) return null;
 
   const ratings = await queryDB(
@@ -181,7 +215,8 @@ export async function getBookWithRatings(env, bookId) {
      WHERE book_id = ? 
      ORDER BY created_at DESC 
      LIMIT 10`,
-    [bookId]
+    [bookId],
+    "users"
   );
 
   return { ...book, ratings };
@@ -195,7 +230,7 @@ export async function getBookWithRatings(env, bookId) {
  * Get user by ID
  */
 export async function getUser(env, userId) {
-  return await queryFirst(env, 'SELECT * FROM users WHERE id = ?', [userId]);
+  return await queryFirst(env, 'SELECT * FROM users WHERE firebase_uid = ? OR id = ?', [userId, userId]);
 }
 
 /**
@@ -213,9 +248,14 @@ export async function createUser(env, userData) {
   
   return await queryDB(
     env,
-    `INSERT INTO users (id, email, name, firebase_id, profile_pic) 
-     VALUES (?, ?, ?, ?, ?)`,
-    [id, email, name, firebaseId, profilePic || null]
+    `INSERT INTO users (firebase_uid, email, display_name, avatar_url) 
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(firebase_uid) DO UPDATE SET
+       email = COALESCE(excluded.email, email),
+       display_name = COALESCE(excluded.display_name, display_name),
+       avatar_url = COALESCE(excluded.avatar_url, avatar_url),
+       last_login_at = CURRENT_TIMESTAMP`,
+    [firebaseId || id, email, name, profilePic || null]
   );
 }
 
@@ -223,19 +263,16 @@ export async function createUser(env, userData) {
  * Update user profile
  */
 export async function updateUserProfile(env, userId, updateData) {
-  const { name, bio, profilePic, language, theme } = updateData;
+  const { name, profilePic, language } = updateData;
   
   return await queryDB(
     env,
     `UPDATE users 
-     SET name = COALESCE(?, name),
-         bio = COALESCE(?, bio),
-         profile_pic = COALESCE(?, profile_pic),
-         language = COALESCE(?, language),
-         theme = COALESCE(?, theme),
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-    [name || null, bio || null, profilePic || null, language || null, theme || null, userId]
+     SET display_name = COALESCE(?, display_name),
+         avatar_url = COALESCE(?, avatar_url),
+         preferred_language = COALESCE(?, preferred_language)
+     WHERE firebase_uid = ? OR id = ?`,
+    [name || null, profilePic || null, language || null, userId, userId]
   );
 }
 
@@ -249,8 +286,8 @@ export async function updateUserProfile(env, userId, updateData) {
 export async function getBookRatings(env, bookId) {
   return await queryDB(
     env,
-    `SELECT r.*, u.name, u.profile_pic FROM ratings r
-     JOIN users u ON r.user_id = u.id
+    `SELECT r.*, u.display_name AS name, u.avatar_url AS profile_pic FROM ratings r
+     LEFT JOIN users u ON r.user_id = u.firebase_uid
      WHERE r.book_id = ?
      ORDER BY r.created_at DESC`,
     [bookId]
@@ -305,10 +342,9 @@ export async function deleteRating(env, userId, bookId) {
 export async function getUserRatings(env, userId, limit = 50) {
   return await queryDB(
     env,
-    `SELECT r.*, b.title, b.author, b.slug, b.cover_url FROM ratings r
-     JOIN books b ON r.book_id = b.id
-     WHERE r.user_id = ?
-     ORDER BY r.created_at DESC
+    `SELECT * FROM ratings
+     WHERE user_id = ?
+     ORDER BY created_at DESC
      LIMIT ?`,
     [userId, limit]
   );
@@ -352,8 +388,7 @@ export async function getCollectionWithBooks(env, collectionId) {
 
   const books = await queryDB(
     env,
-    `SELECT b.*, cb.position FROM books b
-     JOIN collection_books cb ON b.id = cb.book_id
+    `SELECT book_id, position FROM collection_books cb
      WHERE cb.collection_id = ?
      ORDER BY cb.position ASC`,
     [collectionId]
@@ -434,8 +469,7 @@ export async function setReadingStatus(env, userId, bookId, status, progressPerc
 export async function getUserReadingBooks(env, userId) {
   return await queryDB(
     env,
-    `SELECT b.*, rs.progress_percentage FROM books b
-     JOIN reading_status rs ON b.id = rs.book_id
+    `SELECT * FROM reading_status rs
      WHERE rs.user_id = ? AND rs.status = 'reading'
      ORDER BY rs.updated_at DESC`,
     [userId]
@@ -448,8 +482,7 @@ export async function getUserReadingBooks(env, userId) {
 export async function getUserCompletedBooks(env, userId, limit = 50) {
   return await queryDB(
     env,
-    `SELECT b.*, rs.completed_at FROM books b
-     JOIN reading_status rs ON b.id = rs.book_id
+    `SELECT * FROM reading_status rs
      WHERE rs.user_id = ? AND rs.status = 'completed'
      ORDER BY rs.completed_at DESC
      LIMIT ?`,
@@ -467,9 +500,10 @@ export async function getUserCompletedBooks(env, userId, limit = 50) {
 export async function trackEvent(env, userId, eventType, eventName = null, bookId = null, metadata = null) {
   return await queryDB(
     env,
-    `INSERT INTO analytics (user_id, event_type, event_name, book_id, metadata)
+    `INSERT INTO events (user_id, event_type, entity_type, entity_id, language)
      VALUES (?, ?, ?, ?, ?)`,
-    [userId || null, eventType, eventName, bookId || null, metadata ? JSON.stringify(metadata) : null]
+    [userId || null, eventType, eventName || "book", bookId || null, metadata?.language || null],
+    "analytics"
   );
 }
 
@@ -479,10 +513,11 @@ export async function trackEvent(env, userId, eventType, eventName = null, bookI
 export async function getUserActivity(env, userId, days = 30) {
   return await queryDB(
     env,
-    `SELECT * FROM analytics
-     WHERE user_id = ? AND timestamp > datetime('now', '-' || ? || ' days')
-     ORDER BY timestamp DESC`,
-    [userId, days]
+    `SELECT * FROM events
+     WHERE user_id = ? AND created_at > datetime('now', '-' || ? || ' days')
+     ORDER BY created_at DESC`,
+    [userId, days],
+    "analytics"
   );
 }
 
@@ -495,31 +530,21 @@ export async function getUserActivity(env, userId, days = 30) {
  */
 export async function advancedSearch(env, filters = {}) {
   let sql = 'SELECT * FROM books WHERE status = ?';
-  const params = ['available'];
+  const params = ['published'];
 
   if (filters.title) {
     sql += ' AND title LIKE ?';
     params.push(`%${filters.title}%`);
   }
 
-  if (filters.author) {
-    sql += ' AND author LIKE ?';
-    params.push(`%${filters.author}%`);
-  }
-
-  if (filters.minRating) {
-    sql += ' AND rating >= ?';
-    params.push(filters.minRating);
-  }
-
   if (filters.language) {
-    sql += ' AND language = ?';
+    sql += ' AND language_source = ?';
     params.push(filters.language);
   }
 
-  sql += ' ORDER BY rating DESC LIMIT 100';
+  sql += ' ORDER BY created_at DESC LIMIT 100';
 
-  return await queryDB(env, sql, params);
+  return await queryDB(env, sql, params, "content");
 }
 
 // ============================================

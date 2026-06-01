@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useParams } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getComicsByLanguage } from "@/data/comics/index";
+import { useD1Comics } from "@v1/client/content";
 import { useComicDetails } from "./hooks/useComicDetails";
 import { useWishlist } from "./hooks/useWishlist";
 import { useRelatedComics } from "./hooks/useRelatedComics";
@@ -29,7 +29,7 @@ const ComicsDetailsPage = ({ initialLanguage }) => {
   const { isWishlisted, toggleWishlist } = useWishlist(comic?.slug);
   
   // Get all comics for recommendations
-  const allComics = getComicsByLanguage(effectiveLanguage);
+  const { data: allComics } = useD1Comics(effectiveLanguage, { limit: 200 });
   const { relatedByCategory, relatedByPublisher, relatedByCharacters } = useRelatedComics(comic, allComics);
 
   const isDarkMode = themeName === "dark" || themeName === "midnight" || themeName === "cyberpunk";

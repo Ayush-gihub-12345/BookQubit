@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { getBooksByLanguage } from "@/data/books";
+import { useD1Books } from "@v1/client/content";
 import { extractDynamicTagsFromBook } from "@/features/tags/dynamic_book_tags";
 import BookSquareCard from "@/features/book/booklist/ui/BookSquareCard";
 import { FaTag, FaArrowLeft, FaBookOpen } from "react-icons/fa";
@@ -21,21 +21,20 @@ const TagPage = () => {
 
   const [tagName, setTagName] = useState("");
   const [relatedBooks, setRelatedBooks] = useState([]);
-  const [allBooks, setAllBooks] = useState([]);
+  const { data: allBooks } = useD1Books(language, { limit: 200 });
   const [isLoading, setIsLoading] = useState(true);
   const [relatedTags, setRelatedTags] = useState([]);
 
   const isDarkMode = themeName === "dark" || themeName === "midnight" || themeName === "cyberpunk";
 
-  // Load all books
-  useEffect(() => {
-    const books = getBooksByLanguage(language);
-    setAllBooks(books);
-  }, [language]);
-
   // Decode tag name from slug and find related books
   useEffect(() => {
-    if (slug && allBooks.length > 0) {
+    if (!slug) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (allBooks.length > 0) {
       // Convert slug back to tag name (e.g., "annihilation-of-caste" -> "Annihilation of Caste")
       const decodedTag = decodeURIComponent(slug).replace(/-/g, ' ');
       setTagName(decodedTag);

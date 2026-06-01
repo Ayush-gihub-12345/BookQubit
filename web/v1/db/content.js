@@ -31,6 +31,7 @@ function normalizeBook(row) {
 
   return {
     ...row,
+    title: row.displayTitle || row.title,
     slug: row.slug || row.canonical_slug,
     coverImage: row.coverImage || row.cover_url || "",
     image: row.image || row.cover_url || "",

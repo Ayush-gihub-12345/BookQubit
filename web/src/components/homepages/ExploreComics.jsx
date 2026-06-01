@@ -5,7 +5,7 @@ import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { getComicsByLanguage } from "@/data/comics/index";
+import { useD1Comics } from "@v1/client/content";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -18,10 +18,7 @@ const ExploreComics = () => {
   const [sliderKey, setSliderKey] = useState(0);
   const [mounted, setMounted] = useState(false);
 
-  // Get comics data based on current language
-  const ComicsData = useMemo(() => {
-    return getComicsByLanguage(language);
-  }, [language]);
+  const { data: ComicsData } = useD1Comics(language, { limit: 12 });
 
   // Check if current theme is dark mode
   const isDarkMode =

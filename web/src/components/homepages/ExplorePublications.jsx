@@ -8,7 +8,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getPublicationsDataByLanguage } from "@/data/publications";
+import { useD1Publications } from "@v1/client/content";
 
 const ExplorePublications = () => {
   const router = useRouter();
@@ -21,10 +21,7 @@ const ExplorePublications = () => {
   // Check if current theme is dark mode
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
 
-  // Get publications data based on current language
-  const publicationsData = useMemo(() => {
-    return getPublicationsDataByLanguage(language);
-  }, [language]);
+  const { data: publicationsData } = useD1Publications({ limit: 12 });
 
   // Take first 12 publishers for the slider (or all if less)
   const featuredPublishers = publicationsData.slice(0, 12);

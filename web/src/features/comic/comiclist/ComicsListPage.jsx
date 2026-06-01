@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getComicsByLanguage } from "@/data/comics/index";
+import { useD1Comics } from "@v1/client/content";
 import ComicsHeader from "./components/ComicsHeader";
 import ViewControls from "./components/ViewControls";
 import FilterSection from "./components/FilterSection";
@@ -26,9 +26,7 @@ const ComicsListPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
 
-  const comicsData = useMemo(() => {
-    return getComicsByLanguage(language);
-  }, [language]);
+  const { data: comicsData, loading } = useD1Comics(language, { limit: 200 });
 
   if (!theme || !comicsData) {
     return null;
@@ -183,7 +181,11 @@ const ComicsListPage = () => {
             searchQuery={searchQuery}
           />
 
-          {filteredComics.length > 0 ? (
+          {loading ? (
+            <div className={`${theme.textColors?.secondary || "text-gray-600 dark:text-gray-400"} py-12 text-center`}>
+              Loading comics...
+            </div>
+          ) : filteredComics.length > 0 ? (
             <>
               <ComicsGrid
                 comics={paginatedComics}

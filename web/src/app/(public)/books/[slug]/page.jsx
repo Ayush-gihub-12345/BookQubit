@@ -5,10 +5,10 @@ import { cookies } from "next/headers";
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }) {
-  const { slug } = params;
+  const { slug } = await params;
 
   // Get language from cookies
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const language = cookieStore.get("language")?.value || "en";
 
   const book = await getBookBySlugFromDb(null, slug, language).catch(() => null);
@@ -122,9 +122,9 @@ export async function generateMetadata({ params }) {
 // Server Component - passes book data to client component
 export default async function BookPage({ params }) {
   // Get language from cookies on the server
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const language = cookieStore.get("language")?.value || "en";
-  const { slug } = params;
+  const { slug } = await params;
 
   // Fetch book data for structured data
   const book = await getBookBySlugFromDb(null, slug, language).catch(() => null);

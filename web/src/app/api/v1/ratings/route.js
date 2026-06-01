@@ -8,7 +8,7 @@
  */
 
 import { getBookRatings, addRating, getUserBookRating, deleteRating } from '@/lib/d1';
-import { auth } from '@/config/firebase';
+import { getRequestUserId } from '@/lib/requestAuth';
 
 export async function GET(request) {
   try {
@@ -52,17 +52,13 @@ export async function POST(request) {
     const { bookId, rating, review } = body;
     
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     // Validate input
     if (!bookId || !rating) {
@@ -111,17 +107,13 @@ export async function DELETE(request) {
     const bookId = parseInt(searchParams.get('bookId'));
 
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     if (!bookId) {
       return Response.json(

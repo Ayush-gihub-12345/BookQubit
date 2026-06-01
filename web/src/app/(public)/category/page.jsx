@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { getBooksByLanguage } from "@/data/books";
+import { useD1Books } from "@v1/client/content";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -54,17 +54,11 @@ const Category = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
-  const [books, setBooks] = useState([]);
+  const { data: books } = useD1Books(language, { limit: 200 });
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const booksPerPage = 6;
-
-  // Load books based on language
-  React.useEffect(() => {
-    const booksData = getBooksByLanguage(language);
-    setBooks(booksData);
-  }, [language]);
 
   // Guard against undefined theme
   if (!theme) {
@@ -378,7 +372,7 @@ const Category = () => {
                             <div className="flex flex-col sm:flex-row gap-4">
                               <div className="flex-shrink-0">
                                 <img
-                                  src={book.imageUrl}
+                                  src={book.imageUrl || book.image || book.coverImage}
                                   alt={book.title}
                                   className="w-24 h-36 object-cover rounded-lg shadow-md"
                                   onError={(e) => {

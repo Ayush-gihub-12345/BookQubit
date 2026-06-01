@@ -13,9 +13,10 @@ import {
   getCollectionWithBooks,
   createCollection,
   addBookToCollection,
-  removeBookFromCollection 
+  removeBookFromCollection,
+  getUsersDb,
 } from '@/lib/d1';
-import { auth } from '@/config/firebase';
+import { getRequestUserId } from '@/lib/requestAuth';
 
 /**
  * Get user's collections
@@ -27,17 +28,13 @@ export async function GET(request) {
     const collectionId = searchParams.get('id');
 
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     let result;
 
@@ -85,17 +82,13 @@ export async function POST(request) {
     const { name, description, isPublic, action, collectionId, bookId } = body;
 
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     // Add book to collection
     if (action === 'add-book') {
@@ -150,16 +143,13 @@ export async function DELETE(request) {
     const bookId = searchParams.get('bookId');
 
     // Get user from Firebase token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    const userId = getRequestUserId(request);
+    if (!userId) {
       return Response.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    await auth.verifyIdToken(token);
 
     if (!collectionId) {
       return Response.json(
@@ -178,7 +168,7 @@ export async function DELETE(request) {
     }
 
     // Delete entire collection
-    await env.DB.prepare('DELETE FROM collections WHERE id = ?').bind(collectionId).run();
+    await getUsersDb(env).prepare('DELETE FROM collections WHERE id = ?').bind(collectionId).run();
 
     return Response.json({
       success: true,
