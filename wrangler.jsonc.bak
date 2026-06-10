@@ -1,0 +1,14 @@
+{
+  "": "./node_modules/wrangler/config-schema.json",
+  "name": "bookqubit",
+  "compatibility_date": "2026-06-10",
+  "main": ".open-next/worker.js",
+  "compatibility_flags": [ "nodejs_compat" ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bookqubit_content",
+      "database_id": ""
+    }
+  ]
+}

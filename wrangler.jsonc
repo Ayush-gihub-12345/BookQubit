@@ -1,0 +1,12 @@
+﻿{
+  "name": "bookqubit",
+  "compatibility_date": "2026-06-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bookqubit_content",
+      "database_id": "fe1e41b7-dadf-44b1-86a7-c048ebe662a4"
+    }
+  ]
+}
