@@ -1,0 +1,70 @@
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 8px 16px;
+  justify-content: space-around;
+  border-top: 1px solid #e1e8ed;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-bottom-nav .nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.2s;
+  border-radius: 8px;
+  flex: 1;
+}
+
+.mobile-bottom-nav .nav-icon {
+  font-size: 24px;
+}
+
+.mobile-bottom-nav .nav-label {
+  font-size: 11px;
+  color: #657786;
+}
+
+.mobile-bottom-nav .nav-item.active {
+  color: #1da1f2;
+}
+
+.mobile-bottom-nav .nav-item.active .nav-label {
+  color: #1da1f2;
+  font-weight: 600;
+}
+
+.mobile-bottom-nav .nav-item:hover {
+  background: #f5f8fa;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mobile-bottom-nav {
+    background: #1e2936;
+    border-top-color: #2d3748;
+  }
+  
+  .mobile-bottom-nav .nav-label {
+    color: #8899a6;
+  }
+  
+  .mobile-bottom-nav .nav-item:hover {
+    background: #2d3748;
+  }
+  
+  .mobile-bottom-nav .nav-item.active {
+    color: #1da1f2;
+  }
+}

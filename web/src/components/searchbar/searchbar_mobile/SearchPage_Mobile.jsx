@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
+import { getBooksByLanguage } from "@/data/books";
 import { 
   FaSearch, 
   FaTimes, 
@@ -84,9 +85,18 @@ const SearchPage_Mobile = ({ onClose, initialQuery = "" }) => {
 
     setIsLoading(true);
     
-    const response = await fetch(`/api/v1/books?lang=${language}&search=${encodeURIComponent(searchTerm)}&limit=50`);
-    const payload = await response.json();
-    let results = payload?.data || [];
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const books = getBooksByLanguage(language);
+    let results = books.filter((book) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        book.title?.toLowerCase().includes(searchLower) ||
+        book.author?.toLowerCase().includes(searchLower) ||
+        book.description?.toLowerCase().includes(searchLower) ||
+        book.category?.toLowerCase().includes(searchLower)
+      );
+    });
 
     // Apply filters
     if (selectedFilters.categories.length > 0) {
@@ -113,8 +123,8 @@ const SearchPage_Mobile = ({ onClose, initialQuery = "" }) => {
     setSearchResults(results);
     
     // Extract filter options
-    const categories = [...new Set(results.map(book => book.category).filter(Boolean))];
-    const authors = [...new Set(results.map(book => book.author).filter(Boolean))];
+    const categories = [...new Set(books.map(book => book.category).filter(Boolean))];
+    const authors = [...new Set(books.map(book => book.author).filter(Boolean))];
     setFilterOptions({ categories, authors });
     
     setIsLoading(false);
@@ -354,8 +364,8 @@ const SearchPage_Mobile = ({ onClose, initialQuery = "" }) => {
                 style={{ display: 'flex', gap: 12, cursor: 'pointer' }}
               >
                 <div className="result-cover" style={{ width: 60, height: 80, flexShrink: 0 }}>
-                  {book.imageUrl || book.image || book.coverImage ? (
-                    <img src={book.imageUrl || book.image || book.coverImage} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
+                  {book.imageUrl ? (
+                    <img src={book.imageUrl} alt={book.title} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6 }}>
                       <FaBookOpen className="text-gray-400 text-2xl" />

@@ -325,7 +325,7 @@ export default function UserDropDown({ user }) {
             {[
               {
                 label: "Profile",
-                path: "/auth/profile",
+                path: "/profile",
                 icon: (
                   <FaUser
                     className={
@@ -338,13 +338,13 @@ export default function UserDropDown({ user }) {
               },
               {
                 label: "Dashboard",
-                path: "/auth/userdashboard",
+                path: "/user-dashboard",
                 icon: <FaTachometerAlt className="text-emerald-500" />,
                 description: "Your reading dashboard",
               },
               {
-                label: "Bookworm Ranking",
-                path: "/auth/bookwormranking",
+                label: "Bookworm Leaderboard",
+                path: "/bookworm-leaderboard",
                 icon: <FaBookReader className="text-amber-500" />,
                 description: rankingNumber
                   ? `Rank #${formatRankingNumber(rankingNumber)} worldwide`

@@ -1,0 +1,14 @@
+/* Desktop Layout Styles */
+.desktop-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f9fc;
+  position: relative;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .desktop-layout {
+    background: #15202b;
+  }
+}

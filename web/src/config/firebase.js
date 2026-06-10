@@ -25,9 +25,15 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = firebaseConfig.apiKey ? initializeApp(firebaseConfig) : null;
+if (!firebaseConfig.apiKey) {
+  throw new Error(
+    "Firebase API Key missing. Check environment variables."
+  );
+}
 
-export const auth = app ? getAuth(app) : null;
+const app = initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -36,13 +42,6 @@ export const googleProvider = new GoogleAuthProvider();
 /* -------------------------------- */
 
 export const signInWithGoogle = async () => {
-  if (!auth) {
-    return {
-      success: false,
-      error: "Firebase client configuration is missing.",
-    };
-  }
-
   try {
     const result = await signInWithPopup(
       auth,

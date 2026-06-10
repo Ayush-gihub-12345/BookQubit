@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useD1Authors } from "@v1/client/content";
+import { getAuthorsDataByLanguage } from "@/data/authors";
 
 const Authors = () => {
   const { theme, themeName } = useTheme();
@@ -18,7 +18,10 @@ const Authors = () => {
   // Check if current theme is dark mode
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
   
-  const { data: authors, loading } = useD1Authors({ limit: 200 });
+  // Get authors data based on current language
+  const authors = useMemo(() => {
+    return getAuthorsDataByLanguage(language);
+  }, [language]);
 
   // Check if RTL language
   const isRTL = ['ur', 'ar', 'fa', 'ps'].includes(language);
@@ -31,12 +34,6 @@ const Authors = () => {
         <h1 className={`text-4xl font-bold ${theme.textColors?.primary || (isDarkMode ? 'text-white' : 'text-gray-900')} mb-12 text-center`}>
           {t('authors.pageTitle') || "Featured Authors"}
         </h1>
-
-        {loading && (
-          <div className={`text-center py-10 ${theme.textColors?.secondary || (isDarkMode ? 'text-gray-400' : 'text-gray-600')}`}>
-            Loading authors...
-          </div>
-        )}
 
         {/* Authors Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

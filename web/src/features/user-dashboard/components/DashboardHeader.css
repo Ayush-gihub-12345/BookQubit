@@ -1,0 +1,41 @@
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-header-left h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.dashboard-header-left p {
+  margin-top: 6px;
+  color: #6b7280;
+}
+
+.dashboard-header-right button {
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #4f46e5;
+  color: white;
+  font-weight: 600;
+}
+
+.dashboard-header-right button:hover {
+  background: #4338ca;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+}

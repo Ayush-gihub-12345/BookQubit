@@ -7,7 +7,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useD1Authors } from "@v1/client/content";
+import { getAuthorsDataByLanguage } from "@/data/authors";
 
 const ExploreAuthor = () => {
   const { theme, themeName } = useTheme();
@@ -16,13 +16,23 @@ const ExploreAuthor = () => {
   const [sliderKey, setSliderKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   
-  const { data: authors } = useD1Authors({ limit: 8 });
+  // Get authors data based on current language
+  const [authors, setAuthors] = useState([]);
 
   // Check if current theme is dark mode
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
 
   useEffect(() => {
     setMounted(true);
+    
+    // Load authors data for current language
+    const loadAuthors = () => {
+      const authorsData = getAuthorsDataByLanguage(language);
+      setAuthors(authorsData);
+    };
+    
+    loadAuthors();
+    
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
       setSliderKey((prev) => prev + 1);

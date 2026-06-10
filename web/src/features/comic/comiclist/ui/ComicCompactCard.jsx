@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
@@ -13,12 +13,44 @@ const ComicCompactCard = ({
   collections = [],
   showCollections = true,
   className = "",
+  currentLang: propLang,
 }) => {
   const router = useRouter();
+  const params = useParams();
+  const pathname = usePathname();
   const { theme, themeName } = useTheme();
-  const { t } = useLanguage();
+  const { t, language: contextLanguage } = useLanguage();
   const { currentFont } = useFont();
   const { direction, textAlign, flexDirection } = useRTL();
+
+  // Get language from URL
+  const getCurrentLanguage = () => {
+    if (propLang) return propLang;
+    const segments = pathname?.split("/").filter(Boolean);
+    const firstSegment = segments?.[0];
+    const supportedLanguages = [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ja",
+      "zh",
+      "hi",
+      "ar",
+      "ur",
+      "bn",
+      "pt",
+      "ru",
+      "it",
+      "ko",
+    ];
+    if (firstSegment && supportedLanguages.includes(firstSegment)) {
+      return firstSegment;
+    }
+    return params?.lang || contextLanguage || "en";
+  };
+
+  const currentLanguage = getCurrentLanguage();
 
   // Guard against undefined theme
   if (!theme) {
@@ -46,28 +78,46 @@ const ComicCompactCard = ({
   // Fallback image
   const fallbackImage = "/placeholder-comic.jpg";
 
-  // Handle card click - navigate to comic details
+  // Get the correct slug (handle language-specific slugs)
+  const getComicSlug = () => {
+    if (currentLanguage === "hi" && comic.hindiSlug) return comic.hindiSlug;
+    if (currentLanguage === "ur" && comic.urduSlug) return comic.urduSlug;
+    if (currentLanguage === "ar" && comic.arabicSlug) return comic.arabicSlug;
+    if (currentLanguage === "bn" && comic.bengaliSlug) return comic.bengaliSlug;
+    return comic.slug || comic.id;
+  };
+
+  const comicSlug = getComicSlug();
+
+  // Handle card click - navigate to comic details with language
   const handleCardClick = () => {
-    router.push(`/comics/${comic.slug || comic.id}`);
+    router.push(`/${currentLanguage}/comics/${comicSlug}`);
   };
 
   // Handle tag click - stop propagation to prevent card navigation
   const handleTagClick = (e, tag) => {
     e.stopPropagation();
-    console.log("Tag clicked:", tag);
+    // Navigate to tag page with language
+    const tagSlug = tag
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    router.push(`/${currentLanguage}/tags/${tagSlug}`);
   };
 
   // Apply font family inline style
-  const fontStyle = currentFont?.family ? {
-    fontFamily: currentFont.family
-  } : {};
+  const fontStyle = currentFont?.family
+    ? {
+        fontFamily: currentFont.family,
+      }
+    : {};
 
   // Render stars for rating (out of 10, convert to 5 stars)
   const renderStars = (rating) => {
     const starRating = rating / 2;
     const fullStars = Math.floor(starRating);
     const hasHalfStar = starRating % 1 >= 0.5;
-    
+
     return (
       <div className="compact-stars">
         {[...Array(5)].map((_, i) => {
@@ -98,7 +148,8 @@ const ComicCompactCard = ({
                 </defs>
                 <path
                   fill={`url(#half-star-${comic.id})`}
-                  d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                />
               </svg>
             );
           } else {
@@ -129,7 +180,7 @@ const ComicCompactCard = ({
         overflow-hidden rounded-xl 
         flex flex-col h-full
         ${className}
-        ${direction === 'rtl' ? 'rtl' : ''}
+        ${direction === "rtl" ? "rtl" : ""}
       `}
     >
       <div className="p-5">
@@ -165,7 +216,12 @@ const ComicCompactCard = ({
             </p>
 
             {/* Rating */}
-            <div className="flex items-center mb-3">
+            <div
+              className="flex items-center mb-3"
+              style={{
+                flexDirection: direction === "rtl" ? "row-reverse" : "row",
+              }}
+            >
               {renderStars(comic.rating || 0)}
               <span
                 className={`compact-rating-value ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
@@ -204,32 +260,36 @@ const ComicCompactCard = ({
             )}
 
             {/* Characters Introduced Tags */}
-            {comic.charactersIntroduced && comic.charactersIntroduced.length > 0 && (
-              <div className={`flex flex-wrap gap-1.5 mb-3 ${flexDirection}`}>
-                {comic.charactersIntroduced.slice(0, 2).map((character, idx) => (
-                  <span
-                    key={idx}
-                    onClick={(e) => handleTagClick(e, character)}
-                    className={`compact-tag clickable-element ${theme.textColors?.badge || "text-purple-800 dark:text-purple-400"} ${isDarkMode ? "bg-purple-900/30" : "bg-purple-50"}`}
-                  >
-                    {character}
-                  </span>
-                ))}
-                {comic.charactersIntroduced.length > 2 && (
-                  <span
-                    className={`compact-tag ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")} ${isDarkMode ? "bg-gray-700" : "bg-gray-100"}`}
-                  >
-                    +{comic.charactersIntroduced.length - 2} {t("comic.more_characters") || "More"}
-                  </span>
-                )}
-              </div>
-            )}
+            {comic.charactersIntroduced &&
+              comic.charactersIntroduced.length > 0 && (
+                <div className={`flex flex-wrap gap-1.5 mb-3 ${flexDirection}`}>
+                  {comic.charactersIntroduced
+                    .slice(0, 2)
+                    .map((character, idx) => (
+                      <span
+                        key={idx}
+                        onClick={(e) => handleTagClick(e, character)}
+                        className={`compact-tag clickable-element ${theme.textColors?.badge || "text-purple-800 dark:text-purple-400"} ${isDarkMode ? "bg-purple-900/30" : "bg-purple-50"}`}
+                      >
+                        {character}
+                      </span>
+                    ))}
+                  {comic.charactersIntroduced.length > 2 && (
+                    <span
+                      className={`compact-tag ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")} ${isDarkMode ? "bg-gray-700" : "bg-gray-100"}`}
+                    >
+                      +{comic.charactersIntroduced.length - 2}{" "}
+                      {t("comic.more_characters") || "More"}
+                    </span>
+                  )}
+                </div>
+              )}
 
-            {/* View Details Button */}
+            {/* View Details Button with language-aware link */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/comics/${comic.slug || comic.id}`);
+                router.push(`/${currentLanguage}/comics/${comicSlug}`);
               }}
               className={`view-details-button clickable-element ${theme.buttonColors?.primaryButton?.background || "bg-gradient-to-r from-sky-600 to-sky-500"} text-white`}
             >

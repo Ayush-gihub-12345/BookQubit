@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useD1Books, useD1Publications } from "@v1/client/content";
+import { getPublicationsDataByLanguage } from "@/data/publications";
+import booksData from "@/data/books/BooksData";
 import { FaArrowLeft, FaBuilding, FaMapMarkerAlt, FaCalendarAlt, FaGlobe, FaTwitter, FaInstagram, FaFacebook, FaUsers, FaChartLine, FaBuilding as FaCompany, FaBook } from "react-icons/fa";
 
 const PublicationsDetails = () => {
@@ -19,8 +20,10 @@ const PublicationsDetails = () => {
 
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
 
-  const { data: publicationsData, loading: publicationLoading } = useD1Publications({ slug });
-  const { data: booksData } = useD1Books(language, { limit: 200 });
+  // Get publications data based on current language
+  const publicationsData = useMemo(() => {
+    return getPublicationsDataByLanguage(language);
+  }, [language]);
 
   // Find the publisher by slug
   const publisher = publicationsData.find((pub) => pub.slug === slug);
@@ -33,16 +36,6 @@ const PublicationsDetails = () => {
   );
 
   // If no publisher found, show a 404-like message
-  if (publicationLoading) {
-    return (
-      <div className={`${theme.background?.section || (isDarkMode ? 'bg-gray-900' : 'bg-gray-50')} min-h-screen py-20`}>
-        <div className="max-w-7xl mx-auto px-4 text-center" dir={isRTL ? "rtl" : "ltr"}>
-          <p className={theme.textColors?.secondary || 'text-gray-600'}>Loading publication...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!publisher) {
     return (
       <div className={`${theme.background?.section || (isDarkMode ? 'bg-gray-900' : 'bg-gray-50')} min-h-screen py-20`}>

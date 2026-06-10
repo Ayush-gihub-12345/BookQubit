@@ -3,20 +3,21 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FaRobot, FaMoon, FaSun } from "react-icons/fa";
+import { FaRobot } from "react-icons/fa";
 
 import SearchBar_Desktop from "@/components/searchbar/searchbar_desktop/SearchBar_Desktop";
 import UserDropDown from "@/components/auth/Dasktop_Profile_Dropdown";
 import Notification_Dropdown from "@/components/notification/Desktop_Notification_Dropdown";
 import Control from "./components/Control";
 import LangSwitchDropdown from "./components/LangSwitchDropdown";
-import BookQubitSnapDropdown from "./components/BookQubitSnapDropdown";
+import DiscoveryDriftBar from "./components/DiscoveryDriftBar";
 
 import { auth } from "@/config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useTheme } from "@/themes/useTheme";
 import { useRTL } from "@/contexts/RTLContext";
 import { useFont } from "@/contexts/FontContext";
+import { getBooksByLanguage } from "@/data/books";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 import bookqubitLogo from "@/assets/logo/bookqubitlogo.png";
@@ -28,7 +29,7 @@ const Navbar_Desktop_First_Row = () => {
   const [loading, setLoading] = useState(true);
   const [recentSearches, setRecentSearches] = useState([]);
   const [bookSuggestions, setBookSuggestions] = useState([]);
-  const { theme, themeName, changeTheme } = useTheme();
+  const { theme, themeName } = useTheme();
   const { isRTL } = useRTL();
   const { currentFont } = useFont();
   const { language } = useLanguage();
@@ -54,21 +55,17 @@ const Navbar_Desktop_First_Row = () => {
   // Load book suggestions based on language
   useEffect(() => {
     if (!searchInitialized.current) {
-      fetch(`/api/v1/books?lang=${language}&limit=50`)
-        .then((response) => response.json())
-        .then((payload) => {
-          const suggestions = (payload?.data || []).map((book) => ({
-            id: book.id,
-            title: book.title,
-            author: book.author,
-            slug: book.slug,
-            imageUrl: book.imageUrl || book.image || book.coverImage,
-            category: book.category,
-            tags: book.tags,
-          }));
-          setBookSuggestions(suggestions);
-        })
-        .catch(() => setBookSuggestions([]));
+      const books = getBooksByLanguage(language);
+      const suggestions = books.map((book) => ({
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        slug: book.slug,
+        imageUrl: book.imageUrl,
+        category: book.category,
+        tags: book.tags,
+      }));
+      setBookSuggestions(suggestions);
       searchInitialized.current = true;
     }
   }, [language]);
@@ -87,10 +84,6 @@ const Navbar_Desktop_First_Row = () => {
   useEffect(() => {
     if (authListenerInitialized.current) return;
     authListenerInitialized.current = true;
-    if (!auth) {
-      setLoading(false);
-      return;
-    }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -115,14 +108,6 @@ const Navbar_Desktop_First_Row = () => {
   const handleClearRecent = useCallback((updatedRecent = []) => {
     setRecentSearches(updatedRecent);
   }, []);
-
-  const toggleDarkMode = useCallback(() => {
-    if (themeName === "dark" || themeName === "midnight" || themeName === "cyberpunk") {
-      changeTheme("light");
-    } else {
-      changeTheme("dark");
-    }
-  }, [themeName, changeTheme]);
 
   // Get navbar background - using theme object like ExploreCollections
   const getNavbarBackground = () => {
@@ -170,7 +155,7 @@ const Navbar_Desktop_First_Row = () => {
         dir={isRTL ? "rtl" : "ltr"}
         style={{ 
           fontFamily: currentFont?.family || "inherit",
-          borderRadius: 0 // Remove rounded corners
+          borderRadius: 0
         }}
       >
         <div className="navbar-desktop-top-row">
@@ -197,7 +182,7 @@ const Navbar_Desktop_First_Row = () => {
       dir={isRTL ? "rtl" : "ltr"}
       style={{ 
         fontFamily: currentFont?.family || "inherit",
-        borderRadius: 0 // Remove rounded corners from both sides
+        borderRadius: 0
       }}
     >
       <div className="navbar-desktop-top-row">
@@ -222,34 +207,11 @@ const Navbar_Desktop_First_Row = () => {
           />
         </div>
 
-        {/* BOOKQUBITSNAP DROPDOWN */}
-        <div className="navbar-desktop-snap-dropdown">
-          <BookQubitSnapDropdown />
-        </div>
+        {/* DISCOVERY / DRIFT SWITCHER */}
+        <DiscoveryDriftBar />
 
         {/* USER ACTIONS */}
         <div className="navbar-desktop-user-actions">
-          {/* DARK MODE TOGGLE */}
-          <button
-            onClick={toggleDarkMode}
-            className={`navbar-desktop-darkmode-button ${getButtonBackground()}`}
-            aria-label="Toggle dark mode"
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            style={{
-              border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
-              borderRadius: '8px',
-              padding: '8px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            {isDarkMode ? (
-              <FaSun className={getTextHighlight()} size={18} />
-            ) : (
-              <FaMoon className={getTextSecondary()} size={18} />
-            )}
-          </button>
-
           {/* LANGUAGE SWITCHER */}
           <LangSwitchDropdown />
 

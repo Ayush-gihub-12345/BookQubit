@@ -1,0 +1,98 @@
+/* admin_dashboard.css */
+
+.admin-dashboard {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  text-align: center;
+  padding: 40px 20px;
+  margin-bottom: 30px;
+  border-radius: 12px;
+}
+
+.dashboard-header h1 {
+  font-size: 48px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dashboard-header p {
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+.dashboard-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.dashboard-card p {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+/* Dark Mode */
+.admin-dashboard.dark {
+  background: #000;
+  color: #fff;
+}
+
+.admin-dashboard.dark .dashboard-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Light Mode */
+.admin-dashboard.light {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.admin-dashboard.light .dashboard-card {
+  background: white;
+  border-color: #e5e7eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header h1 {
+    font-size: 32px;
+  }
+  
+  .dashboard-header p {
+    font-size: 14px;
+  }
+  
+  .dashboard-card {
+    padding: 24px;
+  }
+}

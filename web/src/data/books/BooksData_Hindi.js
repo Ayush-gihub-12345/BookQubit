@@ -1305,7 +1305,7 @@ const booksHindi = [
   "id": 26,
   "title": "अथर्ववेद",
   "slug": "atharvaveda",
-  "hindiSlug": "atharvaved",
+  "hindiSlug": "अथर्ववेद",
   "author": "अज्ञात",
   "collection": "वैदिक संग्रह",
   "description": "अथर्ववेद में दैनिक जीवन, उपचार, सुरक्षा और व्यावहारिक ज्ञान पर केंद्रित भजन, जादू-टोने और मंत्र शामिल हैं।",

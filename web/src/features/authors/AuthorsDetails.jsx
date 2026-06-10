@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useD1Authors } from "@v1/client/content";
+import { getAuthorsDataByLanguage } from "@/data/authors";
 
 const AuthorDetails = () => {
   const params = useParams();
@@ -21,17 +21,12 @@ const AuthorDetails = () => {
   // Check if current theme is dark mode
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
   
-  const { data: authors, loading } = useD1Authors({ slug });
+  // Get authors data based on current language
+  const authors = useMemo(() => {
+    return getAuthorsDataByLanguage(language);
+  }, [language]);
 
   const author = authors.find((a) => a.slug === slug);
-
-  if (loading) {
-    return (
-      <div className={`min-h-screen ${theme.background?.section || (isDarkMode ? 'bg-gray-900' : 'bg-gray-50')} flex items-center justify-center py-20`}>
-        <p className={theme.textColors?.secondary || (isDarkMode ? 'text-gray-400' : 'text-gray-600')}>Loading author...</p>
-      </div>
-    );
-  }
 
   if (!author) {
     return (

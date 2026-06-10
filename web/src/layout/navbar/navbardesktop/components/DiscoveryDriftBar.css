@@ -1,0 +1,161 @@
+/* DiscoveryDriftBar.css - Multi-Theme Support */
+
+.discovery-drift-bar {
+  display: inline-block;
+  transition: box-shadow 0.2s ease;
+}
+
+.discovery-drift-container {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  position: relative;
+}
+
+.discovery-drift-tab {
+  cursor: pointer;
+  position: relative;
+  isolation: isolate;
+  letter-spacing: 0.3px;
+  font-family: inherit;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* Active indicator */
+.active-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 40px;
+    opacity: 1;
+  }
+}
+
+/* Icon animations */
+.discovery-drift-tab .tab-icon {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.discovery-drift-tab:hover .tab-icon {
+  transform: scale(1.1);
+}
+
+.discovery-drift-tab.active:hover .tab-icon {
+  transform: scale(1);
+}
+
+/* Theme-specific active indicator colors */
+.discovery-drift-bar.bg-white\/80 .active-indicator,
+.discovery-drift-bar:has([class*="bg-white"]) .active-indicator {
+  background: rgba(5, 150, 105, 0.9);
+}
+
+/* Forest theme specific styles */
+[data-theme="forest"] .discovery-drift-tab.active {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+}
+
+[data-theme="forest"] .discovery-drift-tab:not(.active):hover {
+  background: linear-gradient(135deg, #047857, #059669) !important;
+  color: white !important;
+}
+
+/* RTL Support */
+[dir="rtl"] .discovery-drift-container {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .active-indicator {
+  left: auto;
+  right: 50%;
+  transform: translateX(50%);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .discovery-drift-tab {
+    padding: 6px 20px !important;
+    font-size: 13px !important;
+  }
+  
+  .discovery-drift-tab .tab-icon {
+    font-size: 18px !important;
+  }
+  
+  .active-indicator {
+    width: 32px !important;
+  }
+  
+  @keyframes slideIn {
+    from { width: 0; opacity: 0; }
+    to { width: 32px; opacity: 1; }
+  }
+}
+
+@media (max-width: 768px) {
+  .discovery-drift-tab {
+    padding: 5px 16px !important;
+    font-size: 12px !important;
+  }
+  
+  .discovery-drift-tab .tab-icon {
+    font-size: 16px !important;
+  }
+  
+  .discovery-drift-container {
+    gap: 2px;
+  }
+  
+  .active-indicator {
+    width: 28px !important;
+    height: 2px !important;
+  }
+  
+  @keyframes slideIn {
+    from { width: 0; opacity: 0; }
+    to { width: 28px; opacity: 1; }
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .discovery-drift-tab,
+  .discovery-drift-tab .tab-icon,
+  .active-indicator {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  .discovery-drift-tab:hover .tab-icon {
+    transform: scale(1);
+  }
+}
+
+/* Glass morphism for modern browsers */
+@supports (backdrop-filter: blur(12px)) {
+  .discovery-drift-bar {
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Performance optimization */
+.discovery-drift-tab {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import {
   FaHome,
   FaBook,
@@ -25,36 +25,36 @@ import { MoreDropdown } from "./MoreDropdown";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-// Navigation Configuration with translation keys
-const getNavigationConfig = (t) => ({
+// Navigation Configuration with translation keys and language-aware paths
+const getNavigationConfig = (t, currentLang) => ({
   items: [
     {
       name: t("nav.home"),
       icon: <FaHome />,
-      path: "/homepages",
+      path: `/${currentLang}/homepages`,
       translationKey: "nav.home",
     },
     {
       name: t("nav.books"),
       icon: <FaBook />,
-      path: "/books",
+      path: `/${currentLang}/books`,
       translationKey: "nav.books",
       dropdown: [
         {
           name: t("nav.bestsellers"),
-          path: "/books/bestsellers",
+          path: `/${currentLang}/books/bestsellers`,
           icon: <FaStar />,
           translationKey: "nav.bestsellers",
         },
         {
           name: t("nav.new_releases"),
-          path: "/books/newreleases",
+          path: `/${currentLang}/books/newreleases`,
           icon: <FaFire />,
           translationKey: "nav.new_releases",
         },
         {
           name: t("nav.top_rated"),
-          path: "/books/toprated",
+          path: `/${currentLang}/books/toprated`,
           icon: <FaStar />,
           translationKey: "nav.top_rated",
         },
@@ -63,42 +63,42 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.academic_books"),
       icon: <FaGraduationCap />,
-      path: "/academicbooks",
+      path: `/${currentLang}/academicbooks`,
       translationKey: "nav.academic_books",
       dropdown: [
         {
           name: t("nav.engineering"),
-          path: "/academic-books/engineering",
+          path: `/${currentLang}/academic-books/engineering`,
           icon: <FaCogs />,
           translationKey: "nav.engineering",
         },
         {
           name: t("nav.computer_science"),
-          path: "/academic-books/computer-science",
+          path: `/${currentLang}/academic-books/computer-science`,
           icon: <FaLaptopCode />,
           translationKey: "nav.computer_science",
         },
         {
           name: t("nav.medical"),
-          path: "/academic-books/medical",
+          path: `/${currentLang}/academic-books/medical`,
           icon: <FaUserDoctor />,
           translationKey: "nav.medical",
         },
         {
           name: t("nav.business_management"),
-          path: "/academic-books/business",
+          path: `/${currentLang}/academic-books/business`,
           icon: <FaBriefcase />,
           translationKey: "nav.business_management",
         },
         {
           name: t("nav.science"),
-          path: "/academic-books/science",
+          path: `/${currentLang}/academic-books/science`,
           icon: <FaFlask />,
           translationKey: "nav.science",
         },
         {
           name: t("nav.mathematics"),
-          path: "/academic-books/mathematics",
+          path: `/${currentLang}/academic-books/mathematics`,
           icon: <FaSquareRootAlt />,
           translationKey: "nav.mathematics",
         },
@@ -107,24 +107,24 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.comics"),
       icon: <FaBook />,
-      path: "/comics",
+      path: `/${currentLang}/comics`,
       translationKey: "nav.comics",
       dropdown: [
         {
           name: t("nav.marvel"),
-          path: "/comics/marvel",
+          path: `/${currentLang}/comics/marvel`,
           icon: <FaFire />,
           translationKey: "nav.marvel",
         },
         {
           name: t("nav.dc"),
-          path: "/comics/dc",
+          path: `/${currentLang}/comics/dc`,
           icon: <FaStar />,
           translationKey: "nav.dc",
         },
         {
           name: t("nav.manga"),
-          path: "/comics/manga",
+          path: `/${currentLang}/comics/manga`,
           icon: <FaBook />,
           translationKey: "nav.manga",
         },
@@ -133,42 +133,42 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.genre_category"),
       icon: <FaBoxes />,
-      path: "/category",
+      path: `/${currentLang}/category`,
       translationKey: "nav.genre_category",
       dropdown: [
         {
           name: t("nav.fiction"),
-          path: "/category/fiction",
+          path: `/${currentLang}/category/fiction`,
           translationKey: "nav.fiction",
         },
         {
           name: t("nav.non_fiction"),
-          path: "/category/non-fiction",
+          path: `/${currentLang}/category/non-fiction`,
           translationKey: "nav.non_fiction",
         },
         {
           name: t("nav.sci_fi"),
-          path: "/category/sci-fi",
+          path: `/${currentLang}/category/sci-fi`,
           translationKey: "nav.sci_fi",
         },
         {
           name: t("nav.fantasy"),
-          path: "/category/fantasy",
+          path: `/${currentLang}/category/fantasy`,
           translationKey: "nav.fantasy",
         },
         {
           name: t("nav.mystery"),
-          path: "/category/mystery",
+          path: `/${currentLang}/category/mystery`,
           translationKey: "nav.mystery",
         },
         {
           name: t("nav.romance"),
-          path: "/category/romance",
+          path: `/${currentLang}/category/romance`,
           translationKey: "nav.romance",
         },
         {
           name: t("nav.biography"),
-          path: "/category/biography",
+          path: `/${currentLang}/category/biography`,
           translationKey: "nav.biography",
         },
       ],
@@ -176,30 +176,30 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.collections"),
       icon: <FaBoxes />,
-      path: "/collections",
+      path: `/${currentLang}/collections`,
       translationKey: "nav.collections",
       dropdown: [
         {
           name: t("nav.all_collections"),
-          path: "/collections",
+          path: `/${currentLang}/collections`,
           icon: <FaBoxes />,
           translationKey: "nav.all_collections",
         },
         {
           name: t("nav.featured"),
-          path: "/collections/featured",
+          path: `/${currentLang}/collections/featured`,
           icon: <FaStar />,
           translationKey: "nav.featured",
         },
         {
           name: t("nav.summer_reads"),
-          path: "/collections/summer",
+          path: `/${currentLang}/collections/summer`,
           icon: <FaFire />,
           translationKey: "nav.summer_reads",
         },
         {
           name: t("nav.award_winners"),
-          path: "/collections/awards",
+          path: `/${currentLang}/collections/awards`,
           icon: <FaStar />,
           translationKey: "nav.award_winners",
         },
@@ -208,30 +208,30 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.authors"),
       icon: <FaUser />,
-      path: "/authors",
+      path: `/${currentLang}/authors`,
       translationKey: "nav.authors",
       dropdown: [
         {
           name: t("nav.all_authors"),
-          path: "/authors",
+          path: `/${currentLang}/authors`,
           icon: <FaUser />,
           translationKey: "nav.all_authors",
         },
         {
           name: t("nav.popular_authors"),
-          path: "/authors/popular",
+          path: `/${currentLang}/authors/popular`,
           icon: <FaStar />,
           translationKey: "nav.popular_authors",
         },
         {
           name: t("nav.new_authors"),
-          path: "/authors/new",
+          path: `/${currentLang}/authors/new`,
           icon: <FaFire />,
           translationKey: "nav.new_authors",
         },
         {
           name: t("nav.featured_authors"),
-          path: "/authors/featured",
+          path: `/${currentLang}/authors/featured`,
           icon: <FaStar />,
           translationKey: "nav.featured_authors",
         },
@@ -240,30 +240,30 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.publications"),
       icon: <FaBook />,
-      path: "/publications",
+      path: `/${currentLang}/publications`,
       translationKey: "nav.publications",
       dropdown: [
         {
           name: t("nav.all_publications"),
-          path: "/publications",
+          path: `/${currentLang}/publications`,
           icon: <FaBook />,
           translationKey: "nav.all_publications",
         },
         {
           name: t("nav.magazines"),
-          path: "/publications/magazines",
+          path: `/${currentLang}/publications/magazines`,
           icon: <FaNewspaper />,
           translationKey: "nav.magazines",
         },
         {
           name: t("nav.journals"),
-          path: "/publications/journals",
+          path: `/${currentLang}/publications/journals`,
           icon: <FaBook />,
           translationKey: "nav.journals",
         },
         {
           name: t("nav.newspapers"),
-          path: "/publications/newspapers",
+          path: `/${currentLang}/publications/newspapers`,
           icon: <FaNewspaper />,
           translationKey: "nav.newspapers",
         },
@@ -272,14 +272,14 @@ const getNavigationConfig = (t) => ({
     {
       name: t("nav.about"),
       icon: <FaInfoCircle />,
-      path: "/about",
+      path: `/${currentLang}/about`,
       translationKey: "nav.about",
     },
   ],
 });
 
-// Dropdown Component for Desktop with RTL support and proper theme handling
-const DesktopDropdown = ({ item, onItemClick }) => {
+// Dropdown Component for Desktop with RTL support and language-aware routing
+const DesktopDropdown = ({ item, onItemClick, currentLang }) => {
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef(null);
   const router = useRouter();
@@ -287,7 +287,10 @@ const DesktopDropdown = ({ item, onItemClick }) => {
   const { isRTL } = useLanguage();
 
   // Check if current theme is dark mode variant
-  const isDarkTheme = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
+  const isDarkTheme =
+    themeName === "dark" ||
+    themeName === "midnight" ||
+    themeName === "cyberpunk";
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -324,41 +327,43 @@ const DesktopDropdown = ({ item, onItemClick }) => {
       <div
         onClick={handleParentClick}
         className={`
-          inline-flex items-center px-3 py-2 rounded-md
-          ${theme.textColors?.primary || 'text-gray-700 dark:text-gray-200'}
-          hover:${theme.textColors?.highlight || 'text-sky-600 dark:text-sky-400'}
-          transition-colors duration-200 cursor-pointer
+          inline-flex items-center px-3 py-2 rounded-md cursor-pointer
+          ${theme.textColors?.primary || "text-gray-700 dark:text-gray-200"}
+          hover:${theme.textColors?.highlight || "text-sky-600 dark:text-sky-400"}
+          transition-colors duration-200
         `}
-        style={{ 
-          flexDirection: isRTL ? 'row-reverse' : 'row',
+        style={{
+          flexDirection: isRTL ? "row-reverse" : "row",
         }}
       >
         <span
-          className={`${theme.textColors?.highlight || 'text-sky-600 dark:text-sky-400'} ${isRTL ? 'ml-1.5' : 'mr-1.5'}`}
+          className={`${theme.textColors?.highlight || "text-sky-600 dark:text-sky-400"} ${isRTL ? "ml-1.5" : "mr-1.5"}`}
         >
           {item.icon}
         </span>
         <span>{item.name}</span>
-        <FaChevronDown 
-          size={12} 
-          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''} ${isRTL ? 'mr-1' : 'ml-1'}`}
+        <FaChevronDown
+          size={12}
+          className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""} ${isRTL ? "mr-1" : "ml-1"}`}
         />
       </div>
 
-      {/* Dropdown Menu - Controlled by React state */}
+      {/* Dropdown Menu */}
       {isOpen && item.dropdown && (
         <div
           className={`
             absolute top-full mt-1 min-w-[200px] z-50
-            ${theme.background?.section || 'bg-white dark:bg-gray-800'}
-            ${theme.border?.default || 'border border-gray-200 dark:border-gray-700'}
-            ${theme.shadow?.container || 'shadow-lg'}
+            ${theme.background?.section || "bg-white dark:bg-gray-800"}
+            ${theme.border?.default || "border border-gray-200 dark:border-gray-700"}
+            ${theme.shadow?.container || "shadow-lg"}
             rounded-lg overflow-hidden
           `}
-          style={{ 
-            left: isRTL ? 'auto' : '0', 
-            right: isRTL ? '0' : 'auto',
-            backgroundColor: isDarkTheme ? theme.background?.section : undefined
+          style={{
+            left: isRTL ? "auto" : "0",
+            right: isRTL ? "0" : "auto",
+            backgroundColor: isDarkTheme
+              ? theme.background?.section
+              : undefined,
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -367,13 +372,12 @@ const DesktopDropdown = ({ item, onItemClick }) => {
               key={`${item.name}-${dropdownItem.path || index}`}
               href={dropdownItem.path}
               className={`
-                flex items-center px-4 py-2 w-full
-                ${theme.textColors?.primary || 'text-gray-700 dark:text-gray-200'}
-                hover:${theme.background?.hover || 'bg-gray-50 dark:bg-gray-700'}
-                transition-colors duration-150
+                flex items-center px-4 py-2 w-full transition-colors duration-150
+                ${theme.textColors?.primary || "text-gray-700 dark:text-gray-200"}
+                hover:${theme.background?.hover || "bg-gray-50 dark:bg-gray-700"}
               `}
-              style={{ 
-                flexDirection: isRTL ? 'row-reverse' : 'row',
+              style={{
+                flexDirection: isRTL ? "row-reverse" : "row",
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -381,7 +385,9 @@ const DesktopDropdown = ({ item, onItemClick }) => {
               }}
             >
               {dropdownItem.icon && (
-                <span className={`${isRTL ? 'ml-3' : 'mr-3'} ${theme.textColors?.highlight || 'text-sky-600 dark:text-sky-400'}`}>
+                <span
+                  className={`${isRTL ? "ml-3" : "mr-3"} ${theme.textColors?.highlight || "text-sky-600 dark:text-sky-400"}`}
+                >
                   {dropdownItem.icon}
                 </span>
               )}
@@ -394,17 +400,58 @@ const DesktopDropdown = ({ item, onItemClick }) => {
   );
 };
 
-// Main NavItem Component for Desktop only
+// Main NavItem Component for Desktop with language support
 export const NavItem = ({ mobile = false, onItemClick }) => {
   const { theme } = useTheme();
   const { t, isRTL } = useLanguage();
-  const navigationConfig = getNavigationConfig(t);
+  const params = useParams();
+  const pathname = usePathname();
+
+  // Get current language from URL params
+  const getCurrentLanguage = () => {
+    const segments = pathname?.split("/").filter(Boolean);
+    const firstSegment = segments?.[0];
+    const supportedLanguages = [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ja",
+      "zh",
+      "hi",
+      "ar",
+      "ur",
+      "bn",
+      "pt",
+      "ru",
+      "it",
+      "ko",
+      "nl",
+      "tr",
+      "vi",
+      "th",
+      "pl",
+      "sv",
+      "ta",
+      "te",
+      "ml",
+      "kn",
+      "mr",
+    ];
+    if (firstSegment && supportedLanguages.includes(firstSegment)) {
+      return firstSegment;
+    }
+    return params?.lang || "en";
+  };
+
+  const currentLang = getCurrentLanguage();
+  const navigationConfig = getNavigationConfig(t, currentLang);
 
   return (
-    <div 
-      className="flex items-center gap-1 h-full" 
-      style={{ 
-        direction: isRTL ? 'rtl' : 'ltr',
+    <div
+      className="flex items-center gap-1 h-full"
+      style={{
+        direction: isRTL ? "rtl" : "ltr",
       }}
     >
       {navigationConfig.items
@@ -413,27 +460,33 @@ export const NavItem = ({ mobile = false, onItemClick }) => {
             !(
               item.translationKey === "nav.about" &&
               (!item.name || item.name.trim() === "")
-            )
+            ),
         )
         .map((item) => (
           <div key={item.translationKey} className="h-full flex items-center">
             {item.dropdown ? (
-              <DesktopDropdown item={item} onItemClick={onItemClick} />
+              <DesktopDropdown
+                item={item}
+                onItemClick={onItemClick}
+                currentLang={currentLang}
+              />
             ) : (
               <Link
                 href={item.path || "#"}
                 className={`
                   inline-flex items-center px-3 py-2 rounded-md
-                  ${theme.textColors?.primary || 'text-gray-700 dark:text-gray-200'}
-                  hover:${theme.textColors?.highlight || 'text-sky-600 dark:text-sky-400'}
+                  ${theme.textColors?.primary || "text-gray-700 dark:text-gray-200"}
+                  hover:${theme.textColors?.highlight || "text-sky-600 dark:text-sky-400"}
                   transition-colors duration-200
                 `}
-                style={{ 
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                style={{
+                  flexDirection: isRTL ? "row-reverse" : "row",
                 }}
                 onClick={() => onItemClick?.()}
               >
-                <span className={`${theme.textColors?.highlight || 'text-sky-600 dark:text-sky-400'} ${isRTL ? 'ml-1.5' : 'mr-1.5'}`}>
+                <span
+                  className={`${theme.textColors?.highlight || "text-sky-600 dark:text-sky-400"} ${isRTL ? "ml-1.5" : "mr-1.5"}`}
+                >
                   {item.icon}
                 </span>
                 <span>{item.name}</span>
@@ -442,24 +495,36 @@ export const NavItem = ({ mobile = false, onItemClick }) => {
           </div>
         ))}
 
-      <MoreDropdown mobile={false} onItemClick={onItemClick} />
+      <MoreDropdown
+        mobile={false}
+        onItemClick={onItemClick}
+        currentLang={currentLang}
+      />
     </div>
   );
 };
 
-// Helper functions (simplified)
-export const addDropdownItem = (parentName, newItem) => {
-  console.warn("addDropdownItem: This function needs to be updated to work with the translation system");
+// Helper functions with language support
+export const addDropdownItem = (parentName, newItem, currentLang = "en") => {
+  console.warn(
+    "addDropdownItem: This function needs to be updated to work with the translation system",
+  );
 };
 
 export const removeDropdownItem = (parentName, itemPath) => {
-  console.warn("removeDropdownItem: This function needs to be updated to work with the translation system");
+  console.warn(
+    "removeDropdownItem: This function needs to be updated to work with the translation system",
+  );
 };
 
-export const addNavItem = (newItem) => {
-  console.warn("addNavItem: This function needs to be updated to work with the translation system");
+export const addNavItem = (newItem, currentLang = "en") => {
+  console.warn(
+    "addNavItem: This function needs to be updated to work with the translation system",
+  );
 };
 
 export const removeNavItem = (itemName) => {
-  console.warn("removeNavItem: This function needs to be updated to work with the translation system");
+  console.warn(
+    "removeNavItem: This function needs to be updated to work with the translation system",
+  );
 };

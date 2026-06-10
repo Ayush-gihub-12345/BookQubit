@@ -1,133 +1,36 @@
-# BookQubit Web - Next.js Frontend
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Modern, multilingual book discovery platform built with Next.js and Tailwind CSS.
+## Getting Started
 
-## 🚀 Quick Start
+First, run the development server:
 
 ```bash
-# Install dependencies
-npm install
-
-# Development server
 npm run dev
-
-# Build for Cloudflare
-npm run cf:build
-
-# Deploy
-npm run deploy
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## 📦 Project Structure
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```
-src/
-├── app/              # Next.js pages and routes
-├── components/       # React components (books, search, auth, etc.)
-├── contexts/         # React context (Language, Theme, Font)
-├── data/             # Book data in JSON format
-├── datalang/         # Multilingual content
-├── features/         # Feature modules
-├── hooks/            # Custom React hooks
-├── layout/           # Layout components
-├── themes/           # Theme definitions (dark, light, forest, cyberpunk)
-├── translations/     # i18n translations
-└── utils/            # Utility functions
-```
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-## 🌍 Features
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-- **20+ Languages** with RTL support
-- **Multiple Themes** (dark, light, forest, cyberpunk, etc.)
-- **Book Search & Discovery**
-- **User Authentication** (Firebase)
-- **Responsive Design** (mobile-first)
-- **Fast Performance** (Cloudflare Workers deployment)
+## Learn More
 
-## 🎨 Themes
+To learn more about Next.js, take a look at the following resources:
 
-Located in `src/themes/`. Currently available:
-- Dark theme
-- Light theme
-- Forest theme
-- Cyberpunk theme
-- Minimal theme
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## 🌐 Languages Supported
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-English, Hindi, Urdu, Arabic, Bengali, Tamil, Telugu, Kannada, Malayalam, Spanish, French, German, Italian, Chinese, Japanese, Korean, Persian, Russian, Pashto, Marathi
+## Deploy on Vercel
 
-## 📊 Data Format
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Books stored as JSON in `src/data/` with fields:
-- `id`, `title`, `slug`, `author`
-- `description`, `summary`
-- `category`, `genres`, `subjects`, `tags`, `keyPoints`
-- `imageUrl`, `rating`, `price`, `isbn`
-- `pageCount`, `published`, `format`
-- `buttons` (affiliate links)
-
-## 🔧 Configuration Files
-
-- `next.config.mjs` - Next.js settings
-- `wrangler.toml` - Cloudflare Workers config
-- `wrangler.jsonc` - Worker JSON config
-- `open-next.config.ts` - OpenNext adapter config
-- `tailwind.config.js` - Tailwind CSS config
-
-## 📱 Main Pages
-
-- `/` - Home with featured books
-- `/books/:slug` - Book detail
-- `/search` - Search and filter
-- `/authors` - Browse authors
-- `/categories` - Browse categories
-- `/dashboard` - User dashboard
-- `/drift` - Social/trending feature
-
-## 🔐 Authentication
-
-Firebase configured in `src/config/firebase.js`. Update with your Firebase credentials.
-
-## 🎨 Styling
-
-- Tailwind CSS v4
-- Custom theme system
-- React Icons
-- Framer Motion for animations
-
-## 📦 Key Dependencies
-
-- `next` (v15) - React framework
-- `tailwindcss` - CSS framework
-- `firebase` - Backend & auth
-- `react-icons` - Icons
-- `framer-motion` - Animations
-- `wrangler` - Cloudflare CLI
-
-## 🚢 Deployment
-
-Deploy to Cloudflare Workers:
-
-```bash
-npm run deploy
-```
-
-Ensure `wrangler.toml` is configured with your Cloudflare account ID.
-
-## 🧪 Development
-
-```bash
-npm run dev       # Start dev server
-npm run build     # Build for production
-npm run lint      # Lint code
-npm start         # Run production server
-```
-
-## 📄 License
-
-Proprietary - BookQubit Inc.
-
----
-
-**Version**: 0.1.0
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

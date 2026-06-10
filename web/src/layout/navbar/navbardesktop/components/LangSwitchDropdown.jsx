@@ -18,30 +18,86 @@ const LangSwitchDropdown = ({ mobile = false, onItemClick }) => {
     isLanguageMenuOpen,
     toggleLanguageMenu,
     setLanguage,
-    isRTL,
     t,
   } = useLanguage();
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dropdownPosition, setDropdownPosition] = useState({});
   const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Use the theme object provided by useTheme instead of hardcoding
-  const themeStyles = useMemo(() => {
+  // Dynamic theme detection
+  const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
+
+  // Dynamic theme-based styles
+  const getThemeStyles = () => {
+    // Cyberpunk theme
+    if (themeName === 'cyberpunk') {
+      return {
+        background: '#0d0f1a',
+        cardBackground: '#1a1d2e',
+        highlightBackground: '#2d3050',
+        textPrimary: '#00ff9d',
+        textSecondary: '#ff00ff',
+        textHighlight: '#00ff9d',
+        borderColor: '#00ff9d',
+        gradientBackground: 'linear-gradient(135deg, #00ff9d, #ff00ff)',
+        shadow: '0 0 20px rgba(0, 255, 157, 0.2)',
+      };
+    }
+    
+    // Midnight theme
+    if (themeName === 'midnight') {
+      return {
+        background: '#0f172a',
+        cardBackground: '#1e293b',
+        highlightBackground: '#334155',
+        textPrimary: '#f1f5f9',
+        textSecondary: '#94a3b8',
+        textHighlight: '#38bdf8',
+        borderColor: '#334155',
+        gradientBackground: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+        shadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+      };
+    }
+    
+    // Dark theme
+    if (themeName === 'dark') {
+      return {
+        background: '#1f2937',
+        cardBackground: '#374151',
+        highlightBackground: '#4b5563',
+        textPrimary: '#f9fafb',
+        textSecondary: '#9ca3af',
+        textHighlight: '#60a5fa',
+        borderColor: '#374151',
+        gradientBackground: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+        shadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+      };
+    }
+    
+    // Light theme (default)
     return {
-      background: theme?.background?.section || '#ffffff',
-      cardBackground: theme?.background?.card || '#f9fafb',
-      highlightBackground: theme?.background?.secondary || '#f3f4f6',
-      textPrimary: theme?.textColors?.primary || '#111827',
-      textSecondary: theme?.textColors?.secondary || '#6b7280',
-      textHighlight: theme?.textColors?.highlight || '#3b82f6',
-      borderColor: theme?.border?.default || '#e5e7eb',
-      gradientBackground: theme?.buttonColors?.primaryButton?.background || 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-      shadow: theme?.shadow?.container || '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+      background: '#ffffff',
+      cardBackground: '#f9fafb',
+      highlightBackground: '#f3f4f6',
+      textPrimary: '#111827',
+      textSecondary: '#6b7280',
+      textHighlight: '#3b82f6',
+      borderColor: '#e5e7eb',
+      gradientBackground: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+      shadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
     };
-  }, [theme]);
+  };
+
+  const themeStyles = getThemeStyles();
+
+  // Check if current language is RTL
+  const isRTL = useMemo(() => {
+    const rtlLanguages = ['ur', 'ar', 'he', 'fa', 'ps', 'sd'];
+    return rtlLanguages.includes(language);
+  }, [language]);
 
   // Sort languages
   const languages = useMemo(() => {

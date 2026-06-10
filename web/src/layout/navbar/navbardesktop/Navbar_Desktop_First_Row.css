@@ -137,3 +137,55 @@
 .navbar-desktop-first-row * {
   border-radius: 0 !important;
 }
+
+/* Add this to your existing CSS file */
+.navbar-desktop-discovery-drift {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+.discovery-drift-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .navbar-desktop-discovery-drift {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+  
+  .discovery-drift-container a {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Add to Navbar_Desktop_First_Row.css */
+
+.navbar-desktop-discovery-drift {
+  margin: 0 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .navbar-desktop-discovery-drift {
+    margin: 0 12px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .navbar-desktop-discovery-drift {
+    margin: 0 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-desktop-discovery-drift {
+    margin: 0 4px;
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useParams, usePathname } from "next/navigation";
 import {
   ComicButton,
   ComicActionButtons,
@@ -13,9 +14,41 @@ const ComicRectangleCard = ({
   comic,
   onWishlistToggle,
   isWishlisted = false,
+  currentLang: propLang,
 }) => {
   const { theme, themeName } = useTheme();
-  const { t } = useLanguage();
+  const { t, language: contextLanguage } = useLanguage();
+  const params = useParams();
+  const pathname = usePathname();
+
+  // Get language from URL
+  const getCurrentLanguage = () => {
+    if (propLang) return propLang;
+    const segments = pathname?.split("/").filter(Boolean);
+    const firstSegment = segments?.[0];
+    const supportedLanguages = [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ja",
+      "zh",
+      "hi",
+      "ar",
+      "ur",
+      "bn",
+      "pt",
+      "ru",
+      "it",
+      "ko",
+    ];
+    if (firstSegment && supportedLanguages.includes(firstSegment)) {
+      return firstSegment;
+    }
+    return params?.lang || contextLanguage || "en";
+  };
+
+  const currentLanguage = getCurrentLanguage();
 
   // Guard against undefined theme
   if (!theme) {
@@ -27,6 +60,17 @@ const ComicRectangleCard = ({
     themeName === "dark" ||
     themeName === "midnight" ||
     themeName === "cyberpunk";
+
+  // Get the correct slug (handle language-specific slugs)
+  const getComicSlug = () => {
+    if (currentLanguage === "hi" && comic.hindiSlug) return comic.hindiSlug;
+    if (currentLanguage === "ur" && comic.urduSlug) return comic.urduSlug;
+    if (currentLanguage === "ar" && comic.arabicSlug) return comic.arabicSlug;
+    if (currentLanguage === "bn" && comic.bengaliSlug) return comic.bengaliSlug;
+    return comic.slug;
+  };
+
+  const comicSlug = getComicSlug();
 
   return (
     <div
@@ -199,7 +243,7 @@ const ComicRectangleCard = ({
           )}
         </div>
 
-        {/* Perfectly aligned buttons */}
+        {/* Perfectly aligned buttons with language-aware links */}
         <div
           className={`
             flex-shrink-0 pt-4 border-t 
@@ -210,17 +254,20 @@ const ComicRectangleCard = ({
             {/* First row - 3 equal buttons */}
             <ComicButtonGroup direction="horizontal" className="flex-1 gap-2">
               <ComicActionButtons.ViewDetails
-                comicSlug={comic.slug}
+                comicSlug={comicSlug}
+                currentLang={currentLanguage}
                 size="md"
                 className="min-w-0 flex-1"
               />
               <ComicActionButtons.ReadDigital
-                comicSlug={comic.slug}
+                comicSlug={comicSlug}
+                currentLang={currentLanguage}
                 size="md"
                 className="min-w-0 flex-1"
               />
               <ComicActionButtons.QuickSummary
-                comicSlug={comic.slug}
+                comicSlug={comicSlug}
+                currentLang={currentLanguage}
                 size="md"
                 className="min-w-0 flex-1"
               />
@@ -229,19 +276,21 @@ const ComicRectangleCard = ({
             {/* Second row - 3 equal buttons */}
             <ComicButtonGroup direction="horizontal" className="flex-1 gap-2">
               <ComicActionButtons.CollectorGuide
-                comicSlug={comic.slug}
+                comicSlug={comicSlug}
+                currentLang={currentLanguage}
                 size="md"
                 className="min-w-0 flex-1"
               />
               <ComicActionButtons.AddWishlist
-                comicSlug={comic.slug}
+                comicSlug={comicSlug}
                 isWishlisted={isWishlisted}
                 onToggle={() => onWishlistToggle(comic.id, !isWishlisted)}
                 size="md"
                 className="min-w-0 flex-1"
               />
               <ComicActionButtons.ShareComic
-                comicSlug={comic.slug}
+                comicSlug={comicSlug}
+                currentLang={currentLanguage}
                 size="md"
                 className="min-w-0 flex-1"
               />

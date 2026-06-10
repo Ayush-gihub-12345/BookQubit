@@ -1,0 +1,30 @@
+// src/config/languages.js
+export const locales = [
+  { code: 'en', name: 'English', dir: 'ltr', default: true },
+  { code: 'es', name: 'Español', dir: 'ltr' },
+  { code: 'fr', name: 'Français', dir: 'ltr' },
+  { code: 'de', name: 'Deutsch', dir: 'ltr' },
+  { code: 'ja', name: '日本語', dir: 'ltr' },
+  { code: 'zh', name: '中文', dir: 'ltr' },
+  { code: 'hi', name: 'हिन्दी', dir: 'ltr' },
+  { code: 'ar', name: 'العربية', dir: 'rtl' },
+  { code: 'ur', name: 'اردو', dir: 'rtl' },
+  { code: 'bn', name: 'বাংলা', dir: 'ltr' },
+  { code: 'pt', name: 'Português', dir: 'ltr' },
+  { code: 'ru', name: 'Русский', dir: 'ltr' },
+  { code: 'it', name: 'Italiano', dir: 'ltr' },
+  { code: 'ko', name: '한국어', dir: 'ltr' },
+  { code: 'nl', name: 'Nederlands', dir: 'ltr' },
+  { code: 'tr', name: 'Türkçe', dir: 'ltr' },
+  { code: 'vi', name: 'Tiếng Việt', dir: 'ltr' },
+  { code: 'th', name: 'ไทย', dir: 'ltr' },
+  { code: 'pl', name: 'Polski', dir: 'ltr' },
+  { code: 'sv', name: 'Svenska', dir: 'ltr' },
+  { code: 'ta', name: 'தமிழ்', dir: 'ltr' },
+  { code: 'te', name: 'తెలుగు', dir: 'ltr' },
+  { code: 'ml', name: 'മലയാളം', dir: 'ltr' },
+  { code: 'kn', name: 'ಕನ್ನಡ', dir: 'ltr' },
+  { code: 'mr', name: 'मराठी', dir: 'ltr' },
+];
+
+export const defaultLocale = 'en';

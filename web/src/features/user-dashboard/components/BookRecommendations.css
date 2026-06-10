@@ -1,0 +1,17 @@
+.book-recommendations {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.book-recommendations h3 {
+  margin-top: 0;
+}
+
+.book-item {
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+  background: #f3f4f6;
+}

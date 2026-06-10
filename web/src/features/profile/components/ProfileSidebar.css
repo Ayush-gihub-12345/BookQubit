@@ -1,0 +1,259 @@
+/* ProfileSidebar.css - Simple Sidebar */
+
+.profile-sidebar-simple {
+  position: sticky;
+  top: 24px;
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+/* Dark Mode */
+.profile-sidebar-simple.dark {
+  background: #1e293b;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Forest Theme */
+.profile-sidebar-simple.forest {
+  background: #ecfdf5;
+}
+
+/* Custom Scrollbar */
+.profile-sidebar-simple::-webkit-scrollbar {
+  width: 4px;
+}
+
+.profile-sidebar-simple::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.profile-sidebar-simple::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.dark .profile-sidebar-simple::-webkit-scrollbar-track {
+  background: #334155;
+}
+
+.dark .profile-sidebar-simple::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* User Card */
+.sidebar-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  background: #f8fafc;
+}
+
+.dark .sidebar-user-card {
+  background: #334155;
+}
+
+.forest .sidebar-user-card {
+  background: #d1fae5;
+}
+
+.user-avatar {
+  position: relative;
+}
+
+.user-avatar img,
+.avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-info h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-info p {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark .user-info p {
+  color: #94a3b8;
+}
+
+/* Navigation Menu */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.light .nav-item {
+  color: #475569;
+}
+
+.dark .nav-item {
+  color: #94a3b8;
+}
+
+.nav-item:hover {
+  background: #f1f5f9;
+}
+
+.dark .nav-item:hover {
+  background: #334155;
+}
+
+.nav-item.active {
+  background: #3b82f6;
+  color: white;
+}
+
+.nav-icon {
+  font-size: 18px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.nav-badge {
+  background: #ef4444;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nav-item.active .nav-badge {
+  background: white;
+  color: #3b82f6;
+}
+
+/* Sign Out Button */
+.signout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #ef4444;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: auto;
+}
+
+.dark .signout-btn {
+  background: #334155;
+  color: #f87171;
+}
+
+.signout-btn:hover {
+  background: #fee2e2;
+  transform: translateY(-2px);
+}
+
+.dark .signout-btn:hover {
+  background: #7f1d1d;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .profile-sidebar-simple {
+    position: static;
+    height: auto;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-sidebar-simple {
+    padding: 16px;
+  }
+  
+  .nav-item {
+    padding: 8px 10px;
+  }
+  
+  .nav-label {
+    font-size: 13px;
+  }
+  
+  .nav-icon {
+    font-size: 16px;
+    width: 24px;
+  }
+}

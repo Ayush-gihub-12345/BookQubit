@@ -2,16 +2,53 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useParams, usePathname } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
+const ComicSquareCard = ({
+  comic,
+  onTagClick,
+  onWishlistToggle,
+  currentLang: propLang,
+}) => {
   const { theme, themeName } = useTheme();
-  const { t } = useLanguage();
+  const { t, language: contextLanguage } = useLanguage();
+  const params = useParams();
+  const pathname = usePathname();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
+  // Get language from URL
+  const getCurrentLanguage = () => {
+    if (propLang) return propLang;
+    const segments = pathname?.split("/").filter(Boolean);
+    const firstSegment = segments?.[0];
+    const supportedLanguages = [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ja",
+      "zh",
+      "hi",
+      "ar",
+      "ur",
+      "bn",
+      "pt",
+      "ru",
+      "it",
+      "ko",
+    ];
+    if (firstSegment && supportedLanguages.includes(firstSegment)) {
+      return firstSegment;
+    }
+    return params?.lang || contextLanguage || "en";
+  };
+
+  const currentLanguage = getCurrentLanguage();
+
   // Guard against undefined theme
-  if (!theme) {
+  if (!theme || !comic) {
     return null;
   }
 
@@ -23,7 +60,7 @@ const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
 
   // Function to render star rating
   const renderStars = (rating) => {
-    const fullStars = Math.floor(rating / 2); // Convert 10-point to 5-star
+    const fullStars = Math.floor(rating / 2);
     const hasHalfStar = (rating / 2) % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
@@ -47,13 +84,13 @@ const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
             viewBox="0 0 20 20"
           >
             <defs>
-              <linearGradient id="half-star">
+              <linearGradient id={`half-star-${comic.id}`}>
                 <stop offset="50%" stopColor="currentColor" />
-                <stop offset="50%" stopColor="transparent" />
+                <stop offset="50%" stopColor="#cbd5e1" />
               </linearGradient>
             </defs>
             <path
-              fill="url(#half-star)"
+              fill={`url(#half-star-${comic.id})`}
               d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
             />
           </svg>
@@ -86,6 +123,30 @@ const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
       onWishlistToggle(comic.id, newWishlistState);
     }
   };
+
+  // Get the correct slug (handle language-specific slugs)
+  const getComicSlug = () => {
+    // For Hindi, use hindiSlug if available
+    if (currentLanguage === "hi") {
+      return comic.hindiSlug || comic.slug;
+    }
+    // For Urdu, use urduSlug if available
+    if (currentLanguage === "ur") {
+      return comic.urduSlug || comic.slug;
+    }
+    // For Arabic, use arabicSlug if available
+    if (currentLanguage === "ar") {
+      return comic.arabicSlug || comic.slug;
+    }
+    // For Bengali, use bengaliSlug if available
+    if (currentLanguage === "bn") {
+      return comic.bengaliSlug || comic.slug;
+    }
+    // Default to regular slug
+    return comic.slug;
+  };
+
+  const comicSlug = getComicSlug();
 
   return (
     <div
@@ -270,10 +331,10 @@ const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
             </div>
           )}
 
-        {/* Action Buttons */}
+        {/* Action Buttons with Language-aware Links */}
         <div className="flex flex-col gap-2">
           <Link
-            href={`/comics/${comic.slug}`}
+            href={`/${currentLanguage}/comics/${comicSlug}`}
             className={`
               w-full py-2 text-center font-semibold rounded-lg 
               ${theme.buttonColors?.primaryButton?.background || "bg-gradient-to-r from-sky-600 to-sky-500"} 
@@ -290,7 +351,7 @@ const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
 
           <div className="flex gap-2">
             <Link
-              href={`/read/comic/${comic.slug}`}
+              href={`/${currentLanguage}/read/comic/${comicSlug}`}
               className={`
                 flex-1 py-2 text-center font-semibold rounded-lg 
                 ${theme.buttonColors?.secondaryButton?.background || "border-2 border-sky-500 bg-transparent"} 
@@ -305,7 +366,7 @@ const ComicSquareCard = ({ comic, onTagClick, onWishlistToggle }) => {
               {t("comic.read_digital") || "Read"}
             </Link>
             <Link
-              href={`/comics/${comic.slug}/collectors-guide`}
+              href={`/${currentLanguage}/comics/${comicSlug}/collectors-guide`}
               className={`
                 flex-1 py-2 text-center font-semibold rounded-lg 
                 ${theme.buttonColors?.secondaryButton?.background || "border-2 border-sky-500 bg-transparent"} 

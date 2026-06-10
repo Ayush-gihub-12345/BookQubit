@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { useD1Books } from "@v1/client/content";
+import { getBooksByLanguage } from "@/data/books";
 
 // Import components
 import BookNotFound from "@/features/book/bookdeatils/components/BookNotFound";
@@ -32,13 +32,50 @@ import {
 const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const slug = initialSlug || params?.slug;
   const { theme, themeName } = useTheme();
-  const { language: contextLanguage } = useLanguage();
+  const { language: contextLanguage, t } = useLanguage();
   const { currentFont } = useFont();
 
-  // Use initialLanguage if provided, otherwise use context
-  const language = initialLanguage || contextLanguage;
+  // Get language from URL
+  const getLanguageFromURL = () => {
+    const segments = pathname?.split("/").filter(Boolean);
+    const firstSegment = segments?.[0];
+    const supportedLanguages = [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ja",
+      "zh",
+      "hi",
+      "ar",
+      "ur",
+      "bn",
+      "pt",
+      "ru",
+      "it",
+      "ko",
+      "nl",
+      "tr",
+      "vi",
+      "th",
+      "pl",
+      "sv",
+      "ta",
+      "te",
+      "ml",
+      "kn",
+      "mr",
+    ];
+    if (firstSegment && supportedLanguages.includes(firstSegment)) {
+      return firstSegment;
+    }
+    return params?.lang || initialLanguage || contextLanguage || "en";
+  };
+
+  const currentLanguage = getLanguageFromURL();
 
   // Create ref for summary section
   const summaryRef = useRef(null);
@@ -50,34 +87,50 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
   const [book, setBook] = useState(initialBook || null);
   const [booksData, setBooksData] = useState([]);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // State for dynamic tags
   const [dynamicTags, setDynamicTags] = useState([]);
   const [relatedTags, setRelatedTags] = useState([]);
   const [categorizedTags, setCategorizedTags] = useState({});
-  const { data: dbBooks } = useD1Books(language, { limit: 200 });
 
+  // Load books based on language from URL
   useEffect(() => {
-    if (dbBooks.length > 0) {
-      setBooksData(dbBooks);
-    }
-  }, [dbBooks]);
+    setIsLoading(true);
+    const books = getBooksByLanguage(currentLanguage);
+    setBooksData(books || []);
+    setIsLoading(false);
+  }, [currentLanguage]);
+
+  // Reset book when language changes
+  useEffect(() => {
+    setBook(null);
+    setIsRedirecting(false);
+  }, [currentLanguage]);
 
   // Scroll to top when component mounts or slug changes
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [slug]);
+  }, [slug, currentLanguage]);
 
-  // Find book when slug or booksData changes (only if no initialBook)
+  // Find book when slug or booksData changes - SUPPORTS LANGUAGE-SPECIFIC SLUGS
   useEffect(() => {
-    if (!initialBook && slug && booksData.length > 0 && !isRedirecting) {
-      const foundBook = booksData.find((book) => {
-        const bookSlug = book.slug?.toLowerCase().trim();
-        const urlSlug = slug?.toLowerCase().trim();
+    if (slug && booksData.length > 0 && !isRedirecting && !isLoading) {
+      const urlSlug = slug?.toLowerCase().trim();
 
+      const foundBook = booksData.find((book) => {
+        // Check regular slug
+        const bookSlug = book.slug?.toLowerCase().trim();
         if (bookSlug === urlSlug) return true;
+
+        // Check language-specific slug (e.g., hindiSlug for Hindi)
+        const langSlug = book[`${currentLanguage}Slug`]?.toLowerCase().trim();
+        if (langSlug && langSlug === urlSlug) return true;
+
+        // Check if slug matches ID
         if (!isNaN(slug) && book.id === parseInt(slug)) return true;
 
+        // Generate slug from title as fallback
         const generatedSlug = book.title
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
@@ -88,34 +141,31 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
 
       setBook(foundBook);
     }
-  }, [slug, booksData, isRedirecting, initialBook]);
+  }, [slug, booksData, isRedirecting, isLoading, currentLanguage]);
 
   // Extract dynamic tags when book is found
   useEffect(() => {
     if (book && (booksData.length > 0 || initialBook)) {
-      // Extract tags from current book
       const tags = extractDynamicTagsFromBook(book);
       setDynamicTags(tags);
-
-      // Get categorized tags
       const categorized = getCategorizedBookTags(book);
       setCategorizedTags(categorized);
-
-      // Get related tags from other books
       const related = getRelatedTagsForBook(book, booksData, 15);
       setRelatedTags(related);
     }
-  }, [book, booksData, initialBook]);
+  }, [book, booksData, initialBook, currentLanguage]);
 
   // Redirect from ID to slug URL
   useEffect(() => {
     if (!initialBook && book && book.slug && !isNaN(slug) && !isRedirecting) {
       setIsRedirecting(true);
-      router.replace(`/book/${book.slug}`);
+      // Use language-specific slug if available
+      const targetSlug =
+        currentLanguage === "hi" && book.hindiSlug ? book.hindiSlug : book.slug;
+      router.replace(`/${currentLanguage}/books/${targetSlug}`);
     }
-  }, [book, slug, router, isRedirecting, initialBook]);
+  }, [book, slug, router, isRedirecting, initialBook, currentLanguage]);
 
-  // Function to scroll to summary
   const scrollToSummary = () => {
     if (summaryRef.current) {
       summaryRef.current.scrollIntoView({
@@ -127,58 +177,47 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
     }
   };
 
-  // Handle tag click - Navigate to tag page
   const handleTagClick = (tag) => {
-    // Generate slug from tag name
     const tagSlug = tag
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-    router.push(`/tags/${tagSlug}`);
+    router.push(`/${currentLanguage}/tags/${tagSlug}`);
   };
 
-  // Find related books with proper null checks and deduplication
-  const relatedByAuthor =
-    book && booksData.length > 0
-      ? booksData
-          .filter(
-            (b) =>
-              b.author === book.author &&
-              b.id !== book.id &&
-              b.slug !== book.slug,
-          )
-          .slice(0, 4)
-      : [];
+  const relatedByAuthor = useMemo(() => {
+    if (!book || booksData.length === 0) return [];
+    return booksData
+      .filter(
+        (b) =>
+          b.author === book.author && b.id !== book.id && b.slug !== book.slug,
+      )
+      .slice(0, 4);
+  }, [book, booksData]);
 
-  const relatedByCategory =
-    book && booksData.length > 0
-      ? booksData
-          .filter(
-            (b) =>
-              b.category === book.category &&
-              b.id !== book.id &&
-              b.slug !== book.slug,
-          )
-          .slice(0, 4)
-      : [];
+  const relatedByCategory = useMemo(() => {
+    if (!book || booksData.length === 0) return [];
+    return booksData
+      .filter(
+        (b) =>
+          b.category === book.category &&
+          b.id !== book.id &&
+          b.slug !== book.slug,
+      )
+      .slice(0, 4);
+  }, [book, booksData]);
 
-  // Remove duplicates from related books
-  const getUniqueRelatedBooks = () => {
+  const uniqueRelatedBooks = useMemo(() => {
     const allRelated = [...relatedByAuthor, ...relatedByCategory];
     const uniqueBooks = new Map();
-
     allRelated.forEach((book) => {
       if (!uniqueBooks.has(book.id)) {
         uniqueBooks.set(book.id, book);
       }
     });
-
     return Array.from(uniqueBooks.values()).slice(0, 4);
-  };
+  }, [relatedByAuthor, relatedByCategory]);
 
-  const uniqueRelatedBooks = getUniqueRelatedBooks();
-
-  // Handler functions with null checks
   const handleWishlist = () => {
     if (!book) return;
     setIsInWishlist(!isInWishlist);
@@ -197,18 +236,12 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
           text: `Check out "${book.title}" by ${book.author}`,
           url: window.location.href,
         })
-        .catch((err) => {
-          console.log("Error sharing:", err);
-        });
+        .catch((err) => console.log("Error sharing:", err));
     } else {
       navigator.clipboard
         .writeText(window.location.href)
-        .then(() => {
-          alert("Link copied to clipboard!");
-        })
-        .catch((err) => {
-          console.log("Error copying to clipboard:", err);
-        });
+        .then(() => alert("Link copied to clipboard!"))
+        .catch((err) => console.log("Error copying to clipboard:", err));
     }
   };
 
@@ -239,7 +272,24 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
     }
   };
 
-  // Show loading state while redirecting
+  // Show loading state
+  if (isLoading || (booksData.length === 0 && !initialBook)) {
+    return (
+      <div
+        className={`${theme.background?.section || "bg-gray-50 dark:bg-gray-900"} min-h-screen flex items-center justify-center`}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto"></div>
+          <p
+            className={`mt-4 ${theme.textColors?.secondary || "text-gray-600 dark:text-gray-400"}`}
+          >
+            {t("common.loading") || "Loading..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (isRedirecting) {
     return (
       <div
@@ -250,7 +300,7 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
           <p
             className={`mt-4 ${theme.textColors?.secondary || "text-gray-600 dark:text-gray-400"}`}
           >
-            Redirecting...
+            {t("common.redirecting") || "Redirecting..."}
           </p>
         </div>
       </div>
@@ -258,43 +308,57 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
   }
 
   if (!book) {
-    return <BookNotFound slug={slug} />;
+    return <BookNotFound slug={slug} language={currentLanguage} />;
   }
 
-  // Apply font style
   const fontStyle = currentFont ? { fontFamily: currentFont.family } : {};
+  const isDarkMode =
+    themeName === "dark" ||
+    themeName === "midnight" ||
+    themeName === "cyberpunk";
 
   return (
     <>
-      <BookSEO book={book} />
+      <BookSEO book={book} language={currentLanguage} />
 
       <div
-        className={`${theme.background?.section || "bg-gray-50 dark:bg-gray-900"} min-h-screen`}
+        className={`${theme.background?.section || (isDarkMode ? "bg-gray-900" : "bg-gray-50")} min-h-screen`}
         style={fontStyle}
       >
         <div
           className={`
-            ${theme.layout?.containerWidth || "max-w-7xl"} 
-            mx-auto 
-            ${theme.layout?.sectionPadding || "py-12 px-4 sm:px-6 lg:px-8"}
-          `}
+          ${theme.layout?.containerWidth || "max-w-7xl"} 
+          mx-auto 
+          ${theme.layout?.sectionPadding || "py-12 px-4 sm:px-6 lg:px-8"}
+        `}
         >
+          {/* Language Indicator */}
+          <div className="text-right text-xs opacity-50 mb-4">
+            <span
+              className={
+                theme.textColors?.secondary ||
+                (isDarkMode ? "text-gray-400" : "text-gray-600")
+              }
+            >
+              {t("common.language") || "Language"}:{" "}
+              {currentLanguage.toUpperCase()}
+            </span>
+          </div>
+
           {/* Main Book Details */}
           <div
             className={`
-              flex flex-col lg:flex-row gap-8 mb-16 
-              ${theme.shadow?.container || "shadow-lg"} 
-              ${theme.border?.default || "border border-gray-200 dark:border-gray-700"} 
-              p-6 
-              ${theme.background?.section || "bg-white dark:bg-gray-800"} 
-              rounded-2xl
-            `}
+            flex flex-col lg:flex-row gap-8 mb-16 
+            ${theme.shadow?.container || "shadow-lg"} 
+            ${theme.border?.default || "border border-gray-200 dark:border-gray-700"} 
+            p-6 
+            ${theme.background?.section || (isDarkMode ? "bg-gray-800" : "bg-white")} 
+            rounded-2xl
+          `}
           >
             <BookCover book={book} />
-
             <div className="lg:w-2/3 space-y-6">
               <BookInfo book={book} />
-
               <BookActions
                 book={book}
                 bookStatus={bookStatus}
@@ -318,15 +382,12 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
             <BookPublicationDetails book={book} />
           </div>
 
-          {/* About Section */}
           <BookAbout book={book} />
 
-          {/* Summary - with ref attached */}
           <div ref={summaryRef}>
             <BookSummary book={book} />
           </div>
 
-          {/* Dynamic Tags Section - BEFORE RELATED BOOKS */}
           {(dynamicTags.length > 0 || relatedTags.length > 0) && (
             <div className="my-12">
               <RelatedTagsSection
@@ -338,18 +399,17 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
             </div>
           )}
 
-          {/* Related Books */}
           {uniqueRelatedBooks.length > 0 && (
             <RelatedBooks
               relatedByAuthor={relatedByAuthor}
               relatedByCategory={relatedByCategory}
               book={book}
               relatedBooks={uniqueRelatedBooks}
+              currentLang={currentLanguage}
             />
           )}
 
-          {/* Bottom Navigation */}
-          <BookNavigation />
+          <BookNavigation currentLang={currentLanguage} />
         </div>
       </div>
     </>

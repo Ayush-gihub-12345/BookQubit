@@ -1,0 +1,46 @@
+/* Mobile Layout Styles */
+.mobile-layout {
+  min-height: 100vh;
+  background: #f7f9fc;
+}
+
+.mobile-main-content {
+  padding-bottom: 70px; /* Space for bottom nav */
+  overflow-y: auto;
+  height: 100vh;
+  scroll-behavior: smooth;
+}
+
+.mobile-content-container {
+  max-width: 100%;
+  padding: 12px;
+}
+
+/* Hide scrollbar for cleaner look (optional) */
+.mobile-main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mobile-main-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.mobile-main-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .mobile-layout {
+    background: #15202b;
+  }
+  
+  .mobile-main-content::-webkit-scrollbar-track {
+    background: #1e2936;
+  }
+  
+  .mobile-main-content::-webkit-scrollbar-thumb {
+    background: #2d3748;
+  }
+}

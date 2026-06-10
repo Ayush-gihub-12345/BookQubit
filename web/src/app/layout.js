@@ -1,4 +1,6 @@
+// src/app/layout.js
 import Script from "next/script";
+import { headers } from "next/headers";
 
 import ThemeProvider from "@/themes/ThemeProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -7,167 +9,196 @@ import { FontProvider } from "@/contexts/FontContext";
 
 import "./globals.css";
 
-export const metadata = {
-  // Main Domain
-  metadataBase: new URL("https://bookqubit.com"),
-
-  applicationName: "BookQubit",
-
-  appleWebApp: {
-    capable: true,
-    title: "BookQubit",
-    statusBarStyle: "default",
-  },
-
-  title: {
-    default: "BookQubit – Discover Books, Read Previews & Smart Summaries Online",
-    template: "%s | BookQubit",
-  },
-
-  description: "Discover books you'll love with BookQubit. Read previews, explore detailed summaries, and find your next great read with confidence.",
-
-  keywords: [
-    "books", "book summaries", "book previews", "book discovery",
-    "reading app", "BookQubit", "ebooks", "novels", "online books",
-    "book reviews", "book recommendations",
-  ],
-
-  authors: [{ name: "BookQubit" }],
-  creator: "BookQubit",
-  publisher: "BookQubit",
-  category: "books",
-
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-
-  alternates: {
-    canonical: "https://bookqubit.com",
-    languages: {
-      'en': 'https://bookqubit.com/en',
-      'hi': 'https://bookqubit.com/hi',
-      'ur': 'https://bookqubit.com/ur',
-      'ar': 'https://bookqubit.com/ar',
-      'bn': 'https://bookqubit.com/bn',
-      'zh': 'https://bookqubit.com/zh',
-      'fr': 'https://bookqubit.com/fr',
-      'de': 'https://bookqubit.com/de',
-      'ja': 'https://bookqubit.com/ja',
-      'ko': 'https://bookqubit.com/ko',
-      'ru': 'https://bookqubit.com/ru',
-      'it': 'https://bookqubit.com/it',
-      'es': 'https://bookqubit.com/es',
-      'ta': 'https://bookqubit.com/ta',
-      'te': 'https://bookqubit.com/te',
-    },
-  },
-
-  manifest: "/favicons/site.webmanifest",
-
-  icons: {
-    icon: [
-      { url: "/favicons/favicon.ico" },
-      { url: "/favicons/favicon-96x96.png", sizes: "96x96", type: "image/png" },
-      { url: "/favicons/favicon.svg", type: "image/svg+xml" },
-    ],
-    apple: [
-      { url: "/favicons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
-
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    alternateLocale: ["hi_IN", "ur_PK", "ar_SA", "bn_BD", "zh_CN", "fr_FR", "de_DE", "ja_JP", "ko_KR", "ru_RU", "it_IT", "es_ES", "ta_IN", "te_IN"],
-    url: "https://bookqubit.com",
-    siteName: "BookQubit",
-    title: "BookQubit | Book Discovery, Previews, Details & Smart Summaries",
-    description: "Discover your next favorite book with BookQubit. Explore detailed previews, in-depth book details, and concise summaries.",
-    images: [
-      {
-        url: "https://bookqubit.com/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "BookQubit - Smart Reading Platform",
-        type: "image/jpeg",
-      },
-      {
-        url: "https://bookqubit.com/og-image-square.jpg",
-        width: 600,
-        height: 600,
-        alt: "BookQubit Logo",
-        type: "image/jpeg",
-      },
-    ],
-    emails: ["contact@bookqubit.com"],
-    phoneNumbers: ["+1-234-567-8900"],
-    faxNumbers: ["+1-234-567-8901"],
-  },
-
-  twitter: {
-    card: "summary_large_image",
-    site: "@bookqubit",
-    siteId: "1234567890",
-    creator: "@bookqubit",
-    creatorId: "1234567890",
-    title: "BookQubit | Book Discovery, Previews, Details & Smart Summaries",
-    description: "Discover books, previews, summaries, and detailed reading insights on BookQubit.",
-    images: [
-      {
-        url: "https://bookqubit.com/twitter-card.jpg",
-        alt: "BookQubit Twitter Card",
-        width: 1200,
-        height: 600,
-      },
-    ],
-  },
-
-  verification: {
-    google: "qjvxvVO6qUEdHhidcz7qeUdwGWrklQZOMYE5CZN-paw",
-    yandex: "3413ce67b7b5bd51",
-    bing: "79A82530E831502EBB89097AE87D6AE9",
-    pinterest: "16cbeead871ab4c02072d92867663687",
-    facebook: "fcawf09giaubqtu62k97gw1qo81uu0", // ✅ Fixed: Added actual Facebook verification code
-    other: {
-      "msvalidate.01": "79A82530E831502EBB89097AE87D6AE9",
-      "p:domain_verify": "16cbeead871ab4c02072d92867663687",
-      "facebook-domain-verification": "fcawf09giaubqtu62k97gw1qo81uu0", // ✅ Fixed: Replaced placeholder with actual code
-    },
-  },
-
-  category: "Books",
-  section: "Book Discovery Platform",
-  classification: "Book Discovery & Reading Platform",
-  referrer: "strict-origin-when-cross-origin",
-
-  formatDetection: {
-    email: true,
-    address: false,
-    telephone: true,
-  },
-
-  appLinks: {
-    ios: {
-      url: "https://bookqubit.com/app",
-      app_store_id: "1234567890",
-      app_name: "BookQubit",
-    },
-    android: {
-      package: "com.bookqubit.app",
-      app_name: "BookQubit",
-    },
-  },
+// Supported languages for dynamic metadata
+const supportedLanguages = {
+  en: { name: "English", dir: "ltr", locale: "en_US" },
+  hi: { name: "Hindi", dir: "ltr", locale: "hi_IN" },
+  ur: { name: "Urdu", dir: "rtl", locale: "ur_PK" },
+  ar: { name: "Arabic", dir: "rtl", locale: "ar_SA" },
+  bn: { name: "Bangla", dir: "ltr", locale: "bn_BD" },
+  zh: { name: "Chinese", dir: "ltr", locale: "zh_CN" },
+  fr: { name: "French", dir: "ltr", locale: "fr_FR" },
+  de: { name: "German", dir: "ltr", locale: "de_DE" },
+  ja: { name: "Japanese", dir: "ltr", locale: "ja_JP" },
+  ko: { name: "Korean", dir: "ltr", locale: "ko_KR" },
+  ru: { name: "Russian", dir: "ltr", locale: "ru_RU" },
+  it: { name: "Italian", dir: "ltr", locale: "it_IT" },
+  es: { name: "Spanish", dir: "ltr", locale: "es_ES" },
+  ta: { name: "Tamil", dir: "ltr", locale: "ta_IN" },
+  te: { name: "Telugu", dir: "ltr", locale: "te_IN" },
+  ml: { name: "Malayalam", dir: "ltr", locale: "ml_IN" },
+  kn: { name: "Kannada", dir: "ltr", locale: "kn_IN" },
+  mr: { name: "Marathi", dir: "ltr", locale: "mr_IN" },
+  ps: { name: "Pashto", dir: "rtl", locale: "ps_AF" },
+  fa: { name: "Persian", dir: "rtl", locale: "fa_IR" },
 };
 
-// Separate viewport export (required for Next.js 15+)
+// Generate metadata dynamically based on language
+export async function generateMetadata({ params }) {
+  // Try to get language from params or headers
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+  const segments = pathname.split("/").filter(Boolean);
+  const langCode = segments[0] || "en";
+  
+  const currentLang = supportedLanguages[langCode] ? langCode : "en";
+  const langData = supportedLanguages[currentLang];
+  
+  const titles = {
+    en: "BookQubit – Discover Books, Read Previews & Smart Summaries Online",
+    hi: "BookQubit – किताबें खोजें, पूर्वावलोकन पढ़ें और स्मार्ट सारांश ऑनलाइन देखें",
+    ur: "BookQubit – کتابیں دریافت کریں، پیش نظارہ پڑھیں اور سمارٹ خلاصے آن لائن دیکھیں",
+    ar: "BookQubit – اكتشف الكتب، اقرأ المعاينات والملخصات الذكية عبر الإنترنت",
+    bn: "BookQubit – বই আবিষ্কার করুন, প্রিভিউ পড়ুন এবং স্মার্ট সারাংশ অনলাইনে দেখুন",
+    zh: "BookQubit – 发现书籍、阅读预览和智能摘要在线",
+    fr: "BookQubit – Découvrez des livres, lisez des aperçus et des résumés intelligents en ligne",
+    de: "BookQubit – Entdecken Sie Bücher, lesen Sie Vorschauen und intelligente Zusammenfassungen online",
+    ja: "BookQubit – 本を発見、プレビューを読む、スマートな要約をオンラインで",
+    ko: "BookQubit – 도서 발견, 미리보기 읽기 및 스마트 요약 온라인",
+    ru: "BookQubit – Открывайте книги, читайте превью и умные резюме онлайн",
+    it: "BookQubit – Scopri libri, leggi anteprime e riassunti intelligenti online",
+    es: "BookQubit – Descubre libros, lee vistas previas y resúmenes inteligentes en línea",
+    ta: "BookQubit – புத்தகங்களைக் கண்டறியவும், முன்னோட்டங்களைப் படிக்கவும், ஸ்மார்ட் சுருக்கங்களை ஆன்லைனில் காணவும்",
+    te: "BookQubit – పుస్తకాలను కనుగొనండి, ప్రివ్యూలను చదవండి మరియు స్మార్ట్ సారాంశాలు ఆన్‌లైన్లో చూడండి",
+  };
+  
+  const descriptions = {
+    en: "Discover books you'll love with BookQubit. Read previews, explore detailed summaries, and find your next great read with confidence.",
+    hi: "BookQubit के साथ उन किताबों को खोजें जिन्हें आप पसंद करेंगे। पूर्वावलोकन पढ़ें, विस्तृत सारांश देखें, और आत्मविश्वास के साथ अपनी अगली महान पुस्तक खोजें।",
+    ur: "BookQubit کے ساتھ وہ کتابیں دریافت کریں جنہیں آپ پسند کریں گے۔ پیش نظارہ پڑھیں، تفصیلی خلاصے دیکھیں، اور اعتماد کے ساتھ اپنی اگلی عظیم کتاب تلاش کریں۔",
+    ar: "اكتشف الكتب التي ستحبها مع BookQubit. اقرأ المعاينات، واستكشف الملخصات التفصيلية، واعثر على قراءتك العظيمة القادمة بثقة.",
+    bn: "BookQubit এর মাধ্যমে আপনি ভালোবাসবেন এমন বই আবিষ্কার করুন। প্রিভিউ পড়ুন, বিস্তারিত সারাংশ অন্বেষণ করুন, এবং আত্মবিশ্বাসের সাথে আপনার পরবর্তী দুর্দান্ত পড়া খুঁজুন।",
+  };
+  
+  const baseUrl = "https://bookqubit.com";
+  const currentUrl = `${baseUrl}/${currentLang}`;
+  
+  // Build alternate languages for hreflang
+  const alternateLanguages = {};
+  for (const [code, data] of Object.entries(supportedLanguages)) {
+    alternateLanguages[code] = `${baseUrl}/${code}`;
+  }
+  alternateLanguages["x-default"] = `${baseUrl}/en`;
+  
+  return {
+    metadataBase: new URL(baseUrl),
+    applicationName: "BookQubit",
+    title: {
+      default: titles[currentLang] || titles.en,
+      template: `%s | BookQubit`,
+    },
+    description: descriptions[currentLang] || descriptions.en,
+    keywords: [
+      "books", "book summaries", "book previews", "book discovery",
+      "reading app", "BookQubit", "ebooks", "novels", "online books",
+      "book reviews", "book recommendations",
+    ],
+    authors: [{ name: "BookQubit", url: `${baseUrl}/about` }],
+    creator: "BookQubit",
+    publisher: "BookQubit",
+    category: "books",
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
+    alternates: {
+      canonical: currentUrl,
+      languages: alternateLanguages,
+    },
+    manifest: "/favicons/site.webmanifest",
+    icons: {
+      icon: [
+        { url: "/favicons/favicon.ico" },
+        { url: "/favicons/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+        { url: "/favicons/favicon.svg", type: "image/svg+xml" },
+      ],
+      apple: [
+        { url: "/favicons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      ],
+    },
+    openGraph: {
+      type: "website",
+      locale: langData.locale,
+      alternateLocale: Object.values(supportedLanguages).map(l => l.locale),
+      url: currentUrl,
+      siteName: "BookQubit",
+      title: titles[currentLang] || titles.en,
+      description: descriptions[currentLang] || descriptions.en,
+      images: [
+        {
+          url: `${baseUrl}/og-image-${currentLang}.jpg`,
+          width: 1200,
+          height: 630,
+          alt: `BookQubit - Smart Reading Platform in ${langData.name}`,
+          type: "image/jpeg",
+        },
+        {
+          url: `${baseUrl}/og-image-square.jpg`,
+          width: 600,
+          height: 600,
+          alt: "BookQubit Logo",
+          type: "image/jpeg",
+        },
+      ],
+      emails: ["contact@bookqubit.com"],
+      phoneNumbers: ["+1-234-567-8900"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: "@bookqubit",
+      siteId: "1234567890",
+      creator: "@bookqubit",
+      creatorId: "1234567890",
+      title: titles[currentLang] || titles.en,
+      description: descriptions[currentLang] || descriptions.en,
+      images: [
+        {
+          url: `${baseUrl}/twitter-card-${currentLang}.jpg`,
+          alt: `BookQubit Twitter Card - ${langData.name}`,
+          width: 1200,
+          height: 600,
+        },
+      ],
+    },
+    verification: {
+      google: "qjvxvVO6qUEdHhidcz7qeUdwGWrklQZOMYE5CZN-paw",
+      yandex: "3413ce67b7b5bd51",
+      bing: "79A82530E831502EBB89097AE87D6AE9",
+      pinterest: "16cbeead871ab4c02072d92867663687",
+      facebook: "fcawf09giaubqtu62k97gw1qo81uu0",
+      other: {
+        "msvalidate.01": "79A82530E831502EBB89097AE87D6AE9",
+        "p:domain_verify": "16cbeead871ab4c02072d92867663687",
+        "facebook-domain-verification": "fcawf09giaubqtu62k97gw1qo81uu0",
+      },
+    },
+    formatDetection: {
+      email: true,
+      address: false,
+      telephone: true,
+    },
+    appLinks: {
+      ios: {
+        url: "https://bookqubit.com/app",
+        app_store_id: "1234567890",
+        app_name: "BookQubit",
+      },
+      android: {
+        package: "com.bookqubit.app",
+        app_name: "BookQubit",
+      },
+    },
+  };
+}
+
+// Viewport export
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -182,9 +213,9 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html>
       <head>
-        {/* Google Tag Manager - Main Script (placed high in <head>) */}
+        {/* Google Tag Manager */}
         <Script
           id="gtm-script"
           strategy="beforeInteractive"
@@ -199,122 +230,26 @@ export default function RootLayout({ children }) {
           }}
         />
 
-        {/* Charset */}
         <meta charSet="utf-8" />
-
-        {/* Canonical */}
-        <link rel="canonical" href="https://bookqubit.com" />
-
-        {/* Application Name */}
-        <meta name="application-name" content="BookQubit" />
-        <meta name="apple-mobile-web-app-title" content="BookQubit" />
-        <meta property="og:site_name" content="BookQubit" />
-
-        {/* Google Site Verification */}
-        <meta
-          name="google-site-verification"
-          content="qjvxvVO6qUEdHhidcz7qeUdwGWrklQZOMYE5CZN-paw"
-        />
-
-        {/* Bing Verification */}
-        <meta name="msvalidate.01" content="79A82530E831502EBB89097AE87D6AE9" />
-
-        {/* Yandex Verification */}
-        <meta name="yandex-verification" content="3413ce67b7b5bd51" />
-
-        {/* Pinterest Verification */}
-        <meta name="p:domain_verify" content="16cbeead871ab4c02072d92867663687" />
-        <meta name="pinterest" content="16cbeead871ab4c02072d92867663687" />
-
-        {/* Facebook Verification - ✅ FIXED with actual code */}
-        <meta
-          name="facebook-domain-verification"
-          content="fcawf09giaubqtu62k97gw1qo81uu0"
-        />
-
-        {/* Browser Config */}
-        <meta name="msapplication-TileColor" content="#0ea5e9" />
-        <meta name="msapplication-config" content="/browserconfig.xml" />
-
-        {/* Referrer */}
-        <meta name="referrer" content="no-referrer-when-downgrade" />
-
-        {/* Favicons */}
-        <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico" />
-        <link rel="shortcut icon" href="/favicons/favicon.ico" />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="96x96"
-          href="/favicons/favicon-96x96.png"
-        />
-        <link
-          rel="icon"
-          type="image/svg+xml"
-          href="/favicons/favicon.svg"
-        />
-        <link
-          rel="apple-touch-icon"
-          sizes="180x180"
-          href="/favicons/apple-touch-icon.png"
-        />
-        <link rel="manifest" href="/favicons/site.webmanifest" />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="192x192"
-          href="/favicons/web-app-manifest-192x192.png"
-        />
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="512x512"
-          href="/favicons/web-app-manifest-512x512.png"
-        />
-
+        
         {/* Preconnect for Performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.google-analytics.com" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
 
         {/* DNS Prefetch */}
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 
         {/* RSS Feed */}
-        <link
-          rel="alternate"
-          type="application/rss+xml"
-          title="BookQubit Feed"
-          href="/feed.xml"
-        />
+        <link rel="alternate" type="application/rss+xml" title="BookQubit Feed" href="/feed.xml" />
 
-        {/* Alternate Languages */}
-        <link rel="alternate" href="https://bookqubit.com" hrefLang="en" />
-        <link rel="alternate" href="https://bookqubit.com/hi" hrefLang="hi" />
-        <link rel="alternate" href="https://bookqubit.com/ur" hrefLang="ur" />
-        <link rel="alternate" href="https://bookqubit.com/ar" hrefLang="ar" />
-        <link rel="alternate" href="https://bookqubit.com/bn" hrefLang="bn" />
-        <link rel="alternate" href="https://bookqubit.com/zh" hrefLang="zh" />
-        <link rel="alternate" href="https://bookqubit.com/fr" hrefLang="fr" />
-        <link rel="alternate" href="https://bookqubit.com/de" hrefLang="de" />
-        <link rel="alternate" href="https://bookqubit.com/ja" hrefLang="ja" />
-        <link rel="alternate" href="https://bookqubit.com/ko" hrefLang="ko" />
-        <link rel="alternate" href="https://bookqubit.com/ru" hrefLang="ru" />
-        <link rel="alternate" href="https://bookqubit.com/it" hrefLang="it" />
-        <link rel="alternate" href="https://bookqubit.com/es" hrefLang="es" />
-        <link rel="alternate" href="https://bookqubit.com/ta" hrefLang="ta" />
-        <link rel="alternate" href="https://bookqubit.com/te" hrefLang="te" />
-        <link rel="alternate" href="https://bookqubit.com" hrefLang="x-default" />
+        {/* Browser Config */}
+        <meta name="msapplication-TileColor" content="#0ea5e9" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
 
-        {/* Structured Data - Organization */}
+        {/* Structured Data - Organization (Language-agnostic) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -342,15 +277,9 @@ export default function RootLayout({ children }) {
                 telephone: "+1-234-567-8900",
                 contactType: "customer service",
                 email: "contact@bookqubit.com",
-                availableLanguage: ["English", "Hindi", "Urdu", "Arabic", "Bengali", "Chinese", "French", "German", "Japanese", "Korean", "Russian", "Italian", "Spanish", "Tamil", "Telugu"],
+                availableLanguage: Object.values(supportedLanguages).map(l => l.name),
               },
               foundingDate: "2024",
-              founders: [
-                {
-                  "@type": "Person",
-                  name: "BookQubit Team",
-                },
-              ],
               address: {
                 "@type": "PostalAddress",
                 addressCountry: "IN",
@@ -378,33 +307,14 @@ export default function RootLayout({ children }) {
                 },
                 "query-input": "required name=search_term_string",
               },
-              inLanguage: ["en", "hi", "ur", "ar", "bn", "zh", "fr", "de", "ja", "ko", "ru", "it", "es", "ta", "te"],
-            }),
-          }}
-        />
-
-        {/* Structured Data - BreadcrumbList (Home) */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "BreadcrumbList",
-              "itemListElement": [
-                {
-                  "@type": "ListItem",
-                  "position": 1,
-                  "name": "Home",
-                  "item": "https://bookqubit.com",
-                },
-              ],
+              inLanguage: Object.keys(supportedLanguages),
             }),
           }}
         />
       </head>
 
       <body className="antialiased">
-        {/* Google Tag Manager (noscript) - Immediately after opening <body> */}
+        {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-PVP9RM4X"
@@ -413,23 +323,6 @@ export default function RootLayout({ children }) {
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
-
-        {/* Pinterest Tag (Optional - Replace YOUR_PINTEREST_TAG_ID) */}
-        <Script
-          id="pinterest-tag"
-          strategy="afterInteractive"
-        >
-          {`
-            !function(e){if(!window.pintrk){window.pintrk = function () {
-            window.pintrk.queue.push(Array.prototype.slice.call(arguments))};
-            var n=window.pintrk;n.queue=[],n.version="3.0";var
-            t=document.createElement("script");t.async=!0,t.src=e;var
-            r=document.getElementsByTagName("script")[0];
-            r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");
-            pintrk('load', 'YOUR_PINTEREST_TAG_ID');
-            pintrk('page');
-          `}
-        </Script>
 
         <ThemeProvider>
           <LanguageProvider>
