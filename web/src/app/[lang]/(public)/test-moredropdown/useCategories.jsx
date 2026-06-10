@@ -1,20 +1,11 @@
 // src/hooks/useCategories.js
 import { useMemo } from "react";
-// Adjust the import path to match your actual data file location.
-// If you use the @ alias pointing to src/, this works:
-import booksData from "@/data/books/BooksData";
 
 /**
  * Extracts unique country names from booksData.
  */
 const getUniqueCountries = () => {
-  const countries = new Set();
-  booksData.forEach((book) => {
-    if (book.geography?.country) {
-      countries.add(book.geography.country);
-    }
-  });
-  return Array.from(countries).sort();
+  return [];
 };
 
 /**

@@ -1,12 +1,12 @@
-import BooksData from '@/data/books/BooksData'
 import AuthorsData from '@/data/authors/AuthorsData'
 import PublicationsData from '@/data/publications/PublicationsData'
+import { getBooksFromD1 } from '@/lib/server/booksRepository'
 
 const BASE_URL = 'https://www.bookqubit.com'
 
-export default function sitemap() {
+export default async function sitemap() {
   // Add safety check to prevent build failure if data is undefined
-  const booksData = BooksData || []
+  const { books: booksData = [] } = await getBooksFromD1({ lang: 'en', limit: 500 })
   const authorsData = AuthorsData || []
   const publicationsData = PublicationsData || []
 
@@ -33,7 +33,7 @@ export default function sitemap() {
 
   // Dynamic Book Pages
   const bookPages = booksData.map((book) => ({
-    url: `${BASE_URL}/bookdeatils/${book.slug}`, // Note: typo in 'bookdeatils' vs 'bookdetails'
+    url: `${BASE_URL}/en/books/${book.slug}`,
     lastModified: new Date(),
     changeFrequency: 'weekly',
     priority: 0.9,

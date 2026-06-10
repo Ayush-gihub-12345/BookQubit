@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { getBooksByLanguage } from "@/data/books";
+import { fetchBooks } from "@/services/booksApi";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCategoryFilter } from "./hooks/use-category-filter";
@@ -20,7 +20,10 @@ const CategoryList = () => {
     const loadBooks = async () => {
       setIsLoading(true);
       try {
-        const booksData = await getBooksByLanguage(language);
+        const { books: booksData } = await fetchBooks({
+          lang: language,
+          limit: 500,
+        });
         setBooks(booksData || []);
       } catch (error) {
         console.error("Failed to load books:", error);

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getPublicationsDataByLanguage } from "@/data/publications";
-import booksData from "@/data/books/BooksData";
+import { useBooks } from "@/hooks/useBooks";
 import { FaArrowLeft, FaBuilding, FaMapMarkerAlt, FaCalendarAlt, FaGlobe, FaTwitter, FaInstagram, FaFacebook, FaUsers, FaChartLine, FaBuilding as FaCompany, FaBook } from "react-icons/fa";
 
 const PublicationsDetails = () => {
@@ -15,6 +15,7 @@ const PublicationsDetails = () => {
   const slug = params?.slug;
   const { theme, themeName } = useTheme();
   const { language, t, isRTL } = useLanguage();
+  const { books } = useBooks();
 
   if (!theme) return null;
 
@@ -29,7 +30,7 @@ const PublicationsDetails = () => {
   const publisher = publicationsData.find((pub) => pub.slug === slug);
 
   // Filter books by publisher name (case-insensitive partial match)
-  const publisherBooks = booksData.filter(
+  const publisherBooks = books.filter(
     (book) =>
       book.publisher &&
       book.publisher.toLowerCase().includes(publisher?.name.toLowerCase()),
@@ -295,7 +296,7 @@ const PublicationsDetails = () => {
               {publisherBooks.map((book) => (
                 <Link
                   key={book.id}
-                  href={`/bookdeatils/${book.slug || book.id}`}
+                  href={`/${language}/books/${book.slug || book.id}`}
                   className={`group ${theme.background?.section || (isDarkMode ? 'bg-gray-800' : 'bg-white')} p-4 rounded-xl ${theme.shadow?.container || 'shadow-lg'} ${theme.border?.default || 'border border-gray-200 dark:border-gray-700'} hover:shadow-xl transition-all hover:scale-105`}
                 >
                   <div className="aspect-[2/3] mb-3 overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-700">

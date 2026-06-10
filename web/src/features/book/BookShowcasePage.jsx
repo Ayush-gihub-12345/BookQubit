@@ -2,105 +2,151 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { useTheme } from "@/themes/useTheme";
 import { useBooks } from "@/hooks/useBooks";
+import { useTheme } from "@/themes/useTheme";
 import {
   FaBook,
   FaCalendarAlt,
-  FaCrown,
+  FaChartLine,
   FaFilter,
+  FaFire,
   FaSearch,
   FaStar,
   FaTag,
+  FaTrophy,
 } from "react-icons/fa";
 
 const placeholderCover =
   "https://images.pexels.com/photos/256450/pexels-photo-256450.jpeg?w=240&h=360&fit=crop";
+
+const pageConfig = {
+  bestsellers: {
+    title: "Bestselling Books",
+    description: "Books currently highlighted by your database.",
+    empty: "No bestselling books found",
+    icon: FaFire,
+    accent: "from-orange-500 to-red-500",
+    badge: "Bestseller",
+    sortLabel: "Bestselling",
+  },
+  newreleases: {
+    title: "New Releases",
+    description: "Recently added books from your database.",
+    empty: "No new releases found",
+    icon: FaChartLine,
+    accent: "from-emerald-500 to-teal-500",
+    badge: "New Release",
+    sortLabel: "Newest",
+  },
+  toprated: {
+    title: "Top Rated Books",
+    description: "Highest rated books from your database.",
+    empty: "No top rated books found",
+    icon: FaTrophy,
+    accent: "from-amber-500 to-yellow-500",
+    badge: "Top Rated",
+    sortLabel: "Top Rated",
+  },
+};
 
 const toNumber = (value, fallback = 0) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
 };
 
+const getBookDate = (book) => {
+  const raw = book.publishedDate || book.createdAt || book.updatedAt || book.published;
+  const date = raw ? new Date(raw) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+};
+
 const getBookYear = (book) => {
   const rawYear = book.publishedYear || book.year || book.published;
   if (rawYear && /^\d{4}$/.test(String(rawYear))) return rawYear;
-
-  const rawDate = book.publishedDate || book.createdAt || book.updatedAt;
-  const year = rawDate ? new Date(rawDate).getFullYear() : null;
-  return Number.isFinite(year) ? year : "";
+  return getBookDate(book)?.getFullYear() || "";
 };
 
-const FeaturedBooksPage = () => {
+const normalizeBook = (book, index, config) => ({
+  ...book,
+  rank: index + 1,
+  title: book.title || "Untitled Book",
+  author: book.author || "Unknown Author",
+  slug: book.slug || String(book.id),
+  coverImage: book.coverImage || book.imageUrl || placeholderCover,
+  description: book.description || "",
+  category: book.category || book.genre || "General",
+  rating: toNumber(book.rating, 0),
+  reviews: toNumber(book.reviews || book.reviewCount || book.popularity, 0),
+  price: book.price || "",
+  originalPrice: book.originalPrice || "",
+  publishedYear: getBookYear(book),
+  badge: book.badge || config.badge,
+});
+
+const sortBooksForVariant = (books, variant) => {
+  const sorted = [...books];
+
+  if (variant === "newreleases") {
+    return sorted.sort((a, b) => {
+      const aTime = getBookDate(a)?.getTime() || 0;
+      const bTime = getBookDate(b)?.getTime() || 0;
+      return bTime - aTime;
+    });
+  }
+
+  if (variant === "toprated") {
+    return sorted.sort(
+      (a, b) =>
+        toNumber(b.rating) - toNumber(a.rating) ||
+        (a.title || "").localeCompare(b.title || ""),
+    );
+  }
+
+  return sorted.sort(
+    (a, b) =>
+      toNumber(b.popularity || b.reviews || b.reviewCount || b.rating) -
+        toNumber(a.popularity || a.reviews || a.reviewCount || a.rating) ||
+      (a.title || "").localeCompare(b.title || ""),
+  );
+};
+
+const BookShowcasePage = ({ variant }) => {
+  const config = pageConfig[variant] || pageConfig.bestsellers;
   const { theme, themeName } = useTheme();
   const { books, loading, language } = useBooks();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedFeaturedType, setSelectedFeaturedType] = useState("All");
   const [viewMode, setViewMode] = useState("grid");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState("rating");
   const itemsPerPage = 12;
 
-  const featuredBooksData = useMemo(
+  const normalizedBooks = useMemo(
     () =>
-      books.map((book, index) => {
-        const featuredReason =
-          book.featuredReason ||
-          book.badge ||
-          (index === 0 ? "Editor's Pick" : "Featured Selection");
-
-        return {
-          ...book,
-          title: book.title || "Untitled Book",
-          author: book.author || "Unknown Author",
-          slug: book.slug || String(book.id),
-          coverImage: book.coverImage || book.imageUrl || placeholderCover,
-          description: book.description || "",
-          rating: toNumber(book.rating, 0),
-          reviews: toNumber(book.reviews || book.reviewCount, 0),
-          price: book.price || "",
-          originalPrice: book.originalPrice || "",
-          category: book.category || book.genre || "General",
-          publishedYear: getBookYear(book),
-          featuredReason,
-          featuredBadge: featuredReason,
-          featuredColor: book.featuredColor || "from-sky-500 to-blue-500",
-          isAwardWinner: Boolean(book.isAwardWinner || book.award),
-          award: book.award || null,
-        };
-      }),
-    [books],
+      sortBooksForVariant(books, variant).map((book, index) =>
+        normalizeBook(book, index, config),
+      ),
+    [books, config, variant],
   );
 
   const categories = useMemo(
     () => [
       "All",
-      ...Array.from(new Set(featuredBooksData.map((book) => book.category))).filter(Boolean),
+      ...Array.from(new Set(normalizedBooks.map((book) => book.category))).filter(Boolean),
     ],
-    [featuredBooksData],
-  );
-
-  const featuredTypes = useMemo(
-    () => [
-      "All",
-      ...Array.from(
-        new Set(featuredBooksData.map((book) => book.featuredReason)),
-      ).filter(Boolean),
-    ],
-    [featuredBooksData],
+    [normalizedBooks],
   );
 
   if (!theme) return null;
 
+  const Icon = config.icon;
   const isDarkMode =
     themeName === "dark" ||
     themeName === "midnight" ||
     themeName === "cyberpunk";
 
-  const filteredBooks = featuredBooksData.filter((book) => {
-    const query = searchTerm.toLowerCase();
+  const query = searchTerm.toLowerCase();
+  const filteredBooks = normalizedBooks.filter((book) => {
     const matchesSearch =
       query === "" ||
       book.title.toLowerCase().includes(query) ||
@@ -108,45 +154,20 @@ const FeaturedBooksPage = () => {
       book.description.toLowerCase().includes(query);
     const matchesCategory =
       selectedCategory === "All" || book.category === selectedCategory;
-    const matchesFeaturedType =
-      selectedFeaturedType === "All" ||
-      book.featuredReason === selectedFeaturedType;
-    return matchesSearch && matchesCategory && matchesFeaturedType;
-  });
-
-  const sortedBooks = [...filteredBooks].sort((a, b) => {
-    if (sortBy === "rating") return b.rating - a.rating;
-    if (sortBy === "reviews") return b.reviews - a.reviews;
-    if (sortBy === "title") return a.title.localeCompare(b.title);
-    if (sortBy === "price") {
-      return (
-        parseFloat(String(a.price).replace("$", "")) -
-        parseFloat(String(b.price).replace("$", ""))
-      );
-    }
-    return 0;
+    return matchesSearch && matchesCategory;
   });
 
   const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentBooks = sortedBooks.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(sortedBooks.length / itemsPerPage);
+  const currentBooks = filteredBooks.slice(
+    indexOfLastItem - itemsPerPage,
+    indexOfLastItem,
+  );
+  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
+  const hasActiveFilters = searchTerm !== "" || selectedCategory !== "All";
 
-  const clearFilters = () => {
+  const resetFilters = () => {
     setSearchTerm("");
     setSelectedCategory("All");
-    setSelectedFeaturedType("All");
-    setSortBy("rating");
-    setCurrentPage(1);
-  };
-
-  const hasActiveFilters =
-    searchTerm !== "" ||
-    selectedCategory !== "All" ||
-    selectedFeaturedType !== "All";
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
     setCurrentPage(1);
   };
 
@@ -162,20 +183,20 @@ const FeaturedBooksPage = () => {
             <div
               className={`p-3 rounded-full ${theme.background?.navigationDots || (isDarkMode ? "bg-gray-800" : "bg-gray-100")}`}
             >
-              <FaCrown
-                className={`text-4xl ${theme.textColors?.highlight || "text-yellow-500"}`}
+              <Icon
+                className={`text-4xl ${theme.textColors?.highlight || "text-sky-500"}`}
               />
             </div>
           </div>
           <h1
             className={`text-4xl md:text-5xl font-bold ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")} mb-4`}
           >
-            Featured Books
+            {config.title}
           </h1>
           <p
             className={`text-xl ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")} max-w-3xl mx-auto`}
           >
-            Discover curated books from the database.
+            {config.description}
           </p>
         </div>
 
@@ -187,9 +208,12 @@ const FeaturedBooksPage = () => {
               />
               <input
                 type="text"
-                placeholder="Search featured books..."
+                placeholder={`Search ${config.title.toLowerCase()}...`}
                 value={searchTerm}
-                onChange={handleSearchChange}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setCurrentPage(1);
+                }}
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 ${theme.border?.default || "border-gray-300 dark:border-gray-600"} ${theme.background?.section || (isDarkMode ? "bg-gray-800" : "bg-white")} ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
               />
             </div>
@@ -205,18 +229,15 @@ const FeaturedBooksPage = () => {
               )}
             </button>
             <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`px-4 py-2 rounded-lg transition-all ${viewMode === "grid" ? `${theme.buttonColors?.primaryButton?.background || "bg-sky-600"} text-white` : `${theme.background?.navigationDots || "bg-gray-100 dark:bg-gray-800"} ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}`}
-              >
-                Grid
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`px-4 py-2 rounded-lg transition-all ${viewMode === "list" ? `${theme.buttonColors?.primaryButton?.background || "bg-sky-600"} text-white` : `${theme.background?.navigationDots || "bg-gray-100 dark:bg-gray-800"} ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}`}
-              >
-                List
-              </button>
+              {["grid", "list"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`px-4 py-2 rounded-lg capitalize transition-all ${viewMode === mode ? `${theme.buttonColors?.primaryButton?.background || "bg-sky-600"} text-white` : `${theme.background?.navigationDots || "bg-gray-100 dark:bg-gray-800"} ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}`}
+                >
+                  {mode}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -224,69 +245,19 @@ const FeaturedBooksPage = () => {
             <div
               className={`p-4 rounded-lg ${theme.background?.bookCoverSide || (isDarkMode ? "bg-gray-800" : "bg-gray-100")} ${theme.border?.default || "border border-gray-200 dark:border-gray-700"} mb-4`}
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label
-                    className={`block text-sm font-medium mb-2 ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
-                  >
-                    Category
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {categories.map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setCurrentPage(1);
-                        }}
-                        className={`px-3 py-1.5 text-sm rounded-full transition-all ${selectedCategory === category ? `${theme.buttonColors?.primaryButton?.background || "bg-sky-600"} text-white` : `${theme.background?.navigationDots || "bg-gray-100 dark:bg-gray-700"} ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}`}
-                      >
-                        {category}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`block text-sm font-medium mb-2 ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
-                  >
-                    Featured Type
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {featuredTypes.map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => {
-                          setSelectedFeaturedType(type);
-                          setCurrentPage(1);
-                        }}
-                        className={`px-3 py-1.5 text-sm rounded-full transition-all ${selectedFeaturedType === type ? `${theme.buttonColors?.primaryButton?.background || "bg-sky-600"} text-white` : `${theme.background?.navigationDots || "bg-gray-100 dark:bg-gray-700"} ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label
-                    className={`block text-sm font-medium mb-2 ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
-                  >
-                    Sort By
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(event) => {
-                      setSortBy(event.target.value);
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => {
+                      setSelectedCategory(category);
                       setCurrentPage(1);
                     }}
-                    className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 ${theme.border?.default || "border-gray-300 dark:border-gray-600"} ${theme.background?.section || (isDarkMode ? "bg-gray-800" : "bg-white")} ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
+                    className={`px-3 py-1.5 text-sm rounded-full transition-all ${selectedCategory === category ? `${theme.buttonColors?.primaryButton?.background || "bg-sky-600"} text-white` : `${theme.background?.navigationDots || "bg-gray-100 dark:bg-gray-700"} ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}`}
                   >
-                    <option value="rating">Highest Rated</option>
-                    <option value="reviews">Most Reviews</option>
-                    <option value="title">Title A-Z</option>
-                    <option value="price">Price: Low to High</option>
-                  </select>
-                </div>
+                    {category}
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -294,7 +265,7 @@ const FeaturedBooksPage = () => {
           {hasActiveFilters && (
             <div className="flex justify-end mt-2">
               <button
-                onClick={clearFilters}
+                onClick={resetFilters}
                 className={`text-sm ${theme.textColors?.highlight || "text-sky-600"} hover:underline`}
               >
                 Clear All Filters
@@ -306,7 +277,7 @@ const FeaturedBooksPage = () => {
         <div
           className={`mb-6 text-sm ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
         >
-          Showing {sortedBooks.length} featured books
+          Showing {filteredBooks.length} books sorted by {config.sortLabel}
         </div>
 
         {loading ? (
@@ -326,7 +297,7 @@ const FeaturedBooksPage = () => {
             <h3
               className={`text-xl font-semibold mb-2 ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
             >
-              No featured books found
+              {config.empty}
             </h3>
             <p
               className={`${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
@@ -337,7 +308,7 @@ const FeaturedBooksPage = () => {
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {currentBooks.map((book) => (
-              <div
+              <article
                 key={book.id}
                 className={`group ${theme.background?.section || (isDarkMode ? "bg-gray-800" : "bg-white")} ${theme.border?.default || "border border-gray-200 dark:border-gray-700"} rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl`}
               >
@@ -352,11 +323,11 @@ const FeaturedBooksPage = () => {
                     />
                   </div>
                   <div className="absolute top-2 left-2">
-                    <div
-                      className={`bg-gradient-to-r ${book.featuredColor} text-white text-xs px-2 py-1 rounded-full`}
+                    <span
+                      className={`bg-gradient-to-r ${config.accent} text-white text-xs px-2 py-1 rounded-full`}
                     >
-                      {book.featuredBadge}
-                    </div>
+                      #{book.rank} {book.badge}
+                    </span>
                   </div>
                 </div>
                 <div className="p-4">
@@ -402,13 +373,6 @@ const FeaturedBooksPage = () => {
                           {book.price}
                         </span>
                       )}
-                      {book.originalPrice && (
-                        <span
-                          className={`text-xs line-through ml-2 ${theme.textColors?.secondary || "text-gray-500"}`}
-                        >
-                          {book.originalPrice}
-                        </span>
-                      )}
                     </div>
                     <Link
                       href={bookHref(book)}
@@ -418,13 +382,13 @@ const FeaturedBooksPage = () => {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {currentBooks.map((book) => (
-              <div
+              <article
                 key={book.id}
                 className={`flex flex-col sm:flex-row gap-4 p-4 ${theme.background?.section || (isDarkMode ? "bg-gray-800" : "bg-white")} ${theme.border?.default || "border border-gray-200 dark:border-gray-700"} rounded-xl transition-all hover:shadow-lg`}
               >
@@ -436,38 +400,21 @@ const FeaturedBooksPage = () => {
                   />
                 </div>
                 <div className="flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <span
-                        className={`text-xs px-2 py-0.5 bg-gradient-to-r ${book.featuredColor} text-white rounded-full`}
-                      >
-                        {book.featuredReason}
-                      </span>
-                      <h3
-                        className={`text-xl font-bold mt-2 ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
-                      >
-                        {book.title}
-                      </h3>
-                      <p
-                        className={`text-sm mb-2 ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
-                      >
-                        by {book.author}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar
-                          key={i}
-                          className={`w-4 h-4 ${i < Math.floor(book.rating) ? "text-amber-400" : "text-gray-300"}`}
-                        />
-                      ))}
-                      <span
-                        className={`text-sm ml-1 ${theme.textColors?.secondary || "text-gray-500"}`}
-                      >
-                        ({book.reviews.toLocaleString()})
-                      </span>
-                    </div>
-                  </div>
+                  <span
+                    className={`inline-block text-xs px-2 py-0.5 bg-gradient-to-r ${config.accent} text-white rounded-full mb-2`}
+                  >
+                    #{book.rank} {book.badge}
+                  </span>
+                  <h3
+                    className={`text-xl font-bold ${theme.textColors?.primary || (isDarkMode ? "text-white" : "text-gray-900")}`}
+                  >
+                    {book.title}
+                  </h3>
+                  <p
+                    className={`text-sm mb-2 ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
+                  >
+                    by {book.author}
+                  </p>
                   <p
                     className={`text-sm line-clamp-2 mb-3 ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
                   >
@@ -496,7 +443,7 @@ const FeaturedBooksPage = () => {
                     </Link>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
@@ -535,4 +482,4 @@ const FeaturedBooksPage = () => {
   );
 };
 
-export default FeaturedBooksPage;
+export default BookShowcasePage;

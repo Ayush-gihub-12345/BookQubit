@@ -1,7 +1,7 @@
 // src/app/[lang]/(public)/collections/[collectionName]/page.jsx
 import CollectionsDetails from "@/features/collections/collections_deatils/CollectionsDetails";
 import { locales } from "@/config/languages";
-import { getBooksByLanguage } from "@/data/books";
+import { getBooksFromD1 } from "@/lib/server/booksRepository";
 
 // Generate static params for all languages and collections
 export async function generateStaticParams() {
@@ -10,7 +10,7 @@ export async function generateStaticParams() {
 
   // Fetch all collections from all languages
   for (const locale of locales) {
-    const books = getBooksByLanguage(locale.code);
+    const { books } = await getBooksFromD1({ lang: locale.code, limit: 500 });
 
     books.forEach((book) => {
       if (book.collection) {
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }) {
   const decodedCollectionName = decodeURIComponent(collectionName);
 
   // Fetch books to get collection details
-  const books = getBooksByLanguage(currentLang);
+  const { books } = await getBooksFromD1({ lang: currentLang, limit: 500 });
   let bookCount = 0;
   let collectionImage = null;
 

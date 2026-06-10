@@ -13,7 +13,7 @@ import {
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
-import { getBooksByLanguage } from "@/data/books";
+import { useBooks } from "@/hooks/useBooks";
 import { useFont } from "@/contexts/FontContext";
 
 const HeroSectionSliderMobile = () => {
@@ -23,7 +23,7 @@ const HeroSectionSliderMobile = () => {
   const router = useRouter();
   const [currentBookIndex, setCurrentBookIndex] = useState(0);
   const [isInWishlist, setIsInWishlist] = useState(false);
-  const [books, setBooks] = useState([]);
+  const { books } = useBooks();
   const scrollInterval = useRef(null);
 
   // Check if current theme is dark mode
@@ -31,12 +31,6 @@ const HeroSectionSliderMobile = () => {
     themeName === "dark" ||
     themeName === "midnight" ||
     themeName === "cyberpunk";
-
-  // Load books based on language
-  useEffect(() => {
-    const booksData = getBooksByLanguage(language);
-    setBooks(booksData);
-  }, [language]);
 
   // Filter books
   const filteredBooks = books.filter((book) => {
@@ -97,7 +91,7 @@ const HeroSectionSliderMobile = () => {
 
   const handleKnowMore = () => {
     router.push(
-      currentBook?.buttons?.knowMore || `/books/${currentBook?.slug}`,
+      currentBook?.buttons?.knowMore || `/${language}/books/${currentBook?.slug}`,
     );
   };
 

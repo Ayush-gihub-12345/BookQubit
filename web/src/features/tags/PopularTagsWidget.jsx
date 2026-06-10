@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import TagCloud from "./TagCloud";
-import { getBooksByLanguage } from "@/data/books";
+import { useBooks } from "@/hooks/useBooks";
 import { getPopularTags } from "./TagsData";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -15,13 +15,14 @@ const PopularTagsWidget = ({
   const { language } = useLanguage();
   const [popularTags, setPopularTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { books, loading } = useBooks();
 
   useEffect(() => {
-    const books = getBooksByLanguage(language);
+    if (loading) return;
     const tags = getPopularTags(books, limit);
     setPopularTags(tags);
     setIsLoading(false);
-  }, [language, limit]);
+  }, [books, language, limit, loading]);
 
   if (isLoading) {
     return (

@@ -7,7 +7,7 @@
 // import { useTheme } from "@/themes/useTheme";
 // import { useLanguage } from "@/contexts/LanguageContext";
 // import { useFont } from "@/contexts/FontContext";
-// import { getBooksByLanguage } from "@/data/books";
+// import { useBooks } from "@/hooks/useBooks";
 // import {
 //   getAllTags,
 //   getPopularTags,
@@ -52,7 +52,7 @@
 
 //   // Load tags
 //   useEffect(() => {
-//     const books = getBooksByLanguage(language);
+//     const books = [];
 //     const allTags = getAllTags(books);
 //     setTags(allTags);
 //     setFilteredTags(allTags.slice(0, limit));
@@ -453,7 +453,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { getBooksByLanguage } from "@/data/books";
+import { useBooks } from "@/hooks/useBooks";
 import {
   getAllTags,
   getPopularTags,
@@ -509,6 +509,7 @@ const TagsHome = ({
   const [popularTags, setPopularTags] = useState([]);
   const [trendingTags, setTrendingTags] = useState([]);
   const carouselRef = useRef(null);
+  const { books, loading: booksLoading } = useBooks();
 
   const isDarkMode =
     themeName === "dark" ||
@@ -519,7 +520,10 @@ const TagsHome = ({
 
   // Load tags
   useEffect(() => {
-    const books = getBooksByLanguage(language);
+    if (!usePredefined && booksLoading) {
+      setIsLoading(true);
+      return;
+    }
 
     if (usePredefined) {
       // Use predefined tags
@@ -545,7 +549,7 @@ const TagsHome = ({
     }
 
     setIsLoading(false);
-  }, [language, limit, usePredefined]);
+  }, [books, booksLoading, language, limit, usePredefined]);
 
   // Filter tags based on search, letter, and category
   useEffect(() => {

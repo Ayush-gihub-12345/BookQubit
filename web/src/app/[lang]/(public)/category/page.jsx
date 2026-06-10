@@ -1,11 +1,11 @@
 import React, { Suspense } from "react";
 import CategoryList from "@/features/category/category-list";
-import { getBooksByLanguage } from "@/data/books";
+import { getBooksFromD1 } from "@/lib/server/booksRepository";
 
 // Generate metadata for SEO (Server Component)
 export async function generateMetadata({ params, searchParams }) {
   // You can fetch data here for dynamic metadata
-  const books = getBooksByLanguage("en"); // Default language
+  const { books } = await getBooksFromD1({ lang: "en", limit: 500 });
   const totalBooks = books.length;
   const categories = [...new Set(books.map(book => book.category).filter(Boolean))];
   
