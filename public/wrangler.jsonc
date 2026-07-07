@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bookqubit",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+  // Bindings are configured in the Cloudflare dashboard, not committed here:
+  //   Settings → Bindings → D1 Database   → name: DB
+  //   Settings → Bindings → KV Namespace  → name: CACHE
+  //   Settings → Variables → AMAZON_ASSOC_TAG, NEXT_PUBLIC_BASE_URL
+  // For local dev, copy wrangler.local.jsonc.example over this file's bindings
+  // or use `.dev.vars` + local D1/KV (see README).
+}

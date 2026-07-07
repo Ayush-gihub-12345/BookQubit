@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eff8ff;
+  --color-brand-100: #daeeff;
+  --color-brand-500: #0e8de0;
+  --color-brand-600: #0270bd;
+  --color-brand-700: #045a99;
+  --color-ink-900: #0b1220;
+  --color-ink-800: #131c2e;
+  --color-ink-700: #1d2a42;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  @apply bg-white text-slate-800;
+}
+
+@media (prefers-color-scheme: dark) {
+  body { @apply bg-[#0b1220] text-slate-200; }
+}
+
+h1, h2, h3, h4 { font-family: var(--font-display); }
+
+.card {
+  @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition
+    hover:-translate-y-1 hover:shadow-xl hover:border-brand-500/40
+    dark:border-slate-800 dark:bg-[#131c2e];
+}
+
+.pill {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
+    bg-brand-50 text-brand-700 hover:bg-brand-100 transition
+    dark:bg-slate-800 dark:text-brand-100 dark:hover:bg-slate-700;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
+    font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-500
+    shadow-lg shadow-brand-600/25 transition hover:brightness-110 active:scale-95;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
+    font-semibold border border-slate-300 transition hover:border-brand-500
+    hover:text-brand-600 dark:border-slate-700;
+}
+
+.input {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5
+    outline-none transition focus:border-brand-500 focus:ring-2
+    focus:ring-brand-500/20 dark:border-slate-700 dark:bg-[#131c2e];
+}

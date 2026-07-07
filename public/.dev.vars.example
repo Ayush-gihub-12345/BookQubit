@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local `npm run preview`
+AMAZON_ASSOC_TAG=your-tag-20
+NEXT_PUBLIC_BASE_URL=http://localhost:8787
