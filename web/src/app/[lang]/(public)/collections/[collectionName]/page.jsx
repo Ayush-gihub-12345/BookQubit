@@ -1,41 +1,7 @@
 // src/app/[lang]/(public)/collections/[collectionName]/page.jsx
 import CollectionsDetails from "@/features/collections/collections_deatils/CollectionsDetails";
 import { locales } from "@/config/languages";
-import { getBooksFromD1 } from "@/lib/server/booksRepository";
-
-// Generate static params for all languages and collections
-export async function generateStaticParams() {
-  const params = [];
-  const collectionsSet = new Set();
-
-  // Fetch all collections from all languages
-  for (const locale of locales) {
-    const { books } = await getBooksFromD1({ lang: locale.code, limit: 500 });
-
-    books.forEach((book) => {
-      if (book.collection) {
-        if (Array.isArray(book.collection)) {
-          book.collection.forEach((col) => collectionsSet.add(col));
-        } else {
-          collectionsSet.add(book.collection);
-        }
-      }
-    });
-  }
-
-  const allCollections = Array.from(collectionsSet);
-
-  for (const locale of locales) {
-    for (const collectionName of allCollections) {
-      params.push({
-        lang: locale.code,
-        collectionName: encodeURIComponent(collectionName),
-      });
-    }
-  }
-
-  return params;
-}
+import { getBooksByLanguage } from "@/lib/server/booksRepository";
 
 // Generate metadata dynamically based on language and collection name
 export async function generateMetadata({ params }) {
@@ -44,7 +10,7 @@ export async function generateMetadata({ params }) {
   const decodedCollectionName = decodeURIComponent(collectionName);
 
   // Fetch books to get collection details
-  const { books } = await getBooksFromD1({ lang: currentLang, limit: 500 });
+  const books = await getBooksByLanguage(currentLang);
   let bookCount = 0;
   let collectionImage = null;
 

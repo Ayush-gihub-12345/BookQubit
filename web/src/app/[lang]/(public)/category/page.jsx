@@ -1,11 +1,11 @@
 import React, { Suspense } from "react";
 import CategoryList from "@/features/category/category-list";
-import { getBooksFromD1 } from "@/lib/server/booksRepository";
+import { getBooksByLanguage } from "@/lib/server/booksRepository";
 
 // Generate metadata for SEO (Server Component)
 export async function generateMetadata({ params, searchParams }) {
   // You can fetch data here for dynamic metadata
-  const { books } = await getBooksFromD1({ lang: "en", limit: 500 });
+  const books = await getBooksByLanguage("en"); // Default language
   const totalBooks = books.length;
   const categories = [...new Set(books.map(book => book.category).filter(Boolean))];
   
@@ -87,13 +87,6 @@ export async function generateMetadata({ params, searchParams }) {
     viewport: "width=device-width, initial-scale=1",
     themeColor: "#0284c7",
   };
-}
-
-// Generate static params for static site generation (optional)
-export async function generateStaticParams() {
-  // If you have dynamic categories, you can pre-render them
-  // This is optional and depends on your needs
-  return [];
 }
 
 // Loading component for Suspense

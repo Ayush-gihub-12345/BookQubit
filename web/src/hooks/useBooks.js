@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { fetchBookBySlug, fetchBooks } from '@/services/booksApi';
 
 export const useBooks = () => {
   const { language } = useLanguage();
@@ -10,26 +9,20 @@ export const useBooks = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
+    setLoading(true);
 
-    const loadBooks = async () => {
-      setLoading(true);
-
-      try {
-        const result = await fetchBooks({ lang: language, limit: 500 });
-        if (isMounted) setBooks(result.books || []);
-      } catch (error) {
-        console.error('Failed to load books:', error);
-        if (isMounted) setBooks([]);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadBooks();
+    fetch(`/api/books?lang=${language}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setBooks(data.books || []);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
   }, [language]);
 
@@ -42,26 +35,26 @@ export const useBook = (slug) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!slug) {
+      setBook(null);
+      setLoading(false);
+      return;
+    }
 
-    const loadBook = async () => {
-      setLoading(true);
+    let cancelled = false;
+    setLoading(true);
 
-      try {
-        const bookData = await fetchBookBySlug(slug, language);
-        if (isMounted) setBook(bookData);
-      } catch (error) {
-        console.error('Failed to load book:', error);
-        if (isMounted) setBook(null);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadBook();
+    fetch(`/api/books/${encodeURIComponent(slug)}?lang=${language}`)
+      .then((res) => (res.ok ? res.json() : { book: null }))
+      .then((data) => {
+        if (!cancelled) setBook(data.book || null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
   }, [slug, language]);
 

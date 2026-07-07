@@ -1,6 +1,6 @@
 // src/app/[lang]/(public)/comics/[slug]/page.jsx
 import { ComicsDetailsPage } from "@/features/comic/comicdeatils";
-import { getComicsByLanguage } from "@/data/comics/index";
+import { getComicsByLanguage } from "@/lib/server/comicsRepository";
 
 // Force dynamic rendering to avoid static generation issues
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }) {
       };
     }
 
-    const comics = getComicsByLanguage(currentLanguage);
+    const comics = await getComicsByLanguage(currentLanguage);
     const slugField = getSlugFieldName(currentLanguage);
 
     const comic = comics?.find((c) => {
@@ -210,80 +210,6 @@ export async function generateMetadata({ params }) {
   }
 }
 
-// Generate static paths for all comics across all languages
-export async function generateStaticParams() {
-  const languages = [
-    "en",
-    "hi",
-    "ur",
-    "ar",
-    "bn",
-    "es",
-    "fr",
-    "de",
-    "ja",
-    "zh",
-  ];
-  const allParams = [];
-
-  for (const lang of languages) {
-    try {
-      const comics = getComicsByLanguage(lang);
-      if (comics && Array.isArray(comics) && comics.length > 0) {
-        for (const comic of comics) {
-          if (comic && comic.slug) {
-            // Add the default slug
-            allParams.push({
-              lang: lang,
-              slug: comic.slug,
-            });
-
-            // For Hindi, also add the hindiSlug if it exists and is different
-            if (
-              lang === "hi" &&
-              comic.hindiSlug &&
-              comic.hindiSlug !== comic.slug
-            ) {
-              allParams.push({
-                lang: lang,
-                slug: comic.hindiSlug,
-              });
-            }
-
-            // For Urdu, add urduSlug
-            if (
-              lang === "ur" &&
-              comic.urduSlug &&
-              comic.urduSlug !== comic.slug
-            ) {
-              allParams.push({
-                lang: lang,
-                slug: comic.urduSlug,
-              });
-            }
-
-            // For Arabic, add arabicSlug
-            if (
-              lang === "ar" &&
-              comic.arabicSlug &&
-              comic.arabicSlug !== comic.slug
-            ) {
-              allParams.push({
-                lang: lang,
-                slug: comic.arabicSlug,
-              });
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`Error generating params for language ${lang}:`, error);
-    }
-  }
-
-  return allParams;
-}
-
 // Server Component
 export default async function ComicDetailPage({ params }) {
   try {
@@ -300,7 +226,7 @@ export default async function ComicDetailPage({ params }) {
       );
     }
 
-    const comics = getComicsByLanguage(currentLanguage);
+    const comics = await getComicsByLanguage(currentLanguage);
 
     if (!comics || !Array.isArray(comics)) {
       return (

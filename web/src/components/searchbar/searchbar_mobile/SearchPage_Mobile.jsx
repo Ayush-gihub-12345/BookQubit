@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { fetchBooks } from "@/services/booksApi";
+import { getBooksByLanguage } from "@/data/books";
 import { 
   FaSearch, 
   FaTimes, 
@@ -85,12 +85,18 @@ const SearchPage_Mobile = ({ onClose, initialQuery = "" }) => {
 
     setIsLoading(true);
     
-    const { books } = await fetchBooks({
-      lang: language,
-      search: searchTerm,
-      limit: 100,
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const books = getBooksByLanguage(language);
+    let results = books.filter((book) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        book.title?.toLowerCase().includes(searchLower) ||
+        book.author?.toLowerCase().includes(searchLower) ||
+        book.description?.toLowerCase().includes(searchLower) ||
+        book.category?.toLowerCase().includes(searchLower)
+      );
     });
-    let results = [...books];
 
     // Apply filters
     if (selectedFilters.categories.length > 0) {
@@ -188,7 +194,7 @@ const SearchPage_Mobile = ({ onClose, initialQuery = "" }) => {
 
   const handleBookClick = (book) => {
     const slug = book.slug || book.id;
-    router.push(`/${language}/books/${slug}`);
+    router.push(`/books/${slug}`);
     if (onClose) onClose();
   };
 

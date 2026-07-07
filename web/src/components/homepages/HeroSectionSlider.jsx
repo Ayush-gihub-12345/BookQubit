@@ -13,7 +13,7 @@ import {
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRouter } from "next/navigation";
-import { useBooks } from "@/hooks/useBooks";
+import { getBooksByLanguage } from "@/data/books";
 import { useFont } from "@/contexts/FontContext"; // Import font context
 
 const HeroSection = () => {
@@ -25,7 +25,7 @@ const HeroSection = () => {
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [isInCollection, setIsInCollection] = useState(false);
   const [bookStatus, setBookStatus] = useState("unread");
-  const { books } = useBooks();
+  const [books, setBooks] = useState([]);
   const scrollInterval = useRef(null);
 
   // Check if current theme is dark mode
@@ -33,6 +33,12 @@ const HeroSection = () => {
     themeName === "dark" ||
     themeName === "midnight" ||
     themeName === "cyberpunk";
+
+  // Load books based on language
+  useEffect(() => {
+    const booksData = getBooksByLanguage(language);
+    setBooks(booksData);
+  }, [language]);
 
   // Filter books - moved before conditional return
   const filteredBooks = books.filter((book) => {
@@ -139,9 +145,9 @@ const HeroSection = () => {
 
   const handleSummaryClick = () => {
     if (currentBook?.slug) {
-      router.push(`/${language}/books/${currentBook.slug}#summary`);
+      router.push(`/books/${currentBook.slug}#summary`);
     } else if (currentBook?.id) {
-      router.push(`/${language}/books/${currentBook.id}#summary`);
+      router.push(`/books/${currentBook.id}#summary`);
     }
   };
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { fetchBooks } from "@/services/booksApi";
+import { getBooksByLanguage } from "@/data/books";
 
 const useCollectionFiltering = (language) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -10,26 +10,10 @@ const useCollectionFiltering = (language) => {
 
   // Load books based on language
   useEffect(() => {
-    let isMounted = true;
-
-    const loadBooks = async () => {
-      setIsLoading(true);
-      try {
-        const { books: booksData } = await fetchBooks({ lang: language, limit: 500 });
-        if (isMounted) setBooks(booksData);
-      } catch (error) {
-        console.error("Failed to load collection books:", error);
-        if (isMounted) setBooks([]);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    loadBooks();
-
-    return () => {
-      isMounted = false;
-    };
+    setIsLoading(true);
+    const booksData = getBooksByLanguage(language);
+    setBooks(booksData);
+    setIsLoading(false);
   }, [language]);
 
   // Get all unique collections from all books

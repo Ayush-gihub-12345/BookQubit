@@ -1,6 +1,8 @@
 // d:/Projects/done/bookqubit_done/web/src/features/tags/TagsData.js
 "use client";
 
+import { getBooksByLanguage } from "@/data/books";
+
 // Get all tags from books
 export const getAllTags = (books) => {
   const tagsMap = new Map();

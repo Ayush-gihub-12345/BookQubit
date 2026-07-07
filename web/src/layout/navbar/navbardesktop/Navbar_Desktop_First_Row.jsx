@@ -17,7 +17,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useTheme } from "@/themes/useTheme";
 import { useRTL } from "@/contexts/RTLContext";
 import { useFont } from "@/contexts/FontContext";
-import { fetchBooks } from "@/services/booksApi";
+import { getBooksByLanguage } from "@/data/books";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 import bookqubitLogo from "@/assets/logo/bookqubitlogo.png";
@@ -35,6 +35,7 @@ const Navbar_Desktop_First_Row = () => {
   const { language } = useLanguage();
 
   const authListenerInitialized = useRef(false);
+  const searchInitialized = useRef(false);
 
   // Following the same pattern as ExploreCollections
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
@@ -53,10 +54,8 @@ const Navbar_Desktop_First_Row = () => {
 
   // Load book suggestions based on language
   useEffect(() => {
-    let isMounted = true;
-
-    const loadSuggestions = async () => {
-      const { books } = await fetchBooks({ lang: language, limit: 100 });
+    if (!searchInitialized.current) {
+      const books = getBooksByLanguage(language);
       const suggestions = books.map((book) => ({
         id: book.id,
         title: book.title,
@@ -66,17 +65,9 @@ const Navbar_Desktop_First_Row = () => {
         category: book.category,
         tags: book.tags,
       }));
-      if (isMounted) setBookSuggestions(suggestions);
-    };
-
-    loadSuggestions().catch((error) => {
-      console.error("Failed to load book suggestions:", error);
-      if (isMounted) setBookSuggestions([]);
-    });
-
-    return () => {
-      isMounted = false;
-    };
+      setBookSuggestions(suggestions);
+      searchInitialized.current = true;
+    }
   }, [language]);
 
   // Apply font to navbar
@@ -107,12 +98,12 @@ const Navbar_Desktop_First_Row = () => {
 
   const handleSearch = useCallback((query, selectedBook = null) => {
     if (selectedBook) {
-      router.push(`/${language}/books/${selectedBook.slug || selectedBook.id}`);
+      router.push(`/book/${selectedBook.slug || selectedBook.id}`);
     } 
     else if (query && query.trim()) {
-      router.push(`/${language}/search?q=${encodeURIComponent(query.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
-  }, [language, router]);
+  }, [router]);
 
   const handleClearRecent = useCallback((updatedRecent = []) => {
     setRecentSearches(updatedRecent);

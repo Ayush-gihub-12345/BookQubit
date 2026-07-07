@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { fetchBooks } from "@/services/booksApi";
+import { getBooksByLanguage } from "@/data/books";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -61,10 +61,7 @@ const CollectionsDetails = () => {
     const loadBooks = async () => {
       setIsLoading(true);
       try {
-        const { books: booksData } = await fetchBooks({
-          lang: currentLanguage,
-          limit: 500,
-        });
+        const booksData = getBooksByLanguage(currentLanguage);
         setBooks(booksData || []);
       } catch (error) {
         console.error("Failed to load books:", error);

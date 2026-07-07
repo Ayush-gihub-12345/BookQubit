@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:generate": "node scripts/migrate-data-to-d1.mjs",
+    "db:migrate:local": "wrangler d1 execute bookqubit-db --local --file=../migrations/0001_init.sql",
+    "db:seed:local": "wrangler d1 execute bookqubit-db --local --file=../migrations/0002_seed.sql",
+    "db:migrate:remote": "wrangler d1 execute bookqubit-db --remote --file=../migrations/0001_init.sql",
+    "db:seed:remote": "wrangler d1 execute bookqubit-db --remote --file=../migrations/0002_seed.sql",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "date-fns": "^4.4.0",
@@ -24,10 +32,12 @@
     "swiper": "^12.2.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.0.0",
     "@tailwindcss/postcss": "^4.1.11",
     "eslint": "^9.27.0",
     "eslint-config-next": "^15.3.2",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "wrangler": "^3.99.0"
   }
 }

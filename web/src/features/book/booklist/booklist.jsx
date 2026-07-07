@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, usePathname } from "next/navigation";
-import { fetchBooks } from "@/services/booksApi";
+import { getBooksByLanguage } from "@/data/books";
 import BookSquareCard from "@/features/book/booklist/ui/BookSquareCard";
 import BookRectangleCard from "@/features/book/booklist/ui/BookRectangleCard";
 import BookCompactCard from "@/features/book/booklist/ui/BookCompactCard";
@@ -61,10 +61,12 @@ const BookList = () => {
 
   const currentLanguage = getCurrentLanguage();
 
+  // Get books based on current language from URL
+  const booksData = useMemo(() => {
+    return getBooksByLanguage(currentLanguage);
+  }, [currentLanguage]);
+
   // State for search and display
-  const [booksData, setBooksData] = useState([]);
-  const [isBooksLoading, setIsBooksLoading] = useState(true);
-  const [booksError, setBooksError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewType, setViewType] = useState("grid");
   const [isMobile, setIsMobile] = useState(false);
@@ -82,43 +84,6 @@ const BookList = () => {
   const [itemsPerPage, setItemsPerPage] = useState(12);
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadBooks = async () => {
-      setIsBooksLoading(true);
-      setBooksError("");
-
-      try {
-        const result = await fetchBooks({
-          lang: currentLanguage,
-          limit: 500,
-          sort: sortOption,
-        });
-
-        if (isMounted) {
-          setBooksData(result.books || []);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Failed to load books:", error);
-          setBooksData([]);
-          setBooksError(t("book.load_error") || "Unable to load books");
-        }
-      } finally {
-        if (isMounted) {
-          setIsBooksLoading(false);
-        }
-      }
-    };
-
-    loadBooks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentLanguage, sortOption, t]);
 
   // Check screen size on mount and resize
   useEffect(() => {
@@ -618,29 +583,10 @@ const BookList = () => {
         </div>
 
         {/* Book Cards */}
-        {isBooksLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto"></div>
-            <p
-              className={`mt-4 ${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
-            >
-              {t("common.loading") || "Loading..."}
-            </p>
-          </div>
-        ) : booksError ? (
-          <div className="text-center py-12">
-            <p
-              className={`${theme.textColors?.secondary || (isDarkMode ? "text-gray-400" : "text-gray-600")}`}
-            >
-              {booksError}
-            </p>
-          </div>
-        ) : (
-          renderBooksView()
-        )}
+        {renderBooksView()}
 
         {/* Pagination */}
-        {!isBooksLoading && !booksError && filteredBooks.length > 0 && (
+        {filteredBooks.length > 0 && (
           <PaginationBooks
             currentPage={currentPage}
             totalPages={Math.ceil(filteredBooks.length / itemsPerPage)}

@@ -1,10 +1,6 @@
 // src/app/[lang]/(public)/books/[slug]/page.jsx
 import BookDetailsPage from "@/features/book/bookdeatils/bookdeatils";
-import {
-  getBookBySlugFromD1,
-  getBookLanguageSlugsFromD1,
-  getBooksFromD1,
-} from "@/lib/server/booksRepository";
+import { getBooksByLanguage } from "@/data/books";
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }) {
@@ -13,12 +9,8 @@ export async function generateMetadata({ params }) {
   // Get language from URL params (not cookies for URL-based language)
   const currentLanguage = lang || "en";
 
-  let book = null;
-  try {
-    book = await getBookBySlugFromD1(slug, currentLanguage);
-  } catch (error) {
-    console.error("Failed to load book metadata:", error);
-  }
+  const books = getBooksByLanguage(currentLanguage);
+  const book = books?.find((b) => b.slug === slug);
 
   if (!book) {
     return {
@@ -52,11 +44,8 @@ export async function generateMetadata({ params }) {
     .filter(Boolean)
     .join(", ");
 
-  const seoTitle =
-    book.seoTitle ||
-    `${book.title}${book.subtitle ? `: ${book.subtitle}` : ""} | ${book.author ? `by ${book.author} | ` : ""}BookQubit`;
+  const seoTitle = `${book.title}${book.subtitle ? `: ${book.subtitle}` : ""} | ${book.author ? `by ${book.author} | ` : ""}BookQubit`;
   const seoDescription =
-    book.seoDescription?.substring(0, 160) ||
     book.description?.substring(0, 160) ||
     book.about?.substring(0, 160) ||
     `Read "${book.title}" ${book.author ? `by ${book.author} ` : ""}${book.category ? `in ${book.category} ` : ""}category. Get summary, key points, and insights at BookQubit.`;
@@ -64,16 +53,19 @@ export async function generateMetadata({ params }) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com";
   const canonicalUrl = `${baseUrl}/${currentLanguage}/books/${book.slug}`;
 
-  const languageSlugs = await getBookLanguageSlugsFromD1(
-    book.id,
-    book.canonicalSlug || book.slug,
-  );
-  const alternateLanguages = Object.fromEntries(
-    Object.entries(languageSlugs).map(([language, languageSlug]) => [
-      language,
-      `${baseUrl}/${language}/books/${languageSlug}`,
-    ]),
-  );
+  // Generate alternate language URLs
+  const alternateLanguages = {
+    en: `${baseUrl}/en/books/${book.slug}`,
+    hi: `${baseUrl}/hi/books/${book.slug}`,
+    ur: `${baseUrl}/ur/books/${book.slug}`,
+    ar: `${baseUrl}/ar/books/${book.slug}`,
+    bn: `${baseUrl}/bn/books/${book.slug}`,
+    es: `${baseUrl}/es/books/${book.slug}`,
+    fr: `${baseUrl}/fr/books/${book.slug}`,
+    de: `${baseUrl}/de/books/${book.slug}`,
+    ja: `${baseUrl}/ja/books/${book.slug}`,
+    zh: `${baseUrl}/zh/books/${book.slug}`,
+  };
 
   return {
     title: seoTitle,
@@ -175,14 +167,7 @@ export async function generateStaticParams() {
   const allParams = [];
 
   for (const lang of languages) {
-    let books = [];
-    try {
-      const result = await getBooksFromD1({ lang, limit: 500 });
-      books = result.books || [];
-    } catch (error) {
-      console.error(`Failed to load static book params for ${lang}:`, error);
-    }
-
+    const books = getBooksByLanguage(lang);
     if (books && books.length > 0) {
       for (const book of books) {
         allParams.push({
@@ -204,12 +189,8 @@ export default async function BookPage({ params }) {
   const currentLanguage = lang || "en";
 
   // Fetch book data for structured data
-  let book = null;
-  try {
-    book = await getBookBySlugFromD1(slug, currentLanguage);
-  } catch (error) {
-    console.error("Failed to load book page data:", error);
-  }
+  const books = getBooksByLanguage(currentLanguage);
+  const book = books?.find((b) => b.slug === slug);
 
   // Prepare author data for structured data
   let authorData = undefined;

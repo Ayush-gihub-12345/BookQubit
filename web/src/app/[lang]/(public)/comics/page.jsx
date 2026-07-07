@@ -1,6 +1,6 @@
 // src/app/[lang]/(public)/comics/page.jsx
 import ComicsListPage from "@/features/comic/comiclist/ComicsListPage";
-import { getComicsByLanguage } from "@/data/comics";
+import { getComicsByLanguage } from "@/lib/server/comicsRepository";
 
 // Generate metadata for SEO with language support
 export async function generateMetadata({ params }) {
@@ -8,7 +8,7 @@ export async function generateMetadata({ params }) {
   const currentLanguage = lang || "en";
 
   // Fetch comics data for metadata
-  const comics = getComicsByLanguage(currentLanguage);
+  const comics = await getComicsByLanguage(currentLanguage);
   const totalComics = comics?.length || 0;
   const categories = [
     ...new Set(comics?.map((comic) => comic.category).filter(Boolean)),
@@ -139,26 +139,6 @@ export async function generateMetadata({ params }) {
     authors: [{ name: "BookQubit", url: `${baseUrl}/about` }],
     publisher: "BookQubit",
   };
-}
-
-// Generate static params for static site generation
-export async function generateStaticParams() {
-  const languages = [
-    "en",
-    "hi",
-    "ur",
-    "ar",
-    "bn",
-    "es",
-    "fr",
-    "de",
-    "ja",
-    "zh",
-  ];
-
-  return languages.map((lang) => ({
-    lang: lang,
-  }));
 }
 
 // Loading component for Suspense

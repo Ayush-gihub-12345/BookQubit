@@ -8,7 +8,7 @@ import "slick-carousel/slick/slick-theme.css";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { useBooks } from "@/hooks/useBooks";
+import { getBooksByLanguage } from "@/data/books";
 import { FaFire, FaEye, FaChartLine, FaArrowRight, FaBook, FaUser, FaFilm } from "react-icons/fa";
 
 const TrendDashboardSlider = () => {
@@ -19,9 +19,9 @@ const TrendDashboardSlider = () => {
   const [sliderKey, setSliderKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [trendingItems, setTrendingItems] = useState([]);
-  const { books: booksData } = useBooks();
 
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
+  const booksData = getBooksByLanguage(language);
 
   useEffect(() => {
     if (booksData && booksData.length > 0) {
@@ -36,7 +36,7 @@ const TrendDashboardSlider = () => {
           cover: book.imageUrl || book.coverImage || "https://via.placeholder.com/120x180?text=Book",
           trendScore: Math.floor(Math.random() * 30) + 70,
           growth: `+${Math.floor(Math.random() * 50) + 20}%`,
-          link: `/${language}/books/${book.slug || book.id}`,
+          link: `/books/${book.slug || book.id}`,
           icon: <FaBook className="text-blue-400" />,
         });
       });

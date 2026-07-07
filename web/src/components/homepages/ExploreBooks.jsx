@@ -5,7 +5,7 @@ import Link from "next/link";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { useBooks } from "@/hooks/useBooks";
+import { getBooksByLanguage } from "@/data/books";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
@@ -15,13 +15,19 @@ const ExploreBooks = () => {
   const { theme, themeName } = useTheme();
   const { t, language } = useLanguage();
   const { currentFont } = useFont();
-  const { books } = useBooks();
+  const [books, setBooks] = useState([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280);
   const [sliderKey, setSliderKey] = useState(0);
   const [mounted, setMounted] = useState(false);
 
   // Check if current theme is dark mode
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
+
+  // Load books based on language
+  useEffect(() => {
+    const booksData = getBooksByLanguage(language);
+    setBooks(booksData);
+  }, [language]);
 
   const featuredBooks = books.slice(0, 12);
 
@@ -127,7 +133,7 @@ const ExploreBooks = () => {
                   </div>
                   {/* Know More Button - Points to book details page */}
                   <Link
-                    href={`/${language}/books/${book.slug || book.id}`}
+                    href={`/books/${book.slug || book.id}`}
                     className={`know-more-btn ${theme.buttonColors?.primaryButton?.background || 'bg-gradient-to-r from-sky-600 to-sky-500'} ${theme.buttonColors?.primaryButton?.hoverBackground || 'hover:from-sky-700 hover:to-sky-600'} ${theme.buttonColors?.primaryButton?.textColor || 'text-white'}`}
                   >
                     {t("book.know_more") || "Know More"}
@@ -141,7 +147,7 @@ const ExploreBooks = () => {
         <div className="text-center">
           {/* Browse All Books Button - Points to bookslist page */}
           <Link
-            href={`/${language}/books`}
+            href="/books"
             className={`browse-all-btn ${theme.buttonColors?.primaryButton?.background || 'bg-gradient-to-r from-sky-600 to-sky-500'} ${theme.buttonColors?.primaryButton?.hoverBackground || 'hover:from-sky-700 hover:to-sky-600'} ${theme.buttonColors?.primaryButton?.textColor || 'text-white'} ${theme.border?.button || ''} ${theme.shadow?.button || 'shadow-md'}`}
           >
             {t("explore.browse_all_books") || "Browse All Books"}

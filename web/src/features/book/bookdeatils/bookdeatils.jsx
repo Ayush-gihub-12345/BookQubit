@@ -5,7 +5,7 @@ import { useParams, useRouter, usePathname } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { fetchBookBySlug, fetchBooks } from "@/services/booksApi";
+import { getBooksByLanguage } from "@/data/books";
 
 // Import components
 import BookNotFound from "@/features/book/bookdeatils/components/BookNotFound";
@@ -96,46 +96,17 @@ const BookDetailsPage = ({ initialBook, initialSlug, initialLanguage }) => {
 
   // Load books based on language from URL
   useEffect(() => {
-    let isMounted = true;
-
-    const loadBooks = async () => {
-      setIsLoading(true);
-
-      try {
-        const [booksResult, bookResult] = await Promise.all([
-          fetchBooks({ lang: currentLanguage, limit: 500 }),
-          initialBook ? Promise.resolve(initialBook) : fetchBookBySlug(slug, currentLanguage),
-        ]);
-
-        if (isMounted) {
-          setBooksData(booksResult.books || []);
-          setBook(bookResult || null);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Failed to load book details:", error);
-          setBooksData([]);
-          setBook(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadBooks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentLanguage, initialBook, slug]);
+    setIsLoading(true);
+    const books = getBooksByLanguage(currentLanguage);
+    setBooksData(books || []);
+    setIsLoading(false);
+  }, [currentLanguage]);
 
   // Reset book when language changes
   useEffect(() => {
-    if (!initialBook) setBook(null);
+    setBook(null);
     setIsRedirecting(false);
-  }, [currentLanguage, initialBook]);
+  }, [currentLanguage]);
 
   // Scroll to top when component mounts or slug changes
   useEffect(() => {

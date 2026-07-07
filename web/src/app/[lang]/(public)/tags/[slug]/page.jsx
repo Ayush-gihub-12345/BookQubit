@@ -6,7 +6,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
-import { useBooks } from "@/hooks/useBooks";
 import { extractDynamicTagsFromBook } from "@/features/tags/dynamic_book_tags";
 import BookSquareCard from "@/features/book/booklist/ui/BookSquareCard";
 import { FaTag, FaArrowLeft, FaBookOpen } from "react-icons/fa";
@@ -26,12 +25,19 @@ const TagPage = () => {
   const [relatedTags, setRelatedTags] = useState([]);
 
   const isDarkMode = themeName === "dark" || themeName === "midnight" || themeName === "cyberpunk";
-  const { books } = useBooks();
 
   // Load all books
   useEffect(() => {
-    setAllBooks(books);
-  }, [books]);
+    let cancelled = false;
+    fetch(`/api/books?lang=${language}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setAllBooks(data.books || []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   // Decode tag name from slug and find related books
   useEffect(() => {
@@ -75,7 +81,7 @@ const TagPage = () => {
 
   const handleTagClick = (tag) => {
     const tagSlug = tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    router.push(`/${language}/tags/${tagSlug}`);
+    router.push(`/tags/${tagSlug}`);
   };
 
   const fontStyle = currentFont ? { fontFamily: currentFont.family } : {};

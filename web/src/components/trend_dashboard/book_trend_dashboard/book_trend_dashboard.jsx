@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useBooks } from "@/hooks/useBooks";
+import { getBooksByLanguage } from "@/data/books";
 import { useTheme } from "@/themes/useTheme";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFont } from "@/contexts/FontContext";
@@ -25,12 +25,13 @@ const BookTrendDashboard = () => {
   const { t, language } = useLanguage();
   const { currentFont } = useFont();
   const [books, setBooks] = useState([]);
-  const { books: sourceBooks } = useBooks();
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("trending");
   const [hoveredBook, setHoveredBook] = useState(null);
 
-  const booksData = useMemo(() => sourceBooks || [], [sourceBooks]);
+  const booksData = useMemo(() => {
+    return getBooksByLanguage(language);
+  }, [language]);
 
   const isDarkMode = themeName === 'dark' || themeName === 'midnight' || themeName === 'cyberpunk';
 
@@ -179,7 +180,7 @@ const BookTrendDashboard = () => {
       {/* Books Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {getSortedBooks().map((book, idx) => (
-          <Link href={`/${language}/books/${book.slug}`} key={book.id}>
+          <Link href={`/books/${book.slug}`} key={book.id}>
             <div 
               className="group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer"
               onMouseEnter={() => setHoveredBook(book.id)}
