@@ -116,7 +116,21 @@ CREATE TABLE IF NOT EXISTS shelf (
 );
 CREATE INDEX IF NOT EXISTS idx_shelf_user ON shelf(user_id);
 CREATE INDEX IF NOT EXISTS idx_shelf_status ON shelf(status);
+
+CREATE TABLE IF NOT EXISTS goals (
+  user_id TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  target INTEGER NOT NULL DEFAULT 12,
+  PRIMARY KEY (user_id, year)
+);
 `;
+
+// Additive column migrations for tables that may pre-date these columns.
+// Each runs independently and failures ("duplicate column") are expected noise.
+const MIGRATIONS = [
+  "ALTER TABLE shelf ADD COLUMN started_at TEXT",
+  "ALTER TABLE shelf ADD COLUMN finished_at TEXT",
+];
 
 let schemaReady;
 
@@ -131,6 +145,9 @@ export async function getDb() {
     const statements = SCHEMA.split(";").map((s) => s.trim()).filter(Boolean);
     schemaReady = env.DB
       .batch(statements.map((s) => env.DB.prepare(s)))
+      .then(() =>
+        Promise.all(MIGRATIONS.map((m) => env.DB.prepare(m).run().catch(() => {})))
+      )
       .catch((err) => {
         schemaReady = undefined; // allow retry on next request
         throw err;

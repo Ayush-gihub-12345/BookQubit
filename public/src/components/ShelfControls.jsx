@@ -14,6 +14,9 @@ export default function ShelfControls({ slug }) {
   const [user, setUser] = useState(null);
   const [entry, setEntry] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewSaved, setReviewSaved] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -24,6 +27,7 @@ export default function ShelfControls({ slug }) {
         const r = await fetch(`/api/shelf?uid=${u.uid}&slug=${encodeURIComponent(slug)}`);
         const data = await r.json();
         setEntry(data.entry);
+        if (data.entry?.review) setReviewText(data.entry.review);
       }
     });
   }, [slug]);
@@ -98,6 +102,37 @@ export default function ShelfControls({ slug }) {
             onChange={(e) => update({ progress: Number(e.target.value) })}
             className="w-full accent-[var(--color-brand-600)]"
           />
+        </div>
+      )}
+
+      {/* Review composer */}
+      {entry?.status && (
+        <div>
+          <button onClick={() => setReviewOpen(!reviewOpen)} className="text-sm font-semibold text-brand-600 hover:underline">
+            ✍️ {entry?.review ? "Edit your review" : "Write a review"}
+          </button>
+          {reviewOpen && (
+            <div className="mt-2 space-y-2">
+              <textarea
+                value={reviewText}
+                onChange={(e) => { setReviewText(e.target.value); setReviewSaved(false); }}
+                rows={4}
+                maxLength={2000}
+                placeholder="What did you think of this book?"
+                className="input resize-y text-sm"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-muted text-xs">{reviewText.length}/2000</span>
+                <button
+                  disabled={busy || !reviewText.trim()}
+                  onClick={async () => { await update({ review: reviewText.trim() }); setReviewSaved(true); }}
+                  className="btn-primary !px-4 !py-1.5 text-xs"
+                >
+                  {reviewSaved ? "✓ Published" : "Publish review"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

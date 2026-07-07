@@ -151,6 +151,67 @@ export const LEVELS = [
 export const levelFor = (points) => LEVELS.find((l) => points >= l.min);
 export const pointsFor = (r) => (r.reads || 0) * 10 + (r.ratings || 0) * 2 + (r.reviews || 0) * 5;
 
+// Community stats + reviews for one book (drives the book-page social section)
+export async function getBookCommunity(slug) {
+  const db = await getDb();
+  const [agg, dist, reviews] = await Promise.all([
+    db.prepare(
+      `SELECT COUNT(*) AS total,
+         SUM(CASE WHEN status='want' THEN 1 ELSE 0 END) AS want,
+         SUM(CASE WHEN status='reading' THEN 1 ELSE 0 END) AS reading,
+         SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS read,
+         AVG(rating) AS avg_rating,
+         COUNT(rating) AS rating_count
+       FROM shelf WHERE book_slug=?1`
+    ).bind(slug).first(),
+    db.prepare(
+      `SELECT rating, COUNT(*) AS n FROM shelf
+       WHERE book_slug=?1 AND rating IS NOT NULL GROUP BY rating`
+    ).bind(slug).all(),
+    db.prepare(
+      `SELECT s.rating, s.review, s.status, s.updated_at, u.id AS user_id, u.name, u.photo_url
+       FROM shelf s JOIN users u ON u.id=s.user_id
+       WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
+       ORDER BY s.updated_at DESC LIMIT 20`
+    ).bind(slug).all(),
+  ]);
+  const distribution = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    n: dist.results.find((d) => d.rating === star)?.n || 0,
+  }));
+  return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, reviews: reviews.results };
+}
+
+// Latest community activity across the platform
+export async function getRecentActivity(limit = 12) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT s.book_slug, s.status, s.rating, s.updated_at,
+            u.id AS user_id, u.name, u.photo_url,
+            b.title, b.cover_url
+     FROM shelf s
+     JOIN users u ON u.id = s.user_id
+     LEFT JOIN books b ON b.slug = s.book_slug AND b.lang='en'
+     ORDER BY s.updated_at DESC LIMIT ?1`
+  ).bind(limit).all();
+  return results;
+}
+
+// Public profile: user info + full shelf with book data
+export async function getUserProfile(uid) {
+  const db = await getDb();
+  const [user, shelf] = await Promise.all([
+    db.prepare("SELECT * FROM users WHERE id=?1").bind(uid).first(),
+    db.prepare(
+      `SELECT s.*, b.title, b.author, b.cover_url
+       FROM shelf s LEFT JOIN books b ON b.slug=s.book_slug AND b.lang='en'
+       WHERE s.user_id=?1 ORDER BY s.updated_at DESC`
+    ).bind(uid).all(),
+  ]);
+  if (!user) return null;
+  return { user, shelf: shelf.results };
+}
+
 export async function getLeaderboard(limit = 20) {
   const db = await getDb();
   const { results } = await db.prepare(

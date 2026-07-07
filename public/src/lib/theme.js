@@ -5,6 +5,9 @@ export const THEMES = [
   { id: "dark", name: "Dark", icon: "🌙" },
   { id: "sepia", name: "Sepia", icon: "📜" },
   { id: "midnight", name: "Midnight", icon: "🌌" },
+  { id: "ocean", name: "Ocean", icon: "🌊" },
+  { id: "forest", name: "Forest", icon: "🌲" },
+  { id: "rose", name: "Rose", icon: "🌹" },
 ];
 
 export async function getTheme() {

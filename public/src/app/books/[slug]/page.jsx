@@ -5,7 +5,7 @@ import Rating from "@/components/Rating";
 import Section from "@/components/Section";
 import WishlistButton from "@/components/WishlistButton";
 import ShelfControls from "@/components/ShelfControls";
-import { getBook, relatedBooks, getBookAlternates } from "@/lib/repo";
+import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -43,7 +43,10 @@ export default async function BookPage({ params }) {
   const lang = await getLang();
   const book = await getBook(slug, lang);
   if (!book) notFound();
-  const related = await relatedBooks(book, lang);
+  const [related, community] = await Promise.all([
+    relatedBooks(book, lang),
+    getBookCommunity(book.slug),
+  ]);
   const _ = t(lang);
 
   const jsonLd = {
@@ -182,6 +185,63 @@ export default async function BookPage({ params }) {
                 ))}
               </div>
             )}
+
+            {/* Community section */}
+            <div className="mt-10">
+              <h2 className="text-xl font-bold">Community</h2>
+              <div className="mt-4 grid gap-6 sm:grid-cols-[220px_1fr]">
+                <div className="card p-5 text-center hover:!translate-y-0">
+                  <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
+                  <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
+                  <p className="text-muted mt-1 text-xs">{community.rating_count} ratings from readers</p>
+                  <div className="text-muted mt-4 space-y-1 text-xs">
+                    <p>🔖 {community.want || 0} want to read</p>
+                    <p>📖 {community.reading || 0} reading now</p>
+                    <p>✅ {community.read || 0} have read it</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {community.distribution.map((d) => {
+                    const pct = community.rating_count ? Math.round((d.n / community.rating_count) * 100) : 0;
+                    return (
+                      <div key={d.star} className="flex items-center gap-3 text-xs">
+                        <span className="w-8">{d.star} ★</span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                          <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-muted w-10 text-right">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {community.reviews.length > 0 && (
+                <div className="mt-6 space-y-4">
+                  <h3 className="font-bold">Reader Reviews ({community.reviews.length})</h3>
+                  {community.reviews.map((r) => (
+                    <div key={`${r.user_id}-${r.updated_at}`} className="card p-5 hover:!translate-y-0">
+                      <div className="flex items-center gap-3">
+                        {r.photo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.photo_url} alt="" className="h-9 w-9 rounded-full" />
+                        ) : (
+                          <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white">
+                            {(r.name || "R")[0].toUpperCase()}
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/readers/${r.user_id}`} className="text-sm font-semibold hover:text-brand-600">{r.name}</Link>
+                          <p className="text-muted text-xs">{r.updated_at?.slice(0, 10)}</p>
+                        </div>
+                        {r.rating && <span className="text-sm text-amber-400">{"★".repeat(r.rating)}</span>}
+                      </div>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{r.review}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

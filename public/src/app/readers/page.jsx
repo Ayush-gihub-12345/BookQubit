@@ -1,12 +1,19 @@
-import { getLeaderboard } from "@/lib/repo";
+import Link from "next/link";
+import { getLeaderboard, getRecentActivity } from "@/lib/repo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Top Readers — Bookworm Leaderboard" };
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+const ACTION = {
+  read: "finished reading",
+  reading: "started reading",
+  want: "wants to read",
+};
+
 export default async function ReadersPage() {
-  const readers = await getLeaderboard(50);
+  const [readers, activity] = await Promise.all([getLeaderboard(50), getRecentActivity(10)]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -17,6 +24,35 @@ export default async function ReadersPage() {
           Earn points: +10 per book read · +5 per review · +2 per rating
         </p>
       </div>
+
+      {activity.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-lg font-bold">📣 Community Activity</h2>
+          <div className="mt-3 space-y-2">
+            {activity.map((a, i) => (
+              <div key={i} className="card flex items-center gap-3 p-3 text-sm hover:!translate-y-0">
+                {a.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.photo_url} alt="" className="h-8 w-8 rounded-full" />
+                ) : (
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                    {(a.name || "R")[0].toUpperCase()}
+                  </span>
+                )}
+                <p className="min-w-0 flex-1 truncate">
+                  <Link href={`/readers/${a.user_id}`} className="font-semibold hover:text-brand-600">{a.name}</Link>
+                  <span className="text-muted"> {ACTION[a.status] || "updated"} </span>
+                  <Link href={`/books/${encodeURIComponent(a.book_slug)}`} className="font-medium hover:text-brand-600">
+                    {a.title || a.book_slug}
+                  </Link>
+                  {a.rating && <span className="text-amber-400"> {"★".repeat(a.rating)}</span>}
+                </p>
+                <span className="text-muted shrink-0 text-xs">{a.updated_at?.slice(0, 10)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {readers.length ? (
         <ol className="mt-10 space-y-3">
@@ -34,7 +70,7 @@ export default async function ReadersPage() {
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{r.name}</p>
+                <Link href={`/readers/${r.id}`} className="block truncate font-semibold hover:text-brand-600">{r.name}</Link>
                 <p className="text-muted text-xs">
                   {r.level.icon} {r.level.name} · {r.reads} read · {r.ratings} rated
                 </p>

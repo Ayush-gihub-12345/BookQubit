@@ -28,6 +28,8 @@ export default function AccountPage() {
   const [wishlist, setWishlist] = useState([]);
   const [tab, setTab] = useState("all");
   const [rank, setRank] = useState(null);
+  const [goal, setGoal] = useState(null);
+  const [goalInput, setGoalInput] = useState("");
 
   useEffect(() => {
     setWishlist(readWishlist());
@@ -36,11 +38,13 @@ export default function AccountPage() {
     return auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (!u) { router.push("/login"); return; }
-      const [shelfRes, lbRes] = await Promise.all([
+      const [shelfRes, lbRes, goalRes] = await Promise.all([
         fetch(`/api/shelf?uid=${u.uid}`).then((r) => r.json()),
         fetch("/api/leaderboard").then((r) => r.json()).catch(() => ({ readers: [] })),
+        fetch(`/api/goal?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
       ]);
       setShelf(shelfRes.shelf || []);
+      setGoal(goalRes);
       const i = (lbRes.readers || []).findIndex((r) => r.id === u.uid);
       if (i >= 0) setRank({ position: i + 1, ...lbRes.readers[i] });
     });
@@ -107,6 +111,65 @@ export default function AccountPage() {
             <p className="text-muted text-xs">{label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Reading goal */}
+      <div className="card mt-6 flex flex-col items-center gap-6 p-6 hover:!translate-y-0 sm:flex-row">
+        {goal?.target ? (
+          <>
+            <div
+              className="grid h-24 w-24 shrink-0 place-items-center rounded-full"
+              style={{
+                background: `conic-gradient(var(--color-brand-600) ${Math.min(100, Math.round(((goal.done || 0) / goal.target) * 100)) * 3.6}deg, color-mix(in srgb, var(--color-brand-600) 15%, transparent) 0deg)`,
+              }}
+            >
+              <div className="bg-surface grid h-[76px] w-[76px] place-items-center rounded-full text-center">
+                <span>
+                  <span className="block text-xl font-extrabold">{goal.done || 0}</span>
+                  <span className="text-muted block text-[10px]">of {goal.target}</span>
+                </span>
+              </div>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="font-bold">📅 {goal.year} Reading Challenge</h3>
+              <p className="text-muted mt-1 text-sm">
+                {goal.done >= goal.target
+                  ? "🎉 Goal complete — you're unstoppable!"
+                  : `${goal.target - goal.done} more ${goal.target - goal.done === 1 ? "book" : "books"} to reach your goal. Keep going!`}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="font-bold">📅 Set your {new Date().getFullYear()} Reading Challenge</h3>
+            <p className="text-muted mt-1 text-sm">How many books will you read this year?</p>
+          </div>
+        )}
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const target = Number(goalInput);
+            if (!target) return;
+            await fetch("/api/goal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken: await user.getIdToken(), target }),
+            });
+            setGoal((g) => ({ ...(g || { year: new Date().getFullYear(), done: 0 }), target }));
+            setGoalInput("");
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="number" min="1" max="1000" value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            placeholder={goal?.target ? String(goal.target) : "24"}
+            className="input w-24 text-center"
+          />
+          <button type="submit" className="btn-primary !px-4 text-sm">
+            {goal?.target ? "Update" : "Set goal"}
+          </button>
+        </form>
       </div>
 
       {/* Shelf */}

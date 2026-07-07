@@ -41,13 +41,19 @@ export async function POST(request) {
        ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3`
     ).bind(user.uid, user.name, user.photo),
     db.prepare(
-      `INSERT INTO shelf (user_id, book_slug, status, rating, review, progress, updated_at)
-       VALUES (?1, ?2, COALESCE(?3,'want'), ?4, ?5, COALESCE(?6,0), CURRENT_TIMESTAMP)
+      `INSERT INTO shelf (user_id, book_slug, status, rating, review, progress, started_at, finished_at, updated_at)
+       VALUES (?1, ?2, COALESCE(?3,'want'), ?4, ?5, COALESCE(?6,0), ?7, ?8, CURRENT_TIMESTAMP)
        ON CONFLICT(user_id, book_slug) DO UPDATE SET
          status=COALESCE(?3, status), rating=COALESCE(?4, rating),
          review=COALESCE(?5, review), progress=COALESCE(?6, progress),
+         started_at=COALESCE(started_at, ?7), finished_at=COALESCE(finished_at, ?8),
          updated_at=CURRENT_TIMESTAMP`
-    ).bind(user.uid, body.slug, body.status ?? null, body.rating ?? null, body.review ?? null, body.progress ?? null),
+    ).bind(
+      user.uid, body.slug, body.status ?? null, body.rating ?? null,
+      body.review ?? null, body.progress ?? null,
+      ["reading", "read"].includes(body.status) ? new Date().toISOString() : null,
+      body.status === "read" ? new Date().toISOString() : null,
+    ),
   ]);
   return NextResponse.json({ ok: true });
 }

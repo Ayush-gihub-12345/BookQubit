@@ -36,6 +36,32 @@
   --color-brand-50: #1c1c3a; --color-brand-100: #26264a;
   --color-brand-500: #8b5cf6; --color-brand-600: #7c3aed; --color-brand-700: #6d28d9;
 }
+[data-theme="ocean"] {
+  --bg: #ecfeff; --surface: #ffffff; --fg: #164e63;
+  --muted: #558a9c; --line: #cffafe;
+  --color-brand-50: #cffafe; --color-brand-100: #a5f3fc;
+  --color-brand-500: #06b6d4; --color-brand-600: #0891b2; --color-brand-700: #0e7490;
+}
+[data-theme="forest"] {
+  --bg: #f2faf4; --surface: #ffffff; --fg: #1a3a2a;
+  --muted: #5f8a70; --line: #d3ecd9;
+  --color-brand-50: #dcfce7; --color-brand-100: #bbf7d0;
+  --color-brand-500: #10b981; --color-brand-600: #059669; --color-brand-700: #047857;
+}
+[data-theme="rose"] {
+  --bg: #fff1f2; --surface: #ffffff; --fg: #4c0519;
+  --muted: #a8657a; --line: #fecdd3;
+  --color-brand-50: #ffe4e6; --color-brand-100: #fecdd3;
+  --color-brand-500: #f43f5e; --color-brand-600: #e11d48; --color-brand-700: #be123c;
+}
+
+/* horizontal scroll rows */
+.hscroll {
+  @apply flex gap-4 overflow-x-auto pb-3;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+.hscroll > * { scroll-snap-align: start; flex-shrink: 0; }
 
 html { scroll-behavior: smooth; }
 
