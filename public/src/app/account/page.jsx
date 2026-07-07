@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { readWishlist } from "@/components/WishlistButton";
+import BookCover from "@/components/BookCover";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -190,12 +191,8 @@ export default function AccountPage() {
           {visible.map((s) => (
             <Link key={s.book_slug} href={`/books/${encodeURIComponent(s.book_slug)}`} className="card group overflow-hidden">
               <div className="relative aspect-[2/3] overflow-hidden bg-black/5">
-                {s.cover_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.cover_url} alt={s.title} className="h-full w-full object-cover transition group-hover:scale-105" />
-                ) : (
-                  <div className="text-muted grid h-full place-items-center p-4 text-center text-sm font-semibold">{s.title || s.book_slug}</div>
-                )}
+                <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url}
+                  imgClassName="transition group-hover:scale-105" />
                 <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">
                   {s.status === "read" ? "✅ Read" : s.status === "reading" ? `📖 ${s.progress || 0}%` : "🔖 Want"}
                 </span>
@@ -224,10 +221,8 @@ export default function AccountPage() {
             {wishlist.map((b) => (
               <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group overflow-hidden">
                 <div className="aspect-[2/3] overflow-hidden bg-black/5">
-                  {b.cover_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={b.cover_url} alt={b.title} className="h-full w-full object-cover transition group-hover:scale-105" />
-                  )}
+                  <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
+                    imgClassName="transition group-hover:scale-105" />
                 </div>
                 <p className="line-clamp-1 p-2.5 text-xs font-semibold">{b.title}</p>
               </Link>

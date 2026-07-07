@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Rating from "@/components/Rating";
+import BookCover from "@/components/BookCover";
 import { getComic } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
@@ -29,15 +30,8 @@ export default async function ComicPage({ params }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
-        <div className="card overflow-hidden hover:!translate-y-0">
-          {comic.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={comic.cover_url} alt={comic.title} className="w-full" />
-          ) : (
-            <div className="grid aspect-[2/3] place-items-center p-6 text-center text-xl font-bold text-slate-400">
-              {comic.title}
-            </div>
-          )}
+        <div className="card aspect-[2/3] overflow-hidden hover:!translate-y-0">
+          <BookCover title={comic.title} author={comic.publisher} cover_url={comic.cover_url} />
         </div>
 
         <div>

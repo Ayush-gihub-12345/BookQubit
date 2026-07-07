@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import BookCover from "./BookCover";
 
 export default function HeroSlider({ books, labels }) {
   const [i, setI] = useState(0);
@@ -20,14 +21,10 @@ export default function HeroSlider({ books, labels }) {
     <div className="card relative overflow-hidden p-6 hover:!translate-y-0 sm:p-10">
       <div className="grid items-center gap-8 md:grid-cols-[240px_1fr]">
         <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
-          {b.cover_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={b.slug} src={b.cover_url} alt={b.title}
-              className="w-44 rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
-              style={{ animation: "fadeIn .5s ease" }} />
-          ) : (
-            <div className="grid aspect-[2/3] w-44 place-items-center rounded-xl bg-black/10 p-4 text-center font-bold sm:w-56">{b.title}</div>
-          )}
+          <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
+            style={{ animation: "fadeIn .5s ease" }}>
+            <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
+          </div>
         </Link>
 
         <div>

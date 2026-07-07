@@ -3,6 +3,7 @@ import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
 import HeroSlider from "@/components/HeroSlider";
 import Rating from "@/components/Rating";
+import BookCover from "@/components/BookCover";
 import { listBooks, facets, listAuthors, listPublications, listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -47,10 +48,8 @@ export default async function Home() {
           {topRated.map((b, i) => (
             <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-40 overflow-hidden sm:w-44">
               <div className="relative aspect-[2/3] overflow-hidden bg-black/5">
-                {b.cover_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={b.cover_url} alt={b.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                )}
+                <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
+                  imgClassName="transition duration-500 group-hover:scale-105" />
                 <span className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
                   #{i + 1}
                 </span>
@@ -192,12 +191,8 @@ export default async function Home() {
             {comics.map((c) => (
               <Link key={c.id} href={`/comics/${c.slug}`} className="card group w-40 overflow-hidden sm:w-44">
                 <div className="aspect-[2/3] overflow-hidden bg-black/5">
-                  {c.cover_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={c.cover_url} alt={c.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                  ) : (
-                    <div className="text-muted grid h-full place-items-center p-3 text-center text-sm font-bold">{c.title}</div>
-                  )}
+                  <BookCover title={c.title} author={c.publisher} cover_url={c.cover_url}
+                    imgClassName="transition duration-500 group-hover:scale-105" />
                 </div>
                 <div className="p-3">
                   <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600">{c.title}</p>

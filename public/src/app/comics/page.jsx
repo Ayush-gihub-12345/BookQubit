@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Rating from "@/components/Rating";
+import BookCover from "@/components/BookCover";
 import { listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
@@ -17,12 +18,8 @@ export default async function ComicsPage() {
         {comics.map((c) => (
           <Link key={c.id} href={`/comics/${c.slug}`} className="card group block overflow-hidden">
             <div className="relative aspect-[2/3] overflow-hidden bg-slate-100 dark:bg-slate-800">
-              {c.cover_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.cover_url} alt={c.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-              ) : (
-                <div className="grid h-full place-items-center p-4 text-center font-semibold text-slate-400">{c.title}</div>
-              )}
+              <BookCover title={c.title} author={c.publisher} cover_url={c.cover_url}
+                imgClassName="transition duration-500 group-hover:scale-105" />
               {c.category && (
                 <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
                   {c.category}

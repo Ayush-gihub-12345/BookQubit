@@ -5,6 +5,7 @@ import Rating from "@/components/Rating";
 import Section from "@/components/Section";
 import WishlistButton from "@/components/WishlistButton";
 import ShelfControls from "@/components/ShelfControls";
+import BookCover from "@/components/BookCover";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -94,15 +95,8 @@ export default async function BookPage({ params }) {
 
         <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
           <div>
-            <div className="card overflow-hidden !shadow-xl hover:!translate-y-0">
-              {book.cover_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={book.cover_url} alt={`${book.title} cover`} className="w-full" />
-              ) : (
-                <div className="grid aspect-[2/3] place-items-center p-6 text-center text-xl font-bold text-slate-400">
-                  {book.title}
-                </div>
-              )}
+            <div className="card aspect-[2/3] overflow-hidden !shadow-xl hover:!translate-y-0">
+              <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
             <div className="mt-5 space-y-3">
               {book.buyUrl && (

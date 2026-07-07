@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserProfile, levelFor } from "@/lib/repo";
+import BookCover from "@/components/BookCover";
 
 export const dynamic = "force-dynamic";
 
@@ -62,12 +63,8 @@ export default async function ReaderProfilePage({ params }) {
               {items.map((s) => (
                 <Link key={s.book_slug} href={`/books/${encodeURIComponent(s.book_slug)}`} className="card group overflow-hidden">
                   <div className="aspect-[2/3] overflow-hidden bg-black/5">
-                    {s.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={s.cover_url} alt={s.title} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
-                    ) : (
-                      <div className="text-muted grid h-full place-items-center p-3 text-center text-xs font-semibold">{s.title || s.book_slug}</div>
-                    )}
+                    <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url}
+                      imgClassName="transition group-hover:scale-105" />
                   </div>
                   <div className="p-2.5">
                     <p className="line-clamp-1 text-xs font-semibold">{s.title || s.book_slug}</p>

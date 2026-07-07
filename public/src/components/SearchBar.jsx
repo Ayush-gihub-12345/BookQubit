@@ -21,12 +21,23 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
   const [active, setActive] = useState(-1);
   const router = useRouter();
   const boxRef = useRef(null);
+  const inputRef = useRef(null);
   const timer = useRef(null);
 
   useEffect(() => {
     const close = (e) => { if (!boxRef.current?.contains(e.target)) setOpen(false); };
+    const hotkey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
     document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("keydown", hotkey);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", hotkey);
+    };
   }, []);
 
   // flat list of navigable items for keyboard control
@@ -87,20 +98,27 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
   return (
     <div ref={boxRef} className="relative">
       <form onSubmit={submit}>
-        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
         <input
+          ref={inputRef}
           value={q}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => { setRecent(readRecent()); setOpen(true); }}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className={`input pl-10 ${big ? "py-3.5 text-base shadow-xl" : "w-64 py-2 text-sm"}`}
+          className={`input !rounded-full pl-11 pr-16 ${big ? "py-3 text-[15px] shadow-lg shadow-black/5" : "w-64 py-2 text-sm"}`}
           role="combobox"
           aria-expanded={open}
         />
-        {q && (
+        {q ? (
           <button type="button" onClick={() => { setQ(""); setRes(null); }}
-            className="text-muted absolute right-3 top-1/2 -translate-y-1/2 text-sm hover:opacity-70">✕</button>
+            className="text-muted absolute right-4 top-1/2 -translate-y-1/2 text-sm hover:opacity-70">✕</button>
+        ) : (
+          big && (
+            <kbd className="border-line text-muted pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold sm:block">
+              Ctrl K
+            </kbd>
+          )
         )}
       </form>
 
