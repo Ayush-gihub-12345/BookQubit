@@ -102,8 +102,19 @@ let schemaReady;
 
 export async function getDb() {
   const { env } = await getCloudflareContext({ async: true });
+  if (!env?.DB) {
+    throw new Error(
+      "D1 binding 'DB' is missing. Add it: Cloudflare dashboard → your Worker → Settings → Bindings → D1 Database, name it exactly DB."
+    );
+  }
   if (!schemaReady) {
-    schemaReady = env.DB.exec(SCHEMA.replace(/\n/g, " ").trim());
+    const statements = SCHEMA.split(";").map((s) => s.trim()).filter(Boolean);
+    schemaReady = env.DB
+      .batch(statements.map((s) => env.DB.prepare(s)))
+      .catch((err) => {
+        schemaReady = undefined; // allow retry on next request
+        throw err;
+      });
   }
   await schemaReady;
   return env.DB;
