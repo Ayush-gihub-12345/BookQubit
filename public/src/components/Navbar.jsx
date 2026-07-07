@@ -3,37 +3,38 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import AuthButton from "./AuthButton";
+import SearchBar from "./SearchBar";
 
-const NAV = [
-  { href: "/books", label: "Books" },
-  { href: "/collections", label: "Collections" },
-  { href: "/categories", label: "Categories" },
-  { href: "/authors", label: "Authors" },
-  { href: "/publications", label: "Publishers" },
-  { href: "/comics", label: "Comics" },
-  { href: "/tags", label: "Tags" },
-];
-
-export default function Navbar({ lang, languages }) {
+export default function Navbar({ lang, theme, languages, themes, labels }) {
   const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
   const pathname = usePathname();
   const router = useRouter();
 
-  const search = (e) => {
-    e.preventDefault();
-    if (q.trim()) router.push(`/books?q=${encodeURIComponent(q.trim())}`);
-    setOpen(false);
-  };
+  const NAV = [
+    { href: "/books", label: labels.books },
+    { href: "/collections", label: labels.collections },
+    { href: "/categories", label: labels.categories },
+    { href: "/authors", label: labels.authors },
+    { href: "/publications", label: labels.publishers },
+    { href: "/comics", label: labels.comics },
+    { href: "/readers", label: "🏆" },
+  ];
 
-  const setLang = (code) => {
-    document.cookie = `lang=${code};path=/;max-age=31536000`;
+  const setCookie = (name, value) => {
+    document.cookie = `${name}=${value};path=/;max-age=31536000`;
     router.refresh();
   };
 
+  const nextTheme = () => {
+    const i = themes.findIndex((t) => t.id === theme);
+    setCookie("theme", themes[(i + 1) % themes.length].id);
+  };
+  const current = themes.find((t) => t.id === theme) || themes[0];
+
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl dark:border-slate-800/60 dark:bg-[#0b1220]/80">
-      <nav className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
+    <header className="border-line bg-surface/80 sticky top-0 z-50 border-b backdrop-blur-xl">
+      <nav className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/30">
             B
@@ -46,7 +47,7 @@ export default function Navbar({ lang, languages }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-slate-800 ${
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-white/5 ${
                 pathname.startsWith(item.href) ? "text-brand-600" : ""
               }`}
             >
@@ -55,18 +56,22 @@ export default function Navbar({ lang, languages }) {
           ))}
         </div>
 
-        <form onSubmit={search} className="hidden md:block">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search books, authors…"
-            className="input w-56 py-2 text-sm"
-          />
-        </form>
+        <div className="hidden md:block">
+          <SearchBar lang={lang} placeholder={labels.search} />
+        </div>
+
+        <button
+          onClick={nextTheme}
+          className="btn-ghost hidden px-3 py-2 text-base sm:inline-flex"
+          title={`Theme: ${current.name}`}
+          aria-label="Switch theme"
+        >
+          {current.icon}
+        </button>
 
         <select
           value={lang}
-          onChange={(e) => setLang(e.target.value)}
+          onChange={(e) => setCookie("lang", e.target.value)}
           className="input hidden w-auto py-2 text-sm sm:block"
           aria-label="Language"
         >
@@ -75,47 +80,48 @@ export default function Navbar({ lang, languages }) {
           ))}
         </select>
 
-        <button
-          onClick={() => setOpen(!open)}
-          className="btn-ghost px-3 py-2 lg:hidden"
-          aria-label="Menu"
-        >
+        <AuthButton labels={labels} />
+
+        <button onClick={() => setOpen(!open)} className="btn-ghost px-3 py-2 lg:hidden" aria-label="Menu">
           ☰
         </button>
       </nav>
 
       {open && (
-        <div className="border-t border-slate-200 px-4 py-3 lg:hidden dark:border-slate-800">
-          <form onSubmit={search} className="mb-3">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search books, authors…"
-              className="input"
-            />
-          </form>
+        <div className="border-line border-t px-4 py-3 lg:hidden">
+          <div className="mb-3">
+            <SearchBar lang={lang} placeholder={labels.search} big onNavigate={() => setOpen(false)} />
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-50 dark:hover:bg-slate-800"
+                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5"
               >
                 {item.label}
               </Link>
             ))}
+            <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              {labels.signIn}
+            </Link>
           </div>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className="input mt-3 sm:hidden"
-            aria-label="Language"
-          >
-            {languages.map((l) => (
-              <option key={l.code} value={l.code}>{l.name}</option>
-            ))}
-          </select>
+          <div className="mt-3 flex gap-2">
+            <button onClick={nextTheme} className="btn-ghost flex-1 py-2 text-sm">
+              {current.icon} {current.name}
+            </button>
+            <select
+              value={lang}
+              onChange={(e) => setCookie("lang", e.target.value)}
+              className="input flex-1 py-2 text-sm"
+              aria-label="Language"
+            >
+              {languages.map((l) => (
+                <option key={l.code} value={l.code}>{l.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
     </header>

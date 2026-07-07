@@ -60,6 +60,28 @@ or Google Books thumbnails — both free.
 npm run deploy
 ```
 
+## Firebase authentication (Google + email/password)
+Set these as **build-time variables** (dashboard → Worker → Settings → Build → Variables —
+NOT runtime secrets, because `NEXT_PUBLIC_*` values are inlined into the client bundle
+during the build; they are public by design):
+
+| Variable | From Firebase console → Project settings → Your web app |
+|---|---|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | apiKey |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | authDomain |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | projectId |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | appId |
+
+Also: Firebase console → Authentication → Sign-in method → enable **Google** and
+**Email/Password**, and add your `*.workers.dev` domain (and custom domain) under
+**Authorized domains**. If the vars are unset, auth UI hides itself gracefully.
+
+## Themes & languages
+- 4 themes (Light / Dark / Sepia / Midnight) — switcher in the navbar, stored in a cookie.
+- 12 UI languages with RTL support; translated UI strings in `src/lib/i18n.js`.
+- **Localized slugs**: each language row has its own slug (e.g. `/books/सेपियन्स` for Hindi).
+  Translations share the same ISBN, which links language variants for hreflang alternates.
+
 ## Affiliate revenue
 Set `AMAZON_ASSOC_TAG` to your Amazon Associates tracking ID. Any book with an
 `amazon_asin` gets a "Buy on Amazon" button linking to

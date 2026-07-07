@@ -1,17 +1,27 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "bookqubit",
-  "compatibility_date": "2025-03-01",
+  "name": "bookqubitdev",
+  "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": ".open-next/worker.js",
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "database",
+      "database_id": "b7a72589-843b-4c9a-b793-27e3a1ae2b80"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "70c79257dad043be8b1401edd5d3f6d9"
+    }
+  ],
+  "vars": {
+    "AMAZON_ASSOC_TAG": ""
   }
-  // Bindings are configured in the Cloudflare dashboard, not committed here:
-  //   Settings → Bindings → D1 Database   → name: DB
-  //   Settings → Bindings → KV Namespace  → name: CACHE
-  //   Settings → Variables → AMAZON_ASSOC_TAG, NEXT_PUBLIC_BASE_URL
-  // For local dev, copy wrangler.local.jsonc.example over this file's bindings
-  // or use `.dev.vars` + local D1/KV (see README).
 }

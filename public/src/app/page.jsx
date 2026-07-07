@@ -1,13 +1,16 @@
 import Link from "next/link";
 import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
+import SearchBar from "@/components/SearchBar";
 import { listBooks, facets } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const lang = await getLang();
+  const _ = t(lang);
   const [featured, topRated, newReleases, f] = await Promise.all([
     listBooks(lang, { limit: 6 }),
     listBooks(lang, { sort: "rating", limit: 6 }),
@@ -34,10 +37,13 @@ export default async function Home() {
               Explore hand-picked books with summaries and key takeaways, discover authors and
               publishers, and buy through trusted stores — in 12 languages.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/books" className="btn-primary">Browse Books</Link>
+            <div className="mt-6 max-w-md">
+              <SearchBar lang={lang} placeholder={_("search")} big />
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/books" className="btn-primary">{_("browse")}</Link>
               <Link href="/collections" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
-                Explore Collections
+                {_("explore")}
               </Link>
             </div>
           </div>
@@ -59,20 +65,20 @@ export default async function Home() {
         </div>
       </section>
 
-      <Section title="Featured Books" subtitle="Curated picks worth your time" href="/books">
+      <Section title={_("featured")} subtitle="Curated picks worth your time" href="/books">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
           {featured.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       </Section>
 
-      <Section title="Top Rated" subtitle="Loved by readers" href="/books?sort=rating">
+      <Section title={_("topRated")} subtitle="Loved by readers" href="/books?sort=rating">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
           {topRated.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       </Section>
 
       {f.collections.length > 0 && (
-        <Section title="Collections" subtitle="Themed reading journeys" href="/collections">
+        <Section title={_("collections")} subtitle="Themed reading journeys" href="/collections">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {f.collections.slice(0, 4).map((c) => (
               <Link
@@ -88,14 +94,14 @@ export default async function Home() {
         </Section>
       )}
 
-      <Section title="New Releases" subtitle="Fresh on the shelf" href="/books?sort=new">
+      <Section title={_("newReleases")} subtitle="Fresh on the shelf" href="/books?sort=new">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
           {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       </Section>
 
       {f.tags.length > 0 && (
-        <Section title="Popular Tags" href="/tags">
+        <Section title={_("popularTags")} href="/tags">
           <div className="flex flex-wrap gap-2">
             {f.tags.slice(0, 20).map((t) => (
               <Link key={t.name} href={`/tags/${encodeURIComponent(t.name.toLowerCase().replace(/\s+/g, "-"))}`} className="pill">

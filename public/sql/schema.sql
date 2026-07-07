@@ -95,3 +95,23 @@ CREATE TABLE IF NOT EXISTS comics (
   UNIQUE(slug, lang)
 );
 CREATE INDEX IF NOT EXISTS idx_comics_lang ON comics(lang);
+
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  photo_url TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS shelf (
+  user_id TEXT NOT NULL,
+  book_slug TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'want',
+  rating INTEGER,
+  review TEXT,
+  progress INTEGER DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, book_slug)
+);
+CREATE INDEX IF NOT EXISTS idx_shelf_user ON shelf(user_id);
+CREATE INDEX IF NOT EXISTS idx_shelf_status ON shelf(status);

@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
 import Rating from "@/components/Rating";
 import Section from "@/components/Section";
-import { getBook, relatedBooks } from "@/lib/repo";
+import WishlistButton from "@/components/WishlistButton";
+import ShelfControls from "@/components/ShelfControls";
+import { getBook, relatedBooks, getBookAlternates } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +16,19 @@ export async function generateMetadata({ params }) {
   const lang = await getLang();
   const book = await getBook(slug, lang);
   if (!book) return { title: "Book Not Found", robots: { index: false } };
+
+  const alternates = await getBookAlternates(book);
+  const languages = Object.fromEntries(
+    alternates.map((a) => [a.lang, `/books/${encodeURIComponent(a.slug)}`])
+  );
+
   return {
     title: `${book.title} by ${book.author}`,
     description: book.description?.slice(0, 160),
+    alternates: {
+      canonical: `/books/${encodeURIComponent(book.slug)}`,
+      languages,
+    },
     openGraph: {
       title: book.title,
       description: book.description?.slice(0, 160),
@@ -31,6 +44,7 @@ export default async function BookPage({ params }) {
   const book = await getBook(slug, lang);
   if (!book) notFound();
   const related = await relatedBooks(book, lang);
+  const _ = t(lang);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -90,14 +104,16 @@ export default async function BookPage({ params }) {
             <div className="mt-5 space-y-3">
               {book.buyUrl && (
                 <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary w-full">
-                  🛒 Buy on Amazon {book.price && `· ${book.price}`}
+                  🛒 {_("buy")} {book.price && `· ${book.price}`}
                 </a>
               )}
               {book.audiobook_url && (
                 <a href={book.audiobook_url} target="_blank" rel="noopener noreferrer" className="btn-ghost w-full">
-                  🎧 Listen to Audiobook
+                  🎧 {_("listen")}
                 </a>
               )}
+              <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
+              <ShelfControls slug={book.slug} />
               <p className="text-center text-xs text-slate-400">
                 As an Amazon Associate we earn from qualifying purchases.
               </p>
@@ -125,7 +141,7 @@ export default async function BookPage({ params }) {
 
             {book.keyPoints.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">Key Takeaways</h2>
+                <h2 className="text-xl font-bold">{_("keyTakeaways")}</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {book.keyPoints.map((k) => (
                     <li key={k} className="flex items-start gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm dark:bg-slate-800">
@@ -138,7 +154,7 @@ export default async function BookPage({ params }) {
 
             {book.summary && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">Summary</h2>
+                <h2 className="text-xl font-bold">{_("summary")}</h2>
                 <p className="mt-3 whitespace-pre-line leading-relaxed text-slate-600 dark:text-slate-300">
                   {book.summary}
                 </p>
@@ -147,7 +163,7 @@ export default async function BookPage({ params }) {
 
             {meta.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">Details</h2>
+                <h2 className="text-xl font-bold">{_("details")}</h2>
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                   {meta.map(([k, v]) => (
                     <div key={k}>
@@ -171,7 +187,7 @@ export default async function BookPage({ params }) {
       </div>
 
       {related.length > 0 && (
-        <Section title="You may also like">
+        <Section title={_("related")}>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
             {related.map((b) => <BookCard key={b.id} book={b} />)}
           </div>

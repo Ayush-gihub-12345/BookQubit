@@ -50,8 +50,27 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
 }
 
 export async function getBook(slug, lang) {
+  const decoded = decodeURIComponent(slug);
   const books = (await allBooks(lang)).map(mapBook);
-  return books.find((b) => b.slug === decodeURIComponent(slug)) || null;
+  const hit = books.find((b) => b.slug === decoded);
+  if (hit) return hit;
+  // Localized-slug support: the slug may belong to another language's row
+  // (e.g. a Devanagari slug opened while the UI language is English).
+  const db = await getDb();
+  const row = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
+  return row ? mapBook(row) : null;
+}
+
+// All language variants of a book (matched by ISBN prefix-insensitive title
+// fallback) — used for hreflang alternates and the language-switch UX.
+export async function getBookAlternates(book) {
+  if (!book?.isbn && !book?.title) return [];
+  const db = await getDb();
+  const { results } = await db
+    .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2")
+    .bind(book.isbn || "", book.title)
+    .all();
+  return results;
 }
 
 export async function relatedBooks(book, lang, limit = 4) {
@@ -119,4 +138,30 @@ export async function booksByAuthor(name, lang) {
 export async function booksByPublisher(name, lang) {
   const books = await listBooks(lang);
   return books.filter((b) => b.publisher?.toLowerCase().includes(name?.toLowerCase()));
+}
+
+// ── Bookworm ranking ────────────────────────────────────────────────────────
+export const LEVELS = [
+  { min: 400, name: "Grand Librarian", icon: "🏛️" },
+  { min: 150, name: "Bibliophile", icon: "📚" },
+  { min: 50, name: "Bookworm", icon: "🐛" },
+  { min: 10, name: "Page Turner", icon: "📖" },
+  { min: 0, name: "New Reader", icon: "🌱" },
+];
+export const levelFor = (points) => LEVELS.find((l) => points >= l.min);
+export const pointsFor = (r) => (r.reads || 0) * 10 + (r.ratings || 0) * 2 + (r.reviews || 0) * 5;
+
+export async function getLeaderboard(limit = 20) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT u.id, u.name, u.photo_url,
+       SUM(CASE WHEN s.status='read' THEN 1 ELSE 0 END) AS reads,
+       SUM(CASE WHEN s.rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
+       SUM(CASE WHEN s.review IS NOT NULL THEN 1 ELSE 0 END) AS reviews
+     FROM shelf s JOIN users u ON u.id = s.user_id
+     GROUP BY u.id ORDER BY reads DESC, ratings DESC LIMIT ?1`
+  ).bind(limit).all();
+  return results
+    .map((r) => ({ ...r, points: pointsFor(r), level: levelFor(pointsFor(r)) }))
+    .sort((a, b) => b.points - a.points);
 }

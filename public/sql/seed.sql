@@ -90,15 +90,18 @@ INSERT OR IGNORE INTO books (slug,lang,title,author,publisher,price,isbn,publish
  4.3,'https://covers.openlibrary.org/b/isbn/9780593734223-L.jpg','Israel','059373422X',1,0);
 
 -- ── BOOKS (hi) — multi-language demo ───────────────────────────────────────
+-- Translations share the same ISBN as the English edition: ISBN acts as the
+-- "work key" linking language variants for hreflang alternates.
+-- Slugs are localized (Devanagari) — the router resolves them cross-language.
 INSERT OR IGNORE INTO books (slug,lang,title,author,publisher,price,isbn,published,page_count,format,description,summary,category,collection,genres,subjects,tags,key_points,rating,cover_url,country,amazon_asin,featured,bestseller) VALUES
-('sapiens','hi','सेपियन्स: मानव जाति का संक्षिप्त इतिहास','युवाल नोआ हरारी','Harper Hindi','₹499','9789353024734','2018',512,'Paperback',
+('सेपियन्स','hi','सेपियन्स: मानव जाति का संक्षिप्त इतिहास','युवाल नोआ हरारी','Harper Hindi','₹499','9780062316097','2018',512,'Paperback',
  'पाषाण युग से इक्कीसवीं सदी तक मानव जाति का व्यापक इतिहास।',
  'हरारी बताते हैं कि कैसे एक साधारण वानर तीन महान क्रांतियों — संज्ञानात्मक, कृषि और वैज्ञानिक — के माध्यम से पृथ्वी का शासक बन गया। साझा मिथकों की शक्ति से लेकर पूंजी और साम्राज्य तक, यह पुस्तक पूछती है कि क्या इस प्रगति ने हमें अधिक खुश बनाया है।',
  'इतिहास','हरारी संग्रह','["इतिहास","मानवविज्ञान"]','["विकास","सभ्यता"]','["इतिहास","विज्ञान"]',
  '["साझा मिथक बड़े पैमाने पर सहयोग संभव बनाते हैं","कृषि इतिहास का सबसे बड़ा समझौता थी"]',
  4.6,'https://covers.openlibrary.org/b/isbn/9789353024734-L.jpg','इज़राइल','9353024730',1,1),
 
-('atomic-habits','hi','एटॉमिक हैबिट्स','जेम्स क्लियर','Manjul Publishing','₹399','9789390085361','2020',320,'Paperback',
+('एटॉमिक-हैबिट्स','hi','एटॉमिक हैबिट्स','जेम्स क्लियर','Manjul Publishing','₹399','9780735211292','2020',320,'Paperback',
  'अच्छी आदतें बनाने और बुरी आदतें तोड़ने का आसान और सिद्ध तरीका।',
  'क्लियर दिखाते हैं कि उल्लेखनीय परिणाम बड़े बदलावों से नहीं बल्कि समय के साथ संचित छोटे सुधारों से आते हैं। व्यवहार परिवर्तन के चार नियम आदत निर्माण को एक व्यावहारिक प्रणाली में बदल देते हैं।',
  'स्वयं सहायता','','["स्वयं सहायता","मनोविज्ञान"]','["आदतें","उत्पादकता"]','["आदतें","उत्पादकता"]',
