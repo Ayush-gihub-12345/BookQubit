@@ -194,7 +194,18 @@ export default async function BookPage({ params }) {
                     <p>✅ {community.read || 0} have read it</p>
                   </div>
                 </div>
-                <div className="space-y-1.5">
+                <div>
+                  {(community.moods.length > 0 || community.pace.length > 0) && (
+                    <div className="mb-4 flex flex-wrap items-center gap-1.5">
+                      {community.moods.slice(0, 6).map((m) => (
+                        <span key={m.name} className="pill !text-[11px]">{m.name} <span className="ml-1 opacity-60">{m.n}</span></span>
+                      ))}
+                      {community.pace[0] && (
+                        <span className="pill !bg-emerald-500/15 !text-[11px] !text-emerald-600">{community.pace[0].name} pace</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
                   {community.distribution.map((d) => {
                     const pct = community.rating_count ? Math.round((d.n / community.rating_count) * 100) : 0;
                     return (
@@ -207,6 +218,7 @@ export default async function BookPage({ params }) {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </div>
 

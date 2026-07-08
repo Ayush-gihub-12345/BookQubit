@@ -91,6 +91,7 @@ export default function AccountPage() {
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <span className="pill !text-sm">{stats.level.icon} {stats.level.name}</span>
             <span className="pill !text-sm">⚡ {stats.points} pts</span>
+            {goal?.streak > 0 && <span className="pill !bg-orange-500/15 !text-sm !text-orange-500">🔥 {goal.streak}-day streak</span>}
             {rank && <Link href="/readers" className="pill !text-sm">🏆 Rank #{rank.position}</Link>}
           </div>
         </div>

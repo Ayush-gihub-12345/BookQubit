@@ -9,13 +9,27 @@ export async function GET(request) {
   if (!uid) return NextResponse.json({ error: "uid required" }, { status: 400 });
   const year = new Date().getFullYear();
   const db = await getDb();
-  const [goal, done] = await Promise.all([
+  const [goal, done, days] = await Promise.all([
     db.prepare("SELECT target FROM goals WHERE user_id=?1 AND year=?2").bind(uid, year).first(),
     db.prepare(
       "SELECT COUNT(*) AS n FROM shelf WHERE user_id=?1 AND status='read' AND substr(COALESCE(finished_at, updated_at),1,4)=?2"
     ).bind(uid, String(year)).first(),
+    db.prepare(
+      "SELECT DISTINCT substr(updated_at,1,10) AS d FROM shelf WHERE user_id=?1 ORDER BY d DESC LIMIT 90"
+    ).bind(uid).all(),
   ]);
-  return NextResponse.json({ year, target: goal?.target || null, done: done?.n || 0 });
+
+  // Consecutive-day activity streak ending today or yesterday
+  let streak = 0;
+  const dates = new Set(days.results.map((r) => r.d));
+  const cursor = new Date();
+  if (!dates.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
+  while (dates.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return NextResponse.json({ year, target: goal?.target || null, done: done?.n || 0, streak });
 }
 
 // POST /api/goal — { idToken, target }

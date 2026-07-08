@@ -4,6 +4,7 @@ import Section from "@/components/Section";
 import HeroSlider from "@/components/HeroSlider";
 import Rating from "@/components/Rating";
 import BookCover from "@/components/BookCover";
+import ContinueReading from "@/components/ContinueReading";
 import { listBooks, facets, listAuthors, listPublications, listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -41,6 +42,9 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-4 pt-8">
         <HeroSlider books={heroBooks.length ? heroBooks : topRated.slice(0, 5)} labels={{ summary: _("summary") }} />
       </section>
+
+      {/* Continue Reading (signed-in users) */}
+      <ContinueReading />
 
       {/* Trending Now */}
       <Section title="🔥 Trending Now" subtitle="What's hot in our community right now" href="/books?sort=rating">

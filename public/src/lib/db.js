@@ -130,6 +130,8 @@ CREATE TABLE IF NOT EXISTS goals (
 const MIGRATIONS = [
   "ALTER TABLE shelf ADD COLUMN started_at TEXT",
   "ALTER TABLE shelf ADD COLUMN finished_at TEXT",
+  "ALTER TABLE shelf ADD COLUMN moods TEXT",
+  "ALTER TABLE shelf ADD COLUMN pace TEXT",
 ];
 
 let schemaReady;

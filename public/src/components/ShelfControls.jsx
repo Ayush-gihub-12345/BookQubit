@@ -10,6 +10,9 @@ const STATUSES = [
   { id: "read", label: "Read", icon: "✅" },
 ];
 
+const MOODS = ["✨ inspiring", "🌧️ emotional", "😂 funny", "🌑 dark", "🧠 informative", "🫀 hopeful", "😰 tense", "🕯️ reflective"];
+const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
+
 export default function ShelfControls({ slug }) {
   const [user, setUser] = useState(null);
   const [entry, setEntry] = useState(null);
@@ -102,6 +105,39 @@ export default function ShelfControls({ slug }) {
             onChange={(e) => update({ progress: Number(e.target.value) })}
             className="w-full accent-[var(--color-brand-600)]"
           />
+        </div>
+      )}
+
+      {/* Mood & pace — how did it feel? */}
+      {(entry?.status === "read" || entry?.status === "reading") && (
+        <div>
+          <p className="text-muted text-xs font-semibold uppercase tracking-wide">How does it feel?</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {MOODS.map((m) => {
+              const selected = (entry?.moods ? JSON.parse(entry.moods) : []).includes(m);
+              return (
+                <button key={m} disabled={busy}
+                  onClick={() => {
+                    const cur = entry?.moods ? JSON.parse(entry.moods) : [];
+                    const next = selected ? cur.filter((x) => x !== m) : [...cur, m].slice(-3);
+                    update({ moods: next });
+                    setEntry((e) => ({ ...e, moods: JSON.stringify(next) }));
+                  }}
+                  className={`pill !text-[11px] ${selected ? "!bg-brand-600 !text-white" : ""}`}>
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex gap-1.5">
+            {PACES.map((p) => (
+              <button key={p} disabled={busy}
+                onClick={() => update({ pace: p })}
+                className={`pill !text-[11px] ${entry?.pace === p ? "!bg-brand-600 !text-white" : ""}`}>
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

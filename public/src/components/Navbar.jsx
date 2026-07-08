@@ -70,11 +70,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           <span className="hidden sm:inline">Book<span className="text-brand-600">Qubit</span></span>
         </Link>
 
-        <div className="min-w-0 flex-1 px-1 sm:px-4">
+        <div className="hidden min-w-0 flex-1 px-4 md:block">
           <div className="mx-auto max-w-xl">
             <SearchBar lang={lang} placeholder={labels.search} big />
           </div>
         </div>
+        <div className="flex-1 md:hidden" />
 
         {/* Theme picker */}
         <div className="hidden sm:block">
@@ -126,6 +127,11 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         <div className="shrink-0 whitespace-nowrap"><AuthButton labels={labels} /></div>
 
         <button onClick={() => setOpen(!open)} className={`${iconBtn} lg:hidden`} aria-label="Menu">☰</button>
+      </div>
+
+      {/* Mobile search row — full width, never squeezed */}
+      <div className="border-line border-t px-4 py-2 md:hidden">
+        <SearchBar lang={lang} placeholder={labels.search} big />
       </div>
 
       {/* Row 2 */}

@@ -154,7 +154,7 @@ export const pointsFor = (r) => (r.reads || 0) * 10 + (r.ratings || 0) * 2 + (r.
 // Community stats + reviews for one book (drives the book-page social section)
 export async function getBookCommunity(slug) {
   const db = await getDb();
-  const [agg, dist, reviews] = await Promise.all([
+  const [agg, dist, vibes, reviews] = await Promise.all([
     db.prepare(
       `SELECT COUNT(*) AS total,
          SUM(CASE WHEN status='want' THEN 1 ELSE 0 END) AS want,
@@ -169,6 +169,10 @@ export async function getBookCommunity(slug) {
        WHERE book_slug=?1 AND rating IS NOT NULL GROUP BY rating`
     ).bind(slug).all(),
     db.prepare(
+      `SELECT moods, pace FROM shelf
+       WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
+    ).bind(slug).all(),
+    db.prepare(
       `SELECT s.rating, s.review, s.status, s.updated_at, u.id AS user_id, u.name, u.photo_url
        FROM shelf s JOIN users u ON u.id=s.user_id
        WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
@@ -179,7 +183,15 @@ export async function getBookCommunity(slug) {
     star,
     n: dist.results.find((d) => d.rating === star)?.n || 0,
   }));
-  return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, reviews: reviews.results };
+  const moodCounts = new Map();
+  const paceCounts = new Map();
+  for (const v of vibes.results) {
+    for (const m of J(v.moods)) moodCounts.set(m, (moodCounts.get(m) || 0) + 1);
+    if (v.pace) paceCounts.set(v.pace, (paceCounts.get(v.pace) || 0) + 1);
+  }
+  const moods = [...moodCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+  const pace = [...paceCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+  return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, moods, pace, reviews: reviews.results };
 }
 
 // Latest community activity across the platform
