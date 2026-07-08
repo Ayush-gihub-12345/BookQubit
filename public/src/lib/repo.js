@@ -49,6 +49,51 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
   return limit ? books.slice(0, limit) : books;
 }
 
+// SQL-level catalog query with real pagination — scales to very large catalogs
+// (never loads the full table). Used by the /books browser.
+export async function queryBooks(lang, opts = {}) {
+  const { q, category, collection, tag, format, minRating, sort, page = 1, perPage = 24 } = opts;
+  const db = await getDb();
+
+  const where = ["lang = ?"];
+  const binds = [lang];
+  if (category) { where.push("category = ?"); binds.push(category); }
+  if (collection) { where.push("collection = ?"); binds.push(collection); }
+  if (format) { where.push("format LIKE ?"); binds.push(`%${format}%`); }
+  if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
+  if (tag) { where.push("tags LIKE ?"); binds.push(`%"${tag}"%`); }
+  if (q) {
+    where.push("(title LIKE ? OR author LIKE ? OR description LIKE ?)");
+    const like = `%${q}%`;
+    binds.push(like, like, like);
+  }
+
+  const ORDER = {
+    rating: "rating DESC NULLS LAST",
+    new: "published DESC",
+    title: "title COLLATE NOCASE ASC",
+    default: "id ASC",
+  };
+  const orderBy = ORDER[sort] || ORDER.default;
+  const wsql = where.join(" AND ");
+
+  const [count, rows] = await Promise.all([
+    db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...binds).first(),
+    db.prepare(`SELECT * FROM books WHERE ${wsql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+      .bind(...binds, perPage, (page - 1) * perPage).all(),
+  ]);
+
+  // Empty language falls back to English with the same filters
+  if (!count.n && lang !== "en") return queryBooks("en", opts);
+
+  return {
+    books: rows.results.map(mapBook),
+    total: count.n,
+    page: Number(page),
+    pages: Math.max(1, Math.ceil(count.n / perPage)),
+  };
+}
+
 export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
   const books = (await allBooks(lang)).map(mapBook);

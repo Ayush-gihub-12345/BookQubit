@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-[#0e1526]">
+    <footer className="border-line bg-surface mt-16 border-t">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="text-lg font-extrabold">Book<span className="text-brand-600">Qubit</span></p>
@@ -35,7 +35,7 @@ export default function Footer() {
           </p>
         </div>
       </div>
-      <div className="border-t border-slate-200 py-4 text-center text-xs text-slate-400 dark:border-slate-800">
+      <div className="border-line text-muted border-t py-4 text-center text-xs">
         © {new Date().getFullYear()} BookQubit. All rights reserved.
       </div>
     </footer>

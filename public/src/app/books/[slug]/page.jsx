@@ -6,6 +6,7 @@ import Section from "@/components/Section";
 import WishlistButton from "@/components/WishlistButton";
 import ShelfControls from "@/components/ShelfControls";
 import BookCover from "@/components/BookCover";
+import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -78,6 +79,7 @@ export default async function BookPage({ params }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
 
       <div className="mx-auto max-w-7xl px-4 py-10">
         <nav className="mb-6 text-sm text-slate-500">

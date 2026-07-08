@@ -77,6 +77,8 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
   return (
     <header className="border-line bg-surface/85 sticky top-0 z-50 border-b shadow-sm backdrop-blur-xl">
+      {/* brand accent strip */}
+      <div className="h-0.5 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700" />
       {/* Row 1 */}
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         <Link href="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight">

@@ -6,6 +6,8 @@ import Rating from "@/components/Rating";
 import BookCover from "@/components/BookCover";
 import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
+import ForYou from "@/components/ForYou";
+import RecentlyViewed from "@/components/RecentlyViewed";
 import { listBooks, facets, listAuthors, listPublications, listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -25,6 +27,22 @@ export default async function Home() {
     listComics(lang),
   ]);
   const heroBooks = all.filter((b) => b.featured).slice(0, 5);
+  const surprise = all.length ? all[Math.floor(Math.random() * all.length)] : null;
+
+  const QUOTES = [
+    { text: "A reader lives a thousand lives before he dies. The man who never reads lives only one.", by: "George R.R. Martin" },
+    { text: "The more that you read, the more things you will know. The more that you learn, the more places you'll go.", by: "Dr. Seuss" },
+    { text: "Books are a uniquely portable magic.", by: "Stephen King" },
+    { text: "Until I feared I would lose it, I never loved to read. One does not love breathing.", by: "Harper Lee" },
+    { text: "I have always imagined that Paradise will be a kind of library.", by: "Jorge Luis Borges" },
+    { text: "Reading is essential for those who seek to rise above the ordinary.", by: "Jim Rohn" },
+    { text: "A book is a dream that you hold in your hand.", by: "Neil Gaiman" },
+    { text: "There is no friend as loyal as a book.", by: "Ernest Hemingway" },
+    { text: "Once you learn to read, you will be forever free.", by: "Frederick Douglass" },
+    { text: "We read to know we are not alone.", by: "C.S. Lewis" },
+  ];
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const quote = QUOTES[dayOfYear % QUOTES.length];
   const collectionsWithBooks = f.collections.slice(0, 3).map((c) => ({
     ...c,
     books: all.filter((b) => b.collection === c.name).slice(0, 2),
@@ -46,6 +64,12 @@ export default async function Home() {
 
       {/* Continue Reading (signed-in users) */}
       <ContinueReading />
+
+      {/* Personalized picks (signed-in users with history) */}
+      <ForYou lang={lang} />
+
+      {/* Recently viewed (any visitor with history) */}
+      <RecentlyViewed />
 
       {/* Trending Now */}
       <Section title="Trending Now" subtitle="What's hot in our community right now" href="/books?sort=rating">
@@ -70,21 +94,35 @@ export default async function Home() {
       </Section>
 
       {/* CTA band */}
-      <section className="bg-gradient-to-br from-ink-900 via-ink-800 to-brand-700 py-16 text-white">
+      <section className="band py-16">
         <div className="mx-auto max-w-3xl px-4 text-center">
           <h2 className="text-3xl font-extrabold sm:text-4xl">
-            Discover Your Next <span className="bg-gradient-to-r from-pink-400 to-fuchsia-400 bg-clip-text text-transparent">Imagination</span>
+            Discover Your Next <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">Great Read</span>
           </h2>
-          <p className="mt-3 text-slate-300">
+          <p className="mt-3 text-white/70">
             Join our community of readers exploring {all.length}+ titles across {f.categories.length}+ genres — with summaries and key insights on every book.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/books" className="btn-primary">{_("browse")}</Link>
+            {surprise && (
+              <Link href={`/books/${encodeURIComponent(surprise.slug)}`} className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
+                <Icon name="zap" size={15} /> Surprise me
+              </Link>
+            )}
             <Link href="/readers" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
               <Icon name="trophy" size={15} /> Leaderboard
             </Link>
           </div>
         </div>
+      </section>
+
+      {/* Daily quote */}
+      <section className="mx-auto max-w-3xl px-4 py-12 text-center">
+        <p className="text-muted text-xs font-bold uppercase tracking-[0.2em]">Quote of the day</p>
+        <blockquote className="mt-3 text-xl font-medium leading-relaxed sm:text-2xl">
+          “{quote.text}”
+        </blockquote>
+        <p className="text-muted mt-3 text-sm">— {quote.by}</p>
       </section>
 
       {/* Quick Hub */}

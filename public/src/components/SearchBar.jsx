@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "./Icon";
 
 const RECENT_KEY = "bq_recent";
 const readRecent = () => {
@@ -98,7 +99,9 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
   return (
     <div ref={boxRef} className="relative">
       <form onSubmit={submit}>
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
+        <span className="text-muted pointer-events-none absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center">
+          <Icon name="search" size={16} />
+        </span>
         <input
           ref={inputRef}
           value={q}
@@ -106,16 +109,18 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
           onFocus={() => { setRecent(readRecent()); setOpen(true); }}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className={`input !rounded-full pl-11 pr-16 ${big ? "py-3 text-[15px] shadow-lg shadow-black/5" : "w-64 py-2 text-sm"}`}
+          className={`input !rounded-full !pl-11 ${q || big ? "!pr-14" : "!pr-4"} ${big ? "py-3 text-[15px] shadow-lg shadow-black/5" : "w-64 py-2 text-sm"}`}
           role="combobox"
           aria-expanded={open}
         />
         {q ? (
-          <button type="button" onClick={() => { setQ(""); setRes(null); }}
-            className="text-muted absolute right-4 top-1/2 -translate-y-1/2 text-sm hover:opacity-70">✕</button>
+          <button type="button" onClick={() => { setQ(""); setRes(null); }} aria-label="Clear"
+            className="text-muted absolute right-3.5 top-1/2 flex -translate-y-1/2 items-center hover:opacity-70">
+            <Icon name="x" size={15} />
+          </button>
         ) : (
           big && (
-            <kbd className="border-line text-muted pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold sm:block">
+            <kbd className="border-line text-muted pointer-events-none absolute right-3.5 top-1/2 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold sm:block">
               Ctrl K
             </kbd>
           )
