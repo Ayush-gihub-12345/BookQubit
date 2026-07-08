@@ -173,7 +173,7 @@ export async function getBookCommunity(slug) {
        WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
     ).bind(slug).all(),
     db.prepare(
-      `SELECT s.rating, s.review, s.status, s.updated_at, u.id AS user_id, u.name, u.photo_url
+      `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url
        FROM shelf s JOIN users u ON u.id=s.user_id
        WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
        ORDER BY s.updated_at DESC LIMIT 20`

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { readWishlist } from "@/components/WishlistButton";
 import BookCover from "@/components/BookCover";
+import Icon from "@/components/Icon";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -101,15 +102,17 @@ export default function AccountPage() {
       {/* Stats */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
         {[
-          ["✅", stats.read, "Books read"],
-          ["📖", stats.reading, "Reading now"],
-          ["🔖", stats.want, "Want to read"],
-          ["📄", stats.pagesRead.toLocaleString(), "Pages read"],
-          ["★", stats.avgRating, "Avg rating"],
+          ["check", stats.read, "Books read"],
+          ["bookOpen", stats.reading, "Reading now"],
+          ["bookmark", stats.want, "Want to read"],
+          ["barChart", stats.pagesRead.toLocaleString(), "Pages read"],
+          ["star", stats.avgRating, "Avg rating"],
         ].map(([icon, val, label]) => (
           <div key={label} className="card p-4 text-center hover:!translate-y-0">
-            <p className="text-2xl">{icon}</p>
-            <p className="mt-1 text-2xl font-extrabold">{val}</p>
+            <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+              <Icon name={icon} size={18} />
+            </span>
+            <p className="mt-2 text-2xl font-extrabold">{val}</p>
             <p className="text-muted text-xs">{label}</p>
           </div>
         ))}

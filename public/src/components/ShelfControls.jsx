@@ -20,6 +20,7 @@ export default function ShelfControls({ slug }) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [reviewSaved, setReviewSaved] = useState(false);
+  const [spoiler, setSpoiler] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -31,6 +32,7 @@ export default function ShelfControls({ slug }) {
         const data = await r.json();
         setEntry(data.entry);
         if (data.entry?.review) setReviewText(data.entry.review);
+        if (data.entry?.spoiler) setSpoiler(true);
       }
     });
   }, [slug]);
@@ -157,11 +159,16 @@ export default function ShelfControls({ slug }) {
                 placeholder="What did you think of this book?"
                 className="input resize-y text-sm"
               />
+              <label className="text-muted flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={spoiler} onChange={(e) => setSpoiler(e.target.checked)}
+                  className="accent-[var(--color-brand-600)]" />
+                This review contains spoilers
+              </label>
               <div className="flex items-center justify-between">
                 <span className="text-muted text-xs">{reviewText.length}/2000</span>
                 <button
                   disabled={busy || !reviewText.trim()}
-                  onClick={async () => { await update({ review: reviewText.trim() }); setReviewSaved(true); }}
+                  onClick={async () => { await update({ review: reviewText.trim(), spoiler }); setReviewSaved(true); }}
                   className="btn-primary !px-4 !py-1.5 text-xs"
                 >
                   {reviewSaved ? "✓ Published" : "Publish review"}

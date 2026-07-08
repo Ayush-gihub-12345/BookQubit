@@ -242,7 +242,16 @@ export default async function BookPage({ params }) {
                         </div>
                         {r.rating && <span className="text-sm text-amber-400">{"★".repeat(r.rating)}</span>}
                       </div>
-                      <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{r.review}</p>
+                      {r.spoiler ? (
+                        <details className="mt-3">
+                          <summary className="text-muted cursor-pointer text-xs font-semibold hover:text-brand-600">
+                            ⚠ This review contains spoilers — click to reveal
+                          </summary>
+                          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{r.review}</p>
+                        </details>
+                      ) : (
+                        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{r.review}</p>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -4,6 +4,8 @@ import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
 import { getAuthor, booksByAuthor } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { FollowButton, ShareButton } from "@/components/FollowButton";
+import Icon from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
 
@@ -34,23 +36,46 @@ export default async function AuthorPage({ params }) {
               {author.name[0]}
             </div>
           )}
-          <div className="text-center sm:text-left">
-            <h1 className="text-3xl font-bold">{author.name}</h1>
-            <p className="mt-1 text-sm text-slate-400">
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="flex items-center justify-center gap-2 text-3xl font-bold sm:justify-start">
+              {author.name}
+              {author.verified ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 px-2 py-0.5 text-xs font-semibold text-brand-600" title="Verified author">
+                  <Icon name="shieldCheck" size={14} /> Verified
+                </span>
+              ) : null}
+            </h1>
+            <p className="text-muted mt-1 text-sm">
               {[author.country, author.birth_year && `b. ${author.birth_year}`].filter(Boolean).join(" · ")}
             </p>
-            <p className="mt-3 max-w-2xl leading-relaxed text-slate-600 dark:text-slate-300">{author.bio}</p>
+            <p className="mt-3 max-w-2xl leading-relaxed">{author.bio}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
               {author.genres.map((g) => <span key={g} className="pill">{g}</span>)}
             </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <FollowButton type="author" id={author.slug} label="Follow author" />
+              <ShareButton label="Share profile" />
               {author.wikipedia_url && (
-                <a href={author.wikipedia_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 hover:underline">Wikipedia ↗</a>
+                <a href={author.wikipedia_url} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">Wikipedia</a>
               )}
               {author.website_url && (
-                <a href={author.website_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 hover:underline">Website ↗</a>
+                <a href={author.website_url} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">Website</a>
               )}
             </div>
+          </div>
+          {/* Engagement stats */}
+          <div className="grid shrink-0 grid-cols-3 gap-3 sm:grid-cols-1">
+            {[
+              [books.length, "Books"],
+              [books.filter((b) => b.rating).length ? (books.reduce((n, b) => n + (b.rating || 0), 0) / books.filter((b) => b.rating).length).toFixed(1) : "—", "Avg rating"],
+              [author.famous_work ? 1 : 0, "Featured", author.famous_work],
+            ].map(([val, label, sub]) => (
+              <div key={label} className="rounded-xl border border-line px-4 py-3 text-center">
+                <p className="text-lg font-extrabold">{val}</p>
+                <p className="text-muted text-[11px]">{label}</p>
+                {sub && <p className="text-muted mt-0.5 line-clamp-1 text-[10px]">{sub}</p>}
+              </div>
+            ))}
           </div>
         </div>
       </div>

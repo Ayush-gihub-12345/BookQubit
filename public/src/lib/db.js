@@ -123,6 +123,15 @@ CREATE TABLE IF NOT EXISTS goals (
   target INTEGER NOT NULL DEFAULT 12,
   PRIMARY KEY (user_id, year)
 );
+
+CREATE TABLE IF NOT EXISTS follows (
+  user_id TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, target_type, target_id)
+);
+CREATE INDEX IF NOT EXISTS idx_follows_target ON follows(target_type, target_id);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.
@@ -132,6 +141,8 @@ const MIGRATIONS = [
   "ALTER TABLE shelf ADD COLUMN finished_at TEXT",
   "ALTER TABLE shelf ADD COLUMN moods TEXT",
   "ALTER TABLE shelf ADD COLUMN pace TEXT",
+  "ALTER TABLE shelf ADD COLUMN spoiler INTEGER DEFAULT 0",
+  "ALTER TABLE authors ADD COLUMN verified INTEGER DEFAULT 0",
 ];
 
 let schemaReady;

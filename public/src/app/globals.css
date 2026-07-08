@@ -136,5 +136,16 @@ section { animation: rise 0.45s ease both; }
 }
 
 .text-muted { color: var(--muted); }
+
+/* loading skeletons */
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.skeleton {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--fg) 6%, transparent) 25%,
+    color-mix(in srgb, var(--fg) 12%, transparent) 50%,
+    color-mix(in srgb, var(--fg) 6%, transparent) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
 .bg-surface { background: var(--surface); }
 .border-line { border-color: var(--line); }

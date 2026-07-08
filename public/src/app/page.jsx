@@ -5,6 +5,7 @@ import HeroSlider from "@/components/HeroSlider";
 import Rating from "@/components/Rating";
 import BookCover from "@/components/BookCover";
 import ContinueReading from "@/components/ContinueReading";
+import Icon from "@/components/Icon";
 import { listBooks, facets, listAuthors, listPublications, listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -30,10 +31,10 @@ export default async function Home() {
   }));
 
   const HUB = [
-    { icon: "🧭", title: "Explore Library", desc: "Discover new worlds and hidden literary gems", href: "/books", color: "from-sky-500 to-blue-600" },
-    { icon: "🎧", title: "Audiobooks", desc: "Listen to your favorite books on the go", href: "/books", color: "from-fuchsia-500 to-purple-600" },
-    { icon: "💥", title: "Comics", desc: "Legendary issues and timeless adventures", href: "/comics", color: "from-amber-500 to-orange-600" },
-    { icon: "🏆", title: "Community", desc: "Compete with readers on the leaderboard", href: "/readers", color: "from-emerald-500 to-teal-600" },
+    { icon: "compass", title: "Explore Library", desc: "Discover new worlds and hidden literary gems", href: "/books", color: "from-sky-500 to-blue-600" },
+    { icon: "headphones", title: "Audiobooks", desc: "Listen to your favorite books on the go", href: "/books", color: "from-fuchsia-500 to-purple-600" },
+    { icon: "zap", title: "Comics", desc: "Legendary issues and timeless adventures", href: "/comics", color: "from-amber-500 to-orange-600" },
+    { icon: "users", title: "Community", desc: "Follow readers and climb the leaderboard", href: "/readers", color: "from-emerald-500 to-teal-600" },
   ];
 
   return (
@@ -47,7 +48,7 @@ export default async function Home() {
       <ContinueReading />
 
       {/* Trending Now */}
-      <Section title="🔥 Trending Now" subtitle="What's hot in our community right now" href="/books?sort=rating">
+      <Section title="Trending Now" subtitle="What's hot in our community right now" href="/books?sort=rating">
         <div className="hscroll">
           {topRated.map((b, i) => (
             <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-40 overflow-hidden sm:w-44">
@@ -79,7 +80,9 @@ export default async function Home() {
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/books" className="btn-primary">{_("browse")}</Link>
-            <Link href="/readers" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">🏆 Leaderboard</Link>
+            <Link href="/readers" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
+              <Icon name="trophy" size={15} /> Leaderboard
+            </Link>
           </div>
         </div>
       </section>
@@ -89,7 +92,9 @@ export default async function Home() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {HUB.map((h) => (
             <Link key={h.title} href={h.href} className="card group p-6">
-              <span className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${h.color} text-xl text-white shadow-lg`}>{h.icon}</span>
+              <span className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${h.color} text-white shadow-lg`}>
+                <Icon name={h.icon} size={20} />
+              </span>
               <h3 className="mt-4 font-bold group-hover:text-brand-600">{h.title}</h3>
               <p className="text-muted mt-1 text-sm">{h.desc}</p>
               <p className="mt-3 text-xs font-semibold text-brand-600">Open Section →</p>

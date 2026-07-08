@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthButton from "./AuthButton";
 import SearchBar from "./SearchBar";
+import Icon from "./Icon";
 
 function Dropdown({ button, children, width = "w-48" }) {
   const [open, setOpen] = useState(false);
@@ -36,22 +37,35 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const router = useRouter();
 
   const MENUS = [
-    { href: "/", icon: "🏠", label: "Home" },
+    { href: "/", icon: "home", label: "Home" },
     {
-      href: "/books", icon: "📚", label: labels.books,
+      href: "/books", icon: "compass", label: "Discover",
       items: [
-        { href: "/books", label: "📖 All Books" },
-        { href: "/books?sort=rating", label: "⭐ Top Rated" },
-        { href: "/books?sort=new", label: "🆕 New Releases" },
-        { href: "/categories", label: `🗃️ ${labels.categories}` },
-        { href: "/tags", label: `#️⃣ ${labels.tags}` },
+        { href: "/books?sort=rating", icon: "trendingUp", label: "Trending" },
+        { href: "/books?sort=new", icon: "clock", label: "New Releases" },
+        { href: "/books?sort=rating", icon: "star", label: "Top Rated" },
+        { href: "/collections", icon: "layers", label: labels.collections },
       ],
     },
-    { href: "/collections", icon: "🗂️", label: labels.collections },
-    { href: "/authors", icon: "✍️", label: labels.authors },
-    { href: "/publications", icon: "🏢", label: labels.publishers },
-    { href: "/comics", icon: "💥", label: labels.comics },
-    { href: "/readers", icon: "🏆", label: "Readers" },
+    {
+      href: "/books", icon: "book", label: "Browse",
+      items: [
+        { href: "/books", icon: "book", label: "All Books" },
+        { href: "/categories", icon: "grid", label: "Genres & Categories" },
+        { href: "/tags", icon: "hash", label: labels.tags },
+        { href: "/comics", icon: "zap", label: labels.comics },
+      ],
+    },
+    { href: "/authors", icon: "feather", label: labels.authors },
+    { href: "/publications", icon: "building", label: labels.publishers },
+    {
+      href: "/readers", icon: "users", label: "Community",
+      items: [
+        { href: "/readers", icon: "trophy", label: "Leaderboard" },
+        { href: "/readers", icon: "trendingUp", label: "Recent Activity" },
+        { href: "/account", icon: "user", label: labels.account },
+      ],
+    },
   ];
 
   const setCookie = (name, value) => {
@@ -83,7 +97,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             width="w-44"
             button={(toggle) => (
               <button onClick={toggle} className={iconBtn} title={`Theme: ${currentTheme.name}`} aria-label="Theme">
-                {currentTheme.icon}
+                <Icon name="palette" size={17} />
               </button>
             )}
           >
@@ -91,8 +105,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             {themes.map((t) => (
               <button key={t.id} onClick={() => setCookie("theme", t.id)}
                 className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${t.id === theme ? "font-bold text-brand-600" : ""}`}>
-                <span>{t.icon}</span> {t.name}
-                {t.id === theme && <span className="ml-auto text-brand-600">✓</span>}
+                <span className="h-3.5 w-3.5 rounded-full border border-black/10"
+                  style={{ background: { light: "#fff", dark: "#0b1220", sepia: "#b07d2f", midnight: "#7c3aed", ocean: "#0891b2", forest: "#059669", rose: "#e11d48" }[t.id] }} />
+                {t.name}
+                {t.id === theme && <Icon name="check" size={14} className="ml-auto text-brand-600" />}
               </button>
             ))}
           </Dropdown>
