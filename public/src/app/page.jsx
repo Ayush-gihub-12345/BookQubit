@@ -8,6 +8,7 @@ import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
 import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
+import Logo from "@/components/Logo";
 import { listBooks, facets, listAuthors, listPublications, listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -267,8 +268,8 @@ export default async function Home() {
 
       {/* Brand strip */}
       <section className="border-line border-t py-14 text-center">
-        <p className="pill !px-4 !py-1.5">✦ The Future of Reading</p>
-        <h2 className="mt-4 text-2xl font-extrabold">Book<span className="text-brand-600">Qubit</span></h2>
+        <p className="pill !px-4 !py-1.5">The Future of Reading</p>
+        <div className="mt-4 flex justify-center"><Logo size={40} /></div>
         <p className="text-muted mx-auto mt-2 max-w-xl px-4 text-sm">
           Your quantum leap into the world of literature — timeless wisdom, modern intelligence,
           and a reading ecosystem that grows with your mind.

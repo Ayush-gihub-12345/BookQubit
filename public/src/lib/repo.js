@@ -52,7 +52,7 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
 // SQL-level catalog query with real pagination — scales to very large catalogs
 // (never loads the full table). Used by the /books browser.
 export async function queryBooks(lang, opts = {}) {
-  const { q, category, collection, tag, format, minRating, sort, page = 1, perPage = 24 } = opts;
+  const { q, category, collection, tag, format, country, minRating, sort, page = 1, perPage = 24 } = opts;
   const db = await getDb();
 
   const where = ["lang = ?"];
@@ -60,6 +60,7 @@ export async function queryBooks(lang, opts = {}) {
   if (category) { where.push("category = ?"); binds.push(category); }
   if (collection) { where.push("collection = ?"); binds.push(collection); }
   if (format) { where.push("format LIKE ?"); binds.push(`%${format}%`); }
+  if (country) { where.push("country = ?"); binds.push(country); }
   if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
   if (tag) { where.push("tags LIKE ?"); binds.push(`%"${tag}"%`); }
   if (q) {

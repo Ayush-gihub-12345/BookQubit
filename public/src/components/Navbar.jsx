@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import AuthButton from "./AuthButton";
 import SearchBar from "./SearchBar";
 import Icon from "./Icon";
+import { LogoMark } from "./Logo";
 
 function Dropdown({ button, children, width = "w-48" }) {
   const [open, setOpen] = useState(false);
@@ -35,6 +36,18 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const headerRef = useRef(null);
+
+  // Close the mobile sheet on any click/tap outside the header
+  useEffect(() => {
+    const close = (e) => { if (!headerRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+    };
+  }, []);
 
   const MENUS = [
     { href: "/", icon: "home", label: "Home" },
@@ -57,13 +70,78 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       ],
     },
     { href: "/authors", icon: "feather", label: labels.authors },
-    { href: "/publications", icon: "building", label: labels.publishers },
+    {
+      href: "/publications", icon: "building", label: labels.publishers,
+      items: [
+        { href: "/publications", icon: "building", label: "All Publishers" },
+        { href: "/publications/penguin-random-house", icon: "book", label: "Penguin Random House" },
+        { href: "/publications/harpercollins", icon: "book", label: "HarperCollins" },
+      ],
+    },
     {
       href: "/readers", icon: "users", label: "Community",
       items: [
         { href: "/readers", icon: "trophy", label: "Leaderboard" },
         { href: "/readers", icon: "trendingUp", label: "Recent Activity" },
         { href: "/account", icon: "user", label: labels.account },
+        { href: "/login", icon: "logout", label: labels.signIn },
+      ],
+    },
+  ];
+
+  // Multi-column mega menu ("More") — enterprise-style grouped catalog entry points
+  const MEGA = [
+    {
+      title: "Best Sellers",
+      links: [
+        ["Top Rated", "/books?sort=rating"],
+        ["Trending Now", "/books?sort=rating"],
+        ["New Releases", "/books?sort=new"],
+        ["All Books", "/books"],
+        ["Editors' Choice", "/books?sort=rating&rating=4.5"],
+      ],
+    },
+    {
+      title: "Literature Types",
+      links: [
+        ["Philosophy", "/books?category=Philosophy"],
+        ["History", "/books?category=History"],
+        ["Fiction", "/books?category=Fiction"],
+        ["Psychology", "/books?category=Psychology"],
+        ["Self-Help", "/books?category=Self-Help"],
+        ["Business", "/books?category=Business"],
+        ["Finance", "/books?category=Finance"],
+      ],
+    },
+    {
+      title: "Books by Country",
+      links: [
+        ["India", "/books?country=India"],
+        ["USA", "/books?country=USA"],
+        ["UK", "/books?country=UK"],
+        ["Israel", "/books?country=Israel"],
+        ["Germany", "/books?country=Germany"],
+        ["Japan", "/books?country=Japan"],
+        ["Russia", "/books?country=Russia"],
+      ],
+    },
+    {
+      title: "Special Collections",
+      links: [
+        ["Harari Collection", "/collections/Harari%20Collection"],
+        ["Stoic Classics", "/collections/Stoic%20Classics"],
+        ["Dystopian Classics", "/collections/Dystopian%20Classics"],
+        ["Revolutionary Classics", "/collections/Revolutionary%20Classics"],
+        ["All Collections", "/collections"],
+      ],
+    },
+    {
+      title: "By Format",
+      links: [
+        ["Paperback", "/books?format=Paperback"],
+        ["Hardcover", "/books?format=Hardcover"],
+        ["EBook", "/books?format=EBook"],
+        ["Comics", "/comics"],
       ],
     },
   ];
@@ -76,14 +154,16 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
 
   return (
-    <header className="border-line bg-surface/85 sticky top-0 z-50 border-b shadow-sm backdrop-blur-xl">
+    <header ref={headerRef} className="border-line bg-surface/85 relative z-50 border-b shadow-sm backdrop-blur-xl lg:sticky lg:top-0">
       {/* brand accent strip */}
       <div className="h-0.5 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700" />
       {/* Row 1 */}
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-600/30">B</span>
-          <span className="hidden sm:inline">Book<span className="text-brand-600">Qubit</span></span>
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <LogoMark size={36} />
+          <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
+            Book<span className="text-brand-600">Qubit</span>
+          </span>
         </Link>
 
         <div className="hidden min-w-0 flex-1 px-4 md:block">
@@ -153,7 +233,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       </div>
 
       {/* Row 2 */}
-      <div className="border-line hidden border-t lg:block">
+      <div className="border-line relative hidden border-t lg:block">
         <nav className="mx-auto flex max-w-7xl items-center justify-center px-4">
           {MENUS.map((m) => {
             const active = m.href === "/" ? pathname === "/" : pathname.startsWith(m.href.split("?")[0]);
@@ -161,17 +241,17 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               <div key={m.label} className="group relative">
                 <Link href={m.href}
                   className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${active ? "text-brand-600" : ""}`}>
-                  <span className="text-xs">{m.icon}</span> {m.label}
-                  {m.items && <span className="text-[8px] opacity-40 transition group-hover:rotate-180">▼</span>}
+                  <Icon name={m.icon} size={14} className="opacity-70" /> {m.label}
+                  {m.items && <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />}
                   <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
                 </Link>
                 {m.items && (
-                  <div className="invisible absolute left-1/2 top-full z-50 w-56 -translate-x-1/2 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="invisible absolute left-1/2 top-full z-50 w-60 -translate-x-1/2 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                     <div className="bg-surface border-line overflow-hidden rounded-2xl border shadow-2xl">
                       {m.items.map((it) => (
                         <Link key={it.label} href={it.href}
-                          className="block px-4 py-2.5 text-sm hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-white/5">
-                          {it.label}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-white/5">
+                          <Icon name={it.icon} size={14} className="text-muted" /> {it.label}
                         </Link>
                       ))}
                     </div>
@@ -180,6 +260,53 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               </div>
             );
           })}
+
+          {/* More — full mega menu */}
+          <div className="group">
+            <button className="relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600">
+              <Icon name="grid" size={14} className="opacity-70" /> More
+              <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />
+              <span className="absolute inset-x-3 bottom-0 h-0.5 scale-x-0 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform group-hover:scale-x-100" />
+            </button>
+            <div className="invisible absolute inset-x-0 top-full z-50 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+              <div className="bg-surface border-line mx-auto max-w-7xl overflow-hidden rounded-b-2xl border border-t-0 shadow-2xl">
+                <div className="grid grid-cols-6 gap-6 p-8">
+                  {MEGA.map((col) => (
+                    <div key={col.title}>
+                      <p className="border-line mb-3 border-b pb-2 text-sm font-bold">{col.title}</p>
+                      <ul className="space-y-1.5">
+                        {col.links.map(([label, href]) => (
+                          <li key={label}>
+                            <Link href={href} className="text-muted block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600">
+                              {label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                  <div>
+                    <p className="border-line mb-3 border-b pb-2 text-sm font-bold">By Language</p>
+                    <ul className="max-h-52 space-y-1.5 overflow-auto pr-1">
+                      {languages.map((l) => (
+                        <li key={l.code}>
+                          <button onClick={() => setCookie("lang", l.code)}
+                            className={`block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600 ${l.code === lang ? "font-bold text-brand-600" : "text-muted"}`}>
+                            {l.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="border-line border-t p-4 text-center">
+                  <Link href="/categories" className="btn-primary !py-2 text-sm">
+                    Browse All Categories <Icon name="arrowRight" size={14} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
         </nav>
       </div>
 
@@ -189,13 +316,19 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           <div className="grid grid-cols-2 gap-2">
             {MENUS.map((m) => (
               <Link key={m.label} href={m.href} onClick={() => setOpen(false)}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-                {m.icon} {m.label}
+                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+                <Icon name={m.icon} size={15} className="text-muted" /> {m.label}
               </Link>
             ))}
-            <Link href="/login" onClick={() => setOpen(false)} className="rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              🔑 {labels.signIn}
+            <Link href="/login" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
             </Link>
+          </div>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Explore</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[["Top Rated", "/books?sort=rating"], ["New Releases", "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], ["Collections", "/collections"], ["Tags", "/tags"]].map(([label, href]) => (
+              <Link key={label} href={href} onClick={() => setOpen(false)} className="pill">{label}</Link>
+            ))}
           </div>
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Theme</p>
           <div className="mt-2 flex flex-wrap gap-2">

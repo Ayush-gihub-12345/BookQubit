@@ -26,16 +26,16 @@ const FORMATS = ["Paperback", "Hardcover", "EBook"];
 export default async function BooksPage({ searchParams }) {
   const sp = await searchParams;
   const lang = await getLang();
-  const { q, category, tag, collection, sort, rating, format, view } = sp;
+  const { q, category, tag, collection, sort, rating, format, country, view } = sp;
   const page = Math.max(1, parseInt(sp.page) || 1);
 
   const [result, f] = await Promise.all([
-    queryBooks(lang, { q, category, tag, collection, format, minRating: rating, sort, page }),
+    queryBooks(lang, { q, category, tag, collection, format, country, minRating: rating, sort, page }),
     facets(lang),
   ]);
   const { books, total, pages } = result;
 
-  const params = { q, category, tag, collection, sort, rating, format, view };
+  const params = { q, category, tag, collection, sort, rating, format, country, view };
   const link = (patch) => {
     const merged = { ...params, ...patch };
     if (!("page" in patch)) delete merged.page; // filter changes reset to page 1
@@ -50,6 +50,7 @@ export default async function BooksPage({ searchParams }) {
     tag && { label: `#${tag}`, clear: link({ tag: undefined }) },
     rating && { label: `★ ${rating}+`, clear: link({ rating: undefined }) },
     format && { label: format, clear: link({ format: undefined }) },
+    country && { label: country, clear: link({ country: undefined }) },
   ].filter(Boolean);
 
   const isList = view === "list";

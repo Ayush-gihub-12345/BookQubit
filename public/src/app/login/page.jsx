@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function LoginPage() {
   return (
     <div className="mx-auto max-w-md px-4 py-16">
       <div className="card p-8 hover:!translate-y-0">
+        <div className="mb-4 flex justify-center"><Logo size={40} /></div>
         <h1 className="text-center text-2xl font-bold">
           {mode === "signin" ? "Welcome back" : "Create your account"}
         </h1>

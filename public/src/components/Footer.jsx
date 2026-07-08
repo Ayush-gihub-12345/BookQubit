@@ -1,11 +1,12 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
     <footer className="border-line bg-surface mt-16 border-t">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-lg font-extrabold">Book<span className="text-brand-600">Qubit</span></p>
+          <Logo size={32} />
           <p className="mt-2 text-sm text-slate-500">
             Discover great books, read summaries and key insights, and buy through trusted stores.
           </p>
