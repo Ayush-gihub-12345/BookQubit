@@ -195,7 +195,9 @@ export const LEVELS = [
   { min: 0, name: "New Reader", icon: "🌱" },
 ];
 export const levelFor = (points) => LEVELS.find((l) => points >= l.min);
-export const pointsFor = (r) => (r.reads || 0) * 10 + (r.ratings || 0) * 2 + (r.reviews || 0) * 5;
+export const pointsFor = (r) =>
+  (r.reads || 0) * 10 + (r.reviews || 0) * 5 + (r.ratings || 0) * 2 +
+  (r.discussions || 0) * 3 + (r.posts || 0) * 1;
 
 // Community stats + reviews for one book (drives the book-page social section)
 export async function getBookCommunity(slug) {
@@ -240,19 +242,49 @@ export async function getBookCommunity(slug) {
   return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, moods, pace, reviews: reviews.results };
 }
 
-// Latest community activity across the platform
+// Latest community activity — only public-worthy events (finished books,
+// ratings, reviews). Private shelf intents like "want to read" stay private.
 export async function getRecentActivity(limit = 12) {
   const db = await getDb();
   const { results } = await db.prepare(
-    `SELECT s.book_slug, s.status, s.rating, s.updated_at,
+    `SELECT s.book_slug, s.status, s.rating, s.review, s.updated_at,
             u.id AS user_id, u.name, u.photo_url,
             b.title, b.cover_url
      FROM shelf s
      JOIN users u ON u.id = s.user_id
      LEFT JOIN books b ON b.slug = s.book_slug AND b.lang='en'
+     WHERE s.status='read' OR s.rating IS NOT NULL OR s.review IS NOT NULL
      ORDER BY s.updated_at DESC LIMIT ?1`
   ).bind(limit).all();
   return results;
+}
+
+export async function listDiscussions(limit = 30) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT d.*, u.name, u.photo_url,
+       (SELECT COUNT(*) FROM discussion_posts p WHERE p.discussion_id = d.id) AS replies,
+       b.title AS book_title
+     FROM discussions d
+     JOIN users u ON u.id = d.user_id
+     LEFT JOIN books b ON b.slug = d.book_slug AND b.lang='en'
+     ORDER BY d.created_at DESC LIMIT ?1`
+  ).bind(limit).all();
+  return results;
+}
+
+export async function getDiscussion(id) {
+  const db = await getDb();
+  const [thread, posts] = await Promise.all([
+    db.prepare(
+      `SELECT d.*, u.name, u.photo_url FROM discussions d JOIN users u ON u.id=d.user_id WHERE d.id=?1`
+    ).bind(id).first(),
+    db.prepare(
+      `SELECT p.*, u.name, u.photo_url FROM discussion_posts p JOIN users u ON u.id=p.user_id
+       WHERE p.discussion_id=?1 ORDER BY p.created_at ASC`
+    ).bind(id).all(),
+  ]);
+  return thread ? { ...thread, posts: posts.results } : null;
 }
 
 // Public profile: user info + full shelf with book data
@@ -274,13 +306,41 @@ export async function getLeaderboard(limit = 20) {
   const db = await getDb();
   const { results } = await db.prepare(
     `SELECT u.id, u.name, u.photo_url,
-       SUM(CASE WHEN s.status='read' THEN 1 ELSE 0 END) AS reads,
-       SUM(CASE WHEN s.rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
-       SUM(CASE WHEN s.review IS NOT NULL THEN 1 ELSE 0 END) AS reviews
-     FROM shelf s JOIN users u ON u.id = s.user_id
-     GROUP BY u.id ORDER BY reads DESC, ratings DESC LIMIT ?1`
-  ).bind(limit).all();
+       COALESCE(sh.reads, 0) AS reads,
+       COALESCE(sh.ratings, 0) AS ratings,
+       COALESCE(sh.reviews, 0) AS reviews,
+       COALESCE(d.n, 0) AS discussions,
+       COALESCE(p.n, 0) AS posts
+     FROM users u
+     LEFT JOIN (
+       SELECT user_id,
+         SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS reads,
+         SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
+         SUM(CASE WHEN review IS NOT NULL AND review != '' THEN 1 ELSE 0 END) AS reviews
+       FROM shelf GROUP BY user_id
+     ) sh ON sh.user_id = u.id
+     LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussions GROUP BY user_id) d ON d.user_id = u.id
+     LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussion_posts GROUP BY user_id) p ON p.user_id = u.id
+     WHERE COALESCE(sh.reads,0)+COALESCE(sh.ratings,0)+COALESCE(sh.reviews,0)+COALESCE(d.n,0)+COALESCE(p.n,0) > 0
+     LIMIT 500`
+  ).all();
   return results
     .map((r) => ({ ...r, points: pointsFor(r), level: levelFor(pointsFor(r)) }))
-    .sort((a, b) => b.points - a.points);
+    .sort((a, b) => b.points - a.points)
+    .slice(0, limit);
+}
+
+export async function createDiscussion(userId, { title, body, bookSlug }) {
+  const db = await getDb();
+  const res = await db.prepare(
+    "INSERT INTO discussions (user_id, title, body, book_slug) VALUES (?1, ?2, ?3, ?4)"
+  ).bind(userId, title, body, bookSlug || null).run();
+  return res.meta.last_row_id;
+}
+
+export async function addDiscussionPost(discussionId, userId, body) {
+  const db = await getDb();
+  await db.prepare(
+    "INSERT INTO discussion_posts (discussion_id, user_id, body) VALUES (?1, ?2, ?3)"
+  ).bind(discussionId, userId, body).run();
 }

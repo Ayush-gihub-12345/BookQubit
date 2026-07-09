@@ -79,10 +79,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       ],
     },
     {
-      href: "/readers", icon: "users", label: "Community",
+      href: "/community", icon: "users", label: "Community",
       items: [
-        { href: "/readers", icon: "trophy", label: "Leaderboard" },
-        { href: "/readers", icon: "trendingUp", label: "Recent Activity" },
+        { href: "/community", icon: "feather", label: "Discussions" },
+        { href: "/leaderboard", icon: "trophy", label: "Bookworm Ranking" },
         { href: "/account", icon: "user", label: labels.account },
         { href: "/login", icon: "logout", label: labels.signIn },
       ],

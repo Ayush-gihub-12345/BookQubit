@@ -124,6 +124,25 @@ CREATE TABLE IF NOT EXISTS goals (
   PRIMARY KEY (user_id, year)
 );
 
+CREATE TABLE IF NOT EXISTS discussions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  book_slug TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_disc_created ON discussions(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS discussion_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  discussion_id INTEGER NOT NULL,
+  user_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_dposts_disc ON discussion_posts(discussion_id);
+
 CREATE TABLE IF NOT EXISTS follows (
   user_id TEXT NOT NULL,
   target_type TEXT NOT NULL,

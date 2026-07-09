@@ -93,10 +93,11 @@ export default function AccountPage() {
             <span className="pill !text-sm">{stats.level.icon} {stats.level.name}</span>
             <span className="pill !text-sm">⚡ {stats.points} pts</span>
             {goal?.streak > 0 && <span className="pill !bg-orange-500/15 !text-sm !text-orange-500">🔥 {goal.streak}-day streak</span>}
-            {rank && <Link href="/readers" className="pill !text-sm">🏆 Rank #{rank.position}</Link>}
+            {rank && <Link href="/leaderboard" className="pill !text-sm">🏆 Rank #{rank.position}</Link>}
           </div>
         </div>
-        <Link href="/readers" className="btn-ghost text-sm">🏆 Leaderboard</Link>
+        <Link href="/leaderboard" className="btn-ghost text-sm">🏆 Bookworm Ranking</Link>
+        <Link href="/community" className="btn-ghost text-sm">Community</Link>
       </div>
 
       {/* Stats */}

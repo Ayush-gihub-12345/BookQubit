@@ -1,4 +1,4 @@
-import BookCard from "@/components/BookCard";
+import FilterableBookGrid from "@/components/FilterableBookGrid";
 import { listBooks } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
@@ -17,11 +17,10 @@ export default async function CollectionPage({ params }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="text-3xl font-bold">{collection}</h1>
-      <p className="mt-1 text-sm text-slate-500">{books.length} books in this collection</p>
-      <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-        {books.map((b) => <BookCard key={b.id} book={b} />)}
+      <p className="text-muted mt-1 text-sm">{books.length} books in this collection</p>
+      <div className="mt-6">
+        <FilterableBookGrid books={books} emptyMessage="No books match these filters." />
       </div>
-      {!books.length && <p className="py-20 text-center text-slate-500">No books in this collection.</p>}
     </div>
   );
 }

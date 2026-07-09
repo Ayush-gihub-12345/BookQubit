@@ -17,10 +17,7 @@ export default function BookCard({ book }) {
       <div className="p-4">
         <h3 className="line-clamp-1 font-semibold group-hover:text-brand-600">{book.title}</h3>
         <p className="mt-0.5 line-clamp-1 text-sm text-slate-500">{book.author}</p>
-        <div className="mt-2 flex items-center justify-between">
-          <Rating value={book.rating} />
-          {book.price && <span className="text-sm font-semibold text-brand-600">{book.price}</span>}
-        </div>
+        <div className="mt-2"><Rating value={book.rating} /></div>
       </div>
     </Link>
   );

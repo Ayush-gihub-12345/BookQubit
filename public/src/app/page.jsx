@@ -53,7 +53,7 @@ export default async function Home() {
     { icon: "compass", title: "Explore Library", desc: "Discover new worlds and hidden literary gems", href: "/books", color: "from-sky-500 to-blue-600" },
     { icon: "headphones", title: "Audiobooks", desc: "Listen to your favorite books on the go", href: "/books", color: "from-fuchsia-500 to-purple-600" },
     { icon: "zap", title: "Comics", desc: "Legendary issues and timeless adventures", href: "/comics", color: "from-amber-500 to-orange-600" },
-    { icon: "users", title: "Community", desc: "Follow readers and climb the leaderboard", href: "/readers", color: "from-emerald-500 to-teal-600" },
+    { icon: "users", title: "Community", desc: "Join discussions and connect with readers", href: "/community", color: "from-emerald-500 to-teal-600" },
   ];
 
   return (
@@ -110,8 +110,8 @@ export default async function Home() {
                 <Icon name="zap" size={15} /> Surprise me
               </Link>
             )}
-            <Link href="/readers" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
-              <Icon name="trophy" size={15} /> Leaderboard
+            <Link href="/leaderboard" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
+              <Icon name="trophy" size={15} /> Bookworm Ranking
             </Link>
           </div>
         </div>

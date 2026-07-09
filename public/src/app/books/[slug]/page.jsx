@@ -103,7 +103,7 @@ export default async function BookPage({ params }) {
             <div className="mt-5 space-y-3">
               {book.buyUrl && (
                 <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary w-full">
-                  🛒 {_("buy")} {book.price && `· ${book.price}`}
+                  🛒 {_("buy")}
                 </a>
               )}
               {book.audiobook_url && (
@@ -190,11 +190,6 @@ export default async function BookPage({ params }) {
                   <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
                   <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
                   <p className="text-muted mt-1 text-xs">{community.rating_count} ratings from readers</p>
-                  <div className="text-muted mt-4 space-y-1 text-xs">
-                    <p>🔖 {community.want || 0} want to read</p>
-                    <p>📖 {community.reading || 0} reading now</p>
-                    <p>✅ {community.read || 0} have read it</p>
-                  </div>
                 </div>
                 <div>
                   {(community.moods.length > 0 || community.pace.length > 0) && (
