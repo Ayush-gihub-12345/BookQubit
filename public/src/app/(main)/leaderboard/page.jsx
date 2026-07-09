@@ -5,7 +5,7 @@ import { getLeaderboard } from "@/lib/repo";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Bookworm Ranking — Top Readers" };
 
-const MEDAL_STYLE = ["text-amber-400", "text-slate-400", "text-amber-700"];
+const MEDAL_STYLE = ["text-amber-400", "text-muted", "text-amber-700"];
 
 export default async function LeaderboardPage() {
   const readers = await getLeaderboard(50);

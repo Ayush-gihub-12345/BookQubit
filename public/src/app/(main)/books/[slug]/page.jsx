@@ -75,12 +75,17 @@ export default async function BookPage({ params }) {
       : `${readingMinutes} min`
     : null;
 
+  const difficulty = book.page_count
+    ? book.page_count < 180 ? "Easy read" : book.page_count < 400 ? "Moderate" : "Deep read"
+    : null;
+
   const meta = [
     ["Publisher", book.publisher],
     ["Published", book.published],
     ["Language", book.language],
     ["Pages", book.page_count],
     ["Reading time", readingTime && `~${readingTime}`],
+    ["Difficulty", difficulty],
     ["Format", book.format],
     ["ISBN", book.isbn],
     ["Country", book.country],
@@ -92,7 +97,7 @@ export default async function BookPage({ params }) {
       <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
 
       <div className="mx-auto max-w-7xl px-4 py-10">
-        <nav className="mb-6 text-sm text-slate-500">
+        <nav className="text-muted mb-6 text-sm">
           <Link href="/books" className="hover:text-brand-600">Books</Link>
           {book.category && (
             <>
@@ -102,7 +107,7 @@ export default async function BookPage({ params }) {
               </Link>
             </>
           )}
-          {" / "}<span className="text-slate-700 dark:text-slate-300">{book.title}</span>
+          {" / "}<span className="text-[var(--fg)]">{book.title}</span>
         </nav>
 
         <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
@@ -123,7 +128,7 @@ export default async function BookPage({ params }) {
               )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
               <ShelfControls slug={book.slug} />
-              <p className="text-center text-xs text-slate-400">
+              <p className="text-muted text-center text-xs">
                 As an Amazon Associate we earn from qualifying purchases.
               </p>
             </div>
@@ -131,7 +136,7 @@ export default async function BookPage({ params }) {
 
           <div>
             <h1 className="text-3xl font-bold sm:text-4xl">{book.title}</h1>
-            <p className="mt-2 text-lg text-slate-500">
+            <p className="text-muted mt-2 text-lg">
               by{" "}
               <Link href={`/books?q=${encodeURIComponent(book.author || "")}`} className="font-medium text-brand-600 hover:underline">
                 {book.author}
@@ -159,7 +164,7 @@ export default async function BookPage({ params }) {
                 <h2 className="text-xl font-bold">{_("keyTakeaways")}</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {book.keyPoints.map((k) => (
-                    <li key={k} className="flex items-start gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm dark:bg-slate-800">
+                    <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
                       <span className="text-brand-600">✓</span> {k}
                     </li>
                   ))}
@@ -170,7 +175,7 @@ export default async function BookPage({ params }) {
             {book.summary && (
               <div className="mt-8">
                 <h2 className="text-xl font-bold">{_("summary")}</h2>
-                <p className="mt-3 whitespace-pre-line leading-relaxed text-slate-600 dark:text-slate-300">
+                <p className="mt-3 whitespace-pre-line leading-relaxed opacity-90">
                   {book.summary}
                 </p>
               </div>
@@ -182,7 +187,7 @@ export default async function BookPage({ params }) {
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                   {meta.map(([k, v]) => (
                     <div key={k}>
-                      <dt className="text-xs uppercase tracking-wide text-slate-400">{k}</dt>
+                      <dt className="text-muted text-xs uppercase tracking-wide">{k}</dt>
                       <dd className="text-sm font-medium">{v}</dd>
                     </div>
                   ))}

@@ -6,7 +6,7 @@ export default function Section({ title, subtitle, href, children }) {
       <div className="mb-6 flex items-end justify-between">
         <div>
           <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
-          {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
         </div>
         {href && (
           <Link href={href} className="text-sm font-semibold text-brand-600 hover:underline">

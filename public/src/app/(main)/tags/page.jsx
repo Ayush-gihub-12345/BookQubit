@@ -11,7 +11,7 @@ export default async function TagsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="text-3xl font-bold">Tags</h1>
-      <p className="mt-1 text-sm text-slate-500">Explore books by topic</p>
+      <p className="mt-1 text-sm text-muted">Explore books by topic</p>
       <div className="mt-8 flex flex-wrap gap-3">
         {f.tags.map((t) => (
           <Link
@@ -23,7 +23,7 @@ export default async function TagsPage() {
           </Link>
         ))}
       </div>
-      {!f.tags.length && <p className="py-20 text-center text-slate-500">No tags yet.</p>}
+      {!f.tags.length && <p className="py-20 text-center text-muted">No tags yet.</p>}
     </div>
   );
 }

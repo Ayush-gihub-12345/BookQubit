@@ -47,7 +47,7 @@ export default async function ComicPage({ params }) {
             <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
               {meta.map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400">{k}</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted">{k}</dt>
                   <dd className="text-sm font-medium">{v}</dd>
                 </div>
               ))}
@@ -64,7 +64,7 @@ export default async function ComicPage({ params }) {
           )}
 
           {comic.fun_fact && (
-            <div className="mt-8 rounded-2xl border-l-4 border-brand-500 bg-brand-50 p-5 dark:bg-slate-800">
+            <div className="mt-8 tint-brand rounded-2xl border-l-4 border-brand-500 p-5">
               <p className="text-sm font-semibold text-brand-700 dark:text-brand-100">💡 Fun Fact</p>
               <p className="mt-1 text-sm leading-relaxed">{comic.fun_fact}</p>
             </div>

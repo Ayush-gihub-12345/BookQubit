@@ -38,7 +38,7 @@ export default async function PublicationPage({ params }) {
             )}
             <div className="text-center sm:text-left">
               <h1 className="text-3xl font-bold">{pub.name}</h1>
-              <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">{pub.about || pub.description}</p>
+              <p className="mt-2 max-w-2xl opacity-90">{pub.about || pub.description}</p>
               {pub.website && (
                 <a href={pub.website} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
                   {pub.website} ↗
@@ -51,7 +51,7 @@ export default async function PublicationPage({ params }) {
             <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-200 pt-6 sm:grid-cols-3 dark:border-slate-800">
               {meta.map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-xs uppercase tracking-wide text-slate-400">{k}</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted">{k}</dt>
                   <dd className="text-sm font-medium">{v}</dd>
                 </div>
               ))}
@@ -60,7 +60,7 @@ export default async function PublicationPage({ params }) {
 
           {pub.notable_authors.length > 0 && (
             <div className="mt-6">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Notable Authors</p>
+              <p className="text-xs uppercase tracking-wide text-muted">Notable Authors</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {pub.notable_authors.map((a) => <span key={a} className="pill">{a}</span>)}
               </div>
@@ -69,7 +69,7 @@ export default async function PublicationPage({ params }) {
 
           {pub.imprints.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Imprints</p>
+              <p className="text-xs uppercase tracking-wide text-muted">Imprints</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {pub.imprints.map((i) => <span key={i} className="pill">{i}</span>)}
               </div>

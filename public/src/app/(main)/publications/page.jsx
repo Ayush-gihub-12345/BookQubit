@@ -11,7 +11,7 @@ export default async function PublicationsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="text-3xl font-bold">Publishers</h1>
-      <p className="mt-1 text-sm text-slate-500">{pubs.length} publishers</p>
+      <p className="mt-1 text-sm text-muted">{pubs.length} publishers</p>
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {pubs.map((p) => (
           <Link key={p.id} href={`/publications/${p.slug}`} className="card p-5">
@@ -22,14 +22,14 @@ export default async function PublicationsPage() {
               )}
               <div>
                 <h2 className="font-semibold">{p.name}</h2>
-                <p className="text-xs text-slate-400">{[p.type, p.headquarters].filter(Boolean).join(" · ")}</p>
+                <p className="text-xs text-muted">{[p.type, p.headquarters].filter(Boolean).join(" · ")}</p>
               </div>
             </div>
-            <p className="mt-3 line-clamp-2 text-sm text-slate-500">{p.description}</p>
+            <p className="mt-3 line-clamp-2 text-sm text-muted">{p.description}</p>
           </Link>
         ))}
       </div>
-      {!pubs.length && <p className="py-20 text-center text-slate-500">No publishers yet.</p>}
+      {!pubs.length && <p className="py-20 text-center text-muted">No publishers yet.</p>}
     </div>
   );
 }

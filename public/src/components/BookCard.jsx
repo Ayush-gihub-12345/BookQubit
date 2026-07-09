@@ -5,7 +5,7 @@ import BookCover from "./BookCover";
 export default function BookCard({ book }) {
   return (
     <Link href={`/books/${encodeURIComponent(book.slug)}`} className="card group block overflow-hidden">
-      <div className="relative aspect-[2/3] overflow-hidden bg-slate-100 dark:bg-slate-800">
+      <div className="relative aspect-[2/3] overflow-hidden bg-black/5 dark:bg-white/5">
         <BookCover title={book.title} author={book.author} cover_url={book.cover_url}
           imgClassName="transition duration-500 group-hover:scale-105" />
         {book.category && (
@@ -16,7 +16,7 @@ export default function BookCard({ book }) {
       </div>
       <div className="p-4">
         <h3 className="line-clamp-1 font-semibold group-hover:text-brand-600">{book.title}</h3>
-        <p className="mt-0.5 line-clamp-1 text-sm text-slate-500">{book.author}</p>
+        <p className="mt-0.5 line-clamp-1 text-sm text-muted">{book.author}</p>
         <div className="mt-2"><Rating value={book.rating} /></div>
       </div>
     </Link>

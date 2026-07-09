@@ -130,3 +130,75 @@ INSERT OR IGNORE INTO comics (slug,lang,title,category,publisher,publication_dat
 ('action-comics-1','en','Action Comics #1','Golden Age','DC Comics','June 1938','10 cents','64 pages, full color','["Superman","Lois Lane","Zatara"]','["Jerry Siegel","Joe Shuster"]','The birth of the superhero genre: Superman''s debut turned a struggling anthology into the most valuable comic book ever printed.',NULL,'$6 million (CGC 8.5, 2024)','Siegel and Shuster sold the rights to Superman for $130.',9.9),
 ('detective-comics-27','en','Detective Comics #27','Golden Age','DC Comics','May 1939','10 cents','64 pages, full color','["Batman","Commissioner Gordon"]','["Bob Kane","Bill Finger"]','The first appearance of the Bat-Man in "The Case of the Chemical Syndicate" — a six-page story that launched one of fiction''s most enduring characters.',NULL,'$1.5 million+','Bill Finger created most of what defines Batman but wasn''t credited until 2015.',9.7),
 ('amazing-fantasy-15','en','Amazing Fantasy #15','Silver Age','Marvel Comics','August 1962','12 cents','36 pages, full color','["Spider-Man","Aunt May","Uncle Ben"]','["Stan Lee","Steve Ditko"]','Spider-Man''s origin story — a teenage hero with everyday problems, published in a series that was being cancelled with this very issue.',NULL,'$3.6 million (CGC 9.6, 2021)','Publisher Martin Goodman thought readers would hate a teenage hero and that spiders were too creepy.',9.6);
+
+-- ── BOOKS (en) — catalog expansion wave 2 ──────────────────────────────────
+INSERT OR IGNORE INTO books (slug,lang,title,author,publisher,price,isbn,published,page_count,format,description,summary,category,collection,genres,subjects,tags,key_points,rating,cover_url,country,amazon_asin,featured,bestseller) VALUES
+('the-alchemist','en','The Alchemist','Paulo Coelho','HarperOne','$16.99','9780061122415','1988',208,'Paperback',
+ 'A fable about following your dream and listening to your heart.',
+ 'Santiago, an Andalusian shepherd boy, dreams of treasure buried near the Egyptian pyramids and sets off on a journey that teaches him to read omens, listen to his heart, and understand that the real treasure is the journey itself. Coelho''s fable argues that when you truly want something, the universe conspires to help you achieve it — your Personal Legend.',
+ 'Fiction','','["Fiction","Philosophy"]','["Dreams","Destiny","Spirituality"]','["Fiction","Inspiration","Classics"]',
+ '["Follow your Personal Legend","Fear of failure is the only real obstacle","The journey matters more than the destination"]',
+ 4.4,'https://covers.openlibrary.org/b/isbn/9780061122415-L.jpg','Brazil','0061122416',1,1),
+
+('mans-search-for-meaning','en','Man''s Search for Meaning','Viktor E. Frankl','Beacon Press','$15.95','9780807014295','1946',192,'Paperback',
+ 'A Holocaust survivor''s account of finding purpose in the face of unimaginable suffering.',
+ 'Psychiatrist Viktor Frankl survived Auschwitz and emerged with a profound insight: those who found meaning — a person to love, a work to finish — survived what should have been unsurvivable. The book pairs his concentration camp memoir with an introduction to logotherapy, his school of psychology built on the idea that the primary human drive is not pleasure but the pursuit of meaning.',
+ 'Psychology','','["Memoir","Psychology"]','["Meaning","Resilience","Holocaust"]','["Psychology","Memoir","Philosophy"]',
+ '["He who has a why can bear almost any how","Meaning is found in work, love, and courage in suffering","Between stimulus and response lies our freedom to choose"]',
+ 4.7,'https://covers.openlibrary.org/b/isbn/9780807014295-L.jpg','Austria','080701429X',1,1),
+
+('ikigai','en','Ikigai: The Japanese Secret to a Long and Happy Life','Héctor García & Francesc Miralles','Penguin Life','$20.00','9780143130727','2017',208,'Hardcover',
+ 'What the world''s longest-living people can teach us about purpose and happiness.',
+ 'Drawing on interviews with residents of Okinawa — home to the world''s highest concentration of centenarians — the authors distill the Japanese concept of ikigai: the reason you get up in the morning, found at the intersection of what you love, what you''re good at, what the world needs, and what you can be paid for. Practical chapters cover flow, gentle movement, community, and eating to 80% full.',
+ 'Self-Help','','["Self-Help","Lifestyle"]','["Longevity","Purpose","Japan"]','["Wellness","Purpose","Japan"]',
+ '["Find the intersection of passion, mission, vocation, profession","Stay active, never fully retire","Strong community ties extend life"]',
+ 4.3,'https://covers.openlibrary.org/b/isbn/9780143130727-L.jpg','Japan','0143130722',0,1),
+
+('the-subtle-art','en','The Subtle Art of Not Giving a F*ck','Mark Manson','HarperOne','$26.99','9780062457714','2016',224,'Hardcover',
+ 'A counterintuitive approach to living a good life: care about less, but choose wisely.',
+ 'Manson argues that self-improvement culture has it backwards: the key to a good life is not caring about more things but reserving your limited supply of care for what truly matters. Embracing limitations, accepting responsibility even for what isn''t your fault, and choosing better problems — not avoiding problems — is the path to meaning.',
+ 'Self-Help','','["Self-Help","Philosophy"]','["Values","Stoicism","Happiness"]','["Self-Help","Mindset","Bestseller"]',
+ '["You have a limited supply of cares — budget them","Happiness comes from solving good problems","Take responsibility for everything in your life"]',
+ 4.2,'https://covers.openlibrary.org/b/isbn/9780062457714-L.jpg','USA','0062457713',0,1),
+
+('the-power-of-habit','en','The Power of Habit','Charles Duhigg','Random House','$18.00','9780812981605','2012',400,'Paperback',
+ 'Why we do what we do in life and business — and how habits can be changed.',
+ 'Duhigg unpacks the neurological habit loop — cue, routine, reward — and shows how it drives individuals, companies, and societies. From Alcoa''s safety transformation to Target''s prediction algorithms, the book demonstrates that habits can''t be eliminated, only replaced, and that "keystone habits" trigger cascades of change across a whole life.',
+ 'Psychology','','["Psychology","Business"]','["Habits","Neuroscience","Behavior Change"]','["Habits","Psychology","Business"]',
+ '["Habits follow a cue-routine-reward loop","Replace routines, keep cues and rewards","Keystone habits trigger widespread change"]',
+ 4.3,'https://covers.openlibrary.org/b/isbn/9780812981605-L.jpg','USA','081298160X',0,0),
+
+('to-kill-a-mockingbird','en','To Kill a Mockingbird','Harper Lee','Harper Perennial','$16.99','9780060935467','1960',336,'Paperback',
+ 'The classic novel of racial injustice and childhood conscience in the American South.',
+ 'Through the eyes of young Scout Finch, Harper Lee portrays her father Atticus defending a Black man falsely accused in 1930s Alabama. A story about moral courage — doing right when the whole town is against you — that remains one of the most beloved and taught novels in the English language.',
+ 'Fiction','Dystopian Classics','["Fiction","Classics"]','["Justice","Race","Coming of Age"]','["Classics","Justice","Pulitzer Prize"]',
+ '["Real courage is doing right against the odds","Empathy means walking in another''s shoes","Injustice thrives on silence"]',
+ 4.8,'https://covers.openlibrary.org/b/isbn/9780060935467-L.jpg','USA','0060935464',0,1),
+
+('a-brief-history-of-time','en','A Brief History of Time','Stephen Hawking','Bantam','$18.00','9780553380163','1988',212,'Paperback',
+ 'From the Big Bang to black holes — the universe explained for everyone.',
+ 'Hawking takes readers from the origins of the universe through black holes, quantum mechanics, and the arrow of time, asking the deepest questions in physics with only one equation in the entire book. A landmark of science writing that made cosmology a bestseller.',
+ 'Science','','["Science","Cosmology"]','["Physics","Black Holes","Universe"]','["Science","Physics","Classics"]',
+ '["Time began with the Big Bang","Black holes are not entirely black","A unified theory would let us know the mind of God"]',
+ 4.5,'https://covers.openlibrary.org/b/isbn/9780553380163-L.jpg','UK','0553380168',1,0),
+
+('the-intelligent-investor','en','The Intelligent Investor','Benjamin Graham','Harper Business','$24.99','9780060555665','1949',640,'Paperback',
+ 'The definitive book on value investing, praised by Warren Buffett as the best ever written.',
+ 'Graham teaches the discipline of value investing: treating shares as ownership of businesses, exploiting the manic-depressive "Mr. Market" rather than following him, and always demanding a margin of safety. Jason Zweig''s commentary connects each chapter to modern markets.',
+ 'Finance','','["Finance","Investing"]','["Value Investing","Stock Market","Risk"]','["Investing","Finance","Classics"]',
+ '["Buy with a margin of safety","Mr. Market is your servant, not your guide","Investment is most intelligent when most businesslike"]',
+ 4.6,'https://covers.openlibrary.org/b/isbn/9780060555665-L.jpg','USA','0060555661',0,1),
+
+('cant-hurt-me','en','Can''t Hurt Me','David Goggins','Lioncrest','$28.99','9781544512280','2018',364,'Hardcover',
+ 'From abused kid to Navy SEAL and ultra-athlete — mastering the mind to defy the odds.',
+ 'Goggins recounts transforming himself from a depressed, overweight young man into a Navy SEAL and one of the world''s top endurance athletes. His method: the 40% rule (when you feel done, you''re only 40% in), the accountability mirror, and callousing the mind through voluntary hardship.',
+ 'Self-Help','','["Memoir","Self-Help"]','["Discipline","Endurance","Military"]','["Discipline","Motivation","Memoir"]',
+ '["When you think you''re done, you''re at 40%","Face the accountability mirror daily","Callous your mind through discomfort"]',
+ 4.7,'https://covers.openlibrary.org/b/isbn/9781544512280-L.jpg','USA','1544512287',0,1),
+
+('the-almanack-of-naval','en','The Almanack of Naval Ravikant','Eric Jorgenson','Magrathea','$21.99','9781544514215','2020',242,'Paperback',
+ 'A guide to wealth and happiness from the philosopher-investor of Silicon Valley.',
+ 'Curated from a decade of Naval Ravikant''s tweets, essays, and interviews: how to build wealth through equity and specific knowledge rather than renting out your time, and how happiness is a skill you can learn — a default state revealed when you remove the sense that something is missing.',
+ 'Business','','["Business","Philosophy"]','["Wealth","Happiness","Leverage"]','["Wealth","Startups","Philosophy"]',
+ '["Seek wealth, not money or status","Specific knowledge can''t be taught but can be learned","Happiness is a skill and a choice"]',
+ 4.5,'https://covers.openlibrary.org/b/isbn/9781544514215-L.jpg','USA','1544514212',0,0);

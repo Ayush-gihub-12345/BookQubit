@@ -32,7 +32,7 @@ export default async function AuthorPage({ params }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={author.image_url} alt={author.name} className="h-32 w-32 rounded-full object-cover shadow-lg" />
           ) : (
-            <div className="grid h-32 w-32 shrink-0 place-items-center rounded-full bg-brand-50 text-4xl font-bold text-brand-600 dark:bg-slate-800">
+            <div className="grid h-32 w-32 shrink-0 place-items-center tint-brand rounded-full text-4xl font-bold text-brand-600">
               {author.name[0]}
             </div>
           )}

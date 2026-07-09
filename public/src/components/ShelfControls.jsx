@@ -87,7 +87,7 @@ export default function ShelfControls({ slug }) {
             disabled={busy}
             onClick={() => update({ rating: n, status: entry?.status || "read" })}
             className={`text-xl transition hover:scale-125 ${
-              (entry?.rating || 0) >= n ? "text-amber-400" : "text-slate-300 dark:text-slate-600"
+              (entry?.rating || 0) >= n ? "text-amber-400" : "text-muted opacity-40"
             }`}
             aria-label={`Rate ${n} stars`}
           >

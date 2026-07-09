@@ -13,11 +13,11 @@ export default async function ComicsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="text-3xl font-bold">Comics</h1>
-      <p className="mt-1 text-sm text-slate-500">{comics.length} comics</p>
+      <p className="mt-1 text-sm text-muted">{comics.length} comics</p>
       <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
         {comics.map((c) => (
           <Link key={c.id} href={`/comics/${c.slug}`} className="card group block overflow-hidden">
-            <div className="relative aspect-[2/3] overflow-hidden bg-slate-100 dark:bg-slate-800">
+            <div className="relative aspect-[2/3] overflow-hidden bg-black/5 dark:bg-white/5">
               <BookCover title={c.title} author={c.publisher} cover_url={c.cover_url}
                 imgClassName="transition duration-500 group-hover:scale-105" />
               {c.category && (
@@ -28,13 +28,13 @@ export default async function ComicsPage() {
             </div>
             <div className="p-4">
               <h2 className="line-clamp-1 font-semibold group-hover:text-brand-600">{c.title}</h2>
-              <p className="line-clamp-1 text-sm text-slate-500">{c.publisher}</p>
+              <p className="line-clamp-1 text-sm text-muted">{c.publisher}</p>
               <div className="mt-2"><Rating value={c.rating} /></div>
             </div>
           </Link>
         ))}
       </div>
-      {!comics.length && <p className="py-20 text-center text-slate-500">No comics yet.</p>}
+      {!comics.length && <p className="py-20 text-center text-muted">No comics yet.</p>}
     </div>
   );
 }

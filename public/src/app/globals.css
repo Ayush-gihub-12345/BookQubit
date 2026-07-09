@@ -15,46 +15,56 @@
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ── Themes: bg is softly tinted so surfaces (cards/nav) visibly lift ── */
+/* ── Themes: bg is softly tinted so surfaces (cards/nav) visibly lift ──
+   --pill-bg/--pill-fg drive tags/chips per theme so they always have
+   readable contrast (brand-50/100 double as hover backgrounds and CANNOT
+   be reused as text colors in dark themes). */
 :root, [data-theme="light"] {
   --bg: #f6f7fb; --surface: #ffffff; --fg: #1f2437;
   --muted: #6b7288; --line: #e6e8f0;
+  --pill-bg: #e8ecfd; --pill-fg: #4338ca;
 }
 [data-theme="dark"] {
   --bg: #0d1322; --surface: #161e33; --fg: #e4e8f4;
   --muted: #98a2bd; --line: #232d47;
   --color-brand-50: #1c2440; --color-brand-100: #26305a;
   --color-brand-500: #818cf8; --color-brand-600: #6366f1; --color-brand-700: #4f46e5;
+  --pill-bg: #232d54; --pill-fg: #b3bcfa;
 }
 [data-theme="sepia"] {
   --bg: #f4ecdd; --surface: #fdf8ee; --fg: #40331f;
   --muted: #8b7a5e; --line: #e7dbc4;
   --color-brand-50: #f5e9d0; --color-brand-100: #eeddb8;
   --color-brand-500: #b8823a; --color-brand-600: #9c6a24; --color-brand-700: #7d541a;
+  --pill-bg: #efe1c4; --pill-fg: #7d541a;
 }
 [data-theme="midnight"] {
   --bg: #0a0a16; --surface: #15152c; --fg: #e2e2f7;
   --muted: #9a9ac8; --line: #28284e;
   --color-brand-50: #1d1d3d; --color-brand-100: #28284e;
   --color-brand-500: #a78bfa; --color-brand-600: #8b5cf6; --color-brand-700: #7c3aed;
+  --pill-bg: #262650; --pill-fg: #c9b8fc;
 }
 [data-theme="ocean"] {
   --bg: #ebf7f9; --surface: #ffffff; --fg: #14454f;
   --muted: #57858f; --line: #d2ecf0;
   --color-brand-50: #d8f3f7; --color-brand-100: #b8e9f0;
   --color-brand-500: #0aa2c0; --color-brand-600: #0e8199; --color-brand-700: #11687c;
+  --pill-bg: #d4eff4; --pill-fg: #0e6478;
 }
 [data-theme="forest"] {
   --bg: #eff7f0; --surface: #ffffff; --fg: #1c3527;
   --muted: #63866f; --line: #d8ead9;
   --color-brand-50: #ddf2e2; --color-brand-100: #c3e8cc;
   --color-brand-500: #15a05f; --color-brand-600: #0f8750; --color-brand-700: #0c6b40;
+  --pill-bg: #d8efdd; --pill-fg: #0c6b40;
 }
 [data-theme="rose"] {
   --bg: #fbf0f2; --surface: #ffffff; --fg: #491527;
   --muted: #a3697d; --line: #f3d7dd;
   --color-brand-50: #fce7ea; --color-brand-100: #f9d0d8;
   --color-brand-500: #e0446a; --color-brand-600: #c72e55; --color-brand-700: #a52346;
+  --pill-bg: #fadde2; --pill-fg: #a52346;
 }
 
 /* Theme-aware hero/CTA band: adapts to whichever theme is active */
@@ -127,10 +137,15 @@ section { animation: rise 0.45s ease both; }
 }
 
 .pill {
-  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
-    bg-brand-50 text-brand-700 hover:bg-brand-100 transition
-    dark:text-brand-100;
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition;
+  background: var(--pill-bg);
+  color: var(--pill-fg);
 }
+.pill:hover { filter: brightness(1.06); }
+[data-theme="dark"] .pill:hover, [data-theme="midnight"] .pill:hover { filter: brightness(1.25); }
+
+/* subtle brand-tinted background that adapts to every theme */
+.tint-brand { background: color-mix(in srgb, var(--color-brand-500) 12%, transparent); }
 
 .btn-primary {
   @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
