@@ -266,7 +266,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
           {pages > 1 && (
             <nav className="mt-10 flex items-center justify-center gap-1.5" aria-label="Pagination">
-              {page > 1 && <button onClick={() => apply({ page: page - 1 })} className="btn-ghost !px-3 !py-2 text-sm">←</button>}
+              {page > 1 && <button onClick={() => apply({ page: page - 1 })} aria-label="Previous page" className="btn-ghost !px-3 !py-2 text-sm">←</button>}
               {win[0] > 1 && (
                 <>
                   <button onClick={() => apply({ page: 1 })} className="btn-ghost !px-3.5 !py-2 text-sm">1</button>
@@ -285,7 +285,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
                   <button onClick={() => apply({ page: pages })} className="btn-ghost !px-3.5 !py-2 text-sm">{pages}</button>
                 </>
               )}
-              {page < pages && <button onClick={() => apply({ page: page + 1 })} className="btn-ghost !px-3 !py-2 text-sm">→</button>}
+              {page < pages && <button onClick={() => apply({ page: page + 1 })} aria-label="Next page" className="btn-ghost !px-3 !py-2 text-sm">→</button>}
             </nav>
           )}
         </div>

@@ -63,14 +63,24 @@ export default async function BookPage({ params }) {
     image: book.cover_url || undefined,
     description: book.description?.slice(0, 300),
     aggregateRating: book.rating
-      ? { "@type": "AggregateRating", ratingValue: book.rating, bestRating: "5", ratingCount: 1 }
+      ? { "@type": "AggregateRating", ratingValue: book.rating, bestRating: "5", ratingCount: community.rating_count || 1 }
       : undefined,
+    inLanguage: book.language || undefined,
   };
+
+  const readingMinutes = book.page_count ? Math.max(5, Math.round(book.page_count * 1.2)) : null;
+  const readingTime = readingMinutes
+    ? readingMinutes >= 60
+      ? `${Math.floor(readingMinutes / 60)} hr ${readingMinutes % 60 ? `${readingMinutes % 60} min` : ""}`.trim()
+      : `${readingMinutes} min`
+    : null;
 
   const meta = [
     ["Publisher", book.publisher],
     ["Published", book.published],
+    ["Language", book.language],
     ["Pages", book.page_count],
+    ["Reading time", readingTime && `~${readingTime}`],
     ["Format", book.format],
     ["ISBN", book.isbn],
     ["Country", book.country],
@@ -127,8 +137,14 @@ export default async function BookPage({ params }) {
                 {book.author}
               </Link>
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-4">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <Rating value={book.rating} />
+              {community.reviews.length > 0 && (
+                <a href="#reviews" className="text-muted hover:text-brand-600">
+                  {community.reviews.length} {community.reviews.length === 1 ? "review" : "reviews"}
+                </a>
+              )}
+              {readingTime && <span className="text-muted">~{readingTime} read</span>}
               {book.collection && (
                 <Link href={`/collections/${encodeURIComponent(book.collection)}`} className="pill">
                   {book.collection}
@@ -183,13 +199,13 @@ export default async function BookPage({ params }) {
             )}
 
             {/* Community section */}
-            <div className="mt-10">
-              <h2 className="text-xl font-bold">Community</h2>
+            <div id="reviews" className="mt-10 scroll-mt-24">
+              <h2 className="text-xl font-bold">{_("communityTitle")}</h2>
               <div className="mt-4 grid gap-6 sm:grid-cols-[220px_1fr]">
                 <div className="card p-5 text-center hover:!translate-y-0">
                   <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
                   <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
-                  <p className="text-muted mt-1 text-xs">{community.rating_count} ratings from readers</p>
+                  <p className="text-muted mt-1 text-xs">{community.rating_count} {_("ratingsFromReaders")}</p>
                 </div>
                 <div>
                   {(community.moods.length > 0 || community.pace.length > 0) && (
@@ -221,7 +237,7 @@ export default async function BookPage({ params }) {
 
               {community.reviews.length > 0 && (
                 <div className="mt-6 space-y-4">
-                  <h3 className="font-bold">Reader Reviews ({community.reviews.length})</h3>
+                  <h3 className="font-bold">{_("readerReviews")} ({community.reviews.length})</h3>
                   {community.reviews.map((r) => (
                     <div key={`${r.user_id}-${r.updated_at}`} className="card p-5 hover:!translate-y-0">
                       <div className="flex items-center gap-3">

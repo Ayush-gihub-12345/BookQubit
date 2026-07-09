@@ -1,9 +1,6 @@
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { getLang, RTL, LANGUAGES } from "@/lib/lang";
-import { getTheme, THEMES } from "@/lib/theme";
-import { t } from "@/lib/i18n";
+import { getLang, RTL } from "@/lib/lang";
+import { getTheme } from "@/lib/theme";
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com"),
@@ -11,16 +8,11 @@ export const metadata = {
   description:
     "Explore curated books, summaries, key insights, authors, publishers and comics — in 12 languages. Find your next great read on BookQubit.",
   openGraph: { siteName: "BookQubit", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default async function RootLayout({ children }) {
   const [lang, theme] = await Promise.all([getLang(), getTheme()]);
-  const _ = t(lang);
-  const labels = {
-    books: _("books"), collections: _("collections"), categories: _("categories"),
-    authors: _("authors"), publishers: _("publishers"), comics: _("comics"), tags: _("tags"),
-    search: _("search"), signIn: _("signIn"), account: _("account"), signOut: _("signOut"),
-  };
 
   return (
     <html lang={lang} dir={RTL.includes(lang) ? "rtl" : "ltr"} data-theme={theme}>
@@ -32,11 +24,7 @@ export default async function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="flex min-h-screen flex-col antialiased">
-        <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels} />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body className="flex min-h-screen flex-col antialiased">{children}</body>
     </html>
   );
 }

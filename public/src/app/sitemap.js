@@ -7,8 +7,12 @@ export default async function sitemap() {
     listBooks("en"), listAuthors("en"), listPublications("en"), listComics("en"),
   ]).catch(() => [[], [], [], []]);
 
-  const staticPages = ["", "/books", "/authors", "/publications", "/comics", "/collections", "/categories", "/tags"]
-    .map((p) => ({ url: `${BASE}${p}`, changeFrequency: "weekly", priority: p === "" ? 1 : 0.8 }));
+  const core = ["", "/books", "/authors", "/publications", "/comics", "/collections", "/categories", "/tags"];
+  const secondary = ["/community", "/leaderboard", "/about", "/contact", "/privacy", "/terms"];
+  const staticPages = [
+    ...core.map((p) => ({ url: `${BASE}${p}`, changeFrequency: "weekly", priority: p === "" ? 1 : 0.8 })),
+    ...secondary.map((p) => ({ url: `${BASE}${p}`, changeFrequency: "monthly", priority: 0.4 })),
+  ];
 
   return [
     ...staticPages,

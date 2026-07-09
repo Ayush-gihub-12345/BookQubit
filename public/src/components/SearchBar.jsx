@@ -46,6 +46,8 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
     ? [
         ...res.books.map((b) => ({ type: "book", label: b.title, href: `/books/${encodeURIComponent(b.slug)}`, ...b })),
         ...res.authors.map((a) => ({ type: "author", label: a.name, href: `/authors/${a.slug}`, ...a })),
+        ...(res.publishers || []).map((p) => ({ type: "publisher", label: p.name, href: `/publications/${p.slug}`, ...p })),
+        ...(res.categories || []).map((c) => ({ type: "category", label: c.name, href: `/books?category=${encodeURIComponent(c.name)}` })),
         ...res.tags.map((t) => ({ type: "tag", label: t.name, href: `/books?tag=${encodeURIComponent(t.name)}` })),
       ]
     : [];
@@ -92,7 +94,8 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
     );
   };
 
-  const empty = res && !res.books.length && !res.authors.length && !res.tags.length;
+  const empty = res && !res.books.length && !res.authors.length && !res.tags.length
+    && !(res.publishers || []).length && !(res.categories || []).length;
   const showRecent = open && !res && recent.length > 0;
   let idx = -1;
 
@@ -181,6 +184,43 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {res?.publishers?.length > 0 && (
+            <div className="border-line border-t p-2">
+              <p className="text-muted px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide">Publishers</p>
+              {res.publishers.map((p) => {
+                idx += 1; const i = idx;
+                return (
+                  <button key={p.slug} onClick={() => go(`/publications/${p.slug}`, p.name)}
+                    onMouseEnter={() => setActive(i)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${active === i ? "bg-brand-50 dark:bg-white/5" : ""}`}>
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600/15 text-sm font-bold text-brand-600">
+                      <Icon name="building" size={14} />
+                    </span>
+                    <span className="text-sm font-medium">{mark(p.name)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {res?.categories?.length > 0 && (
+            <div className="border-line border-t p-2">
+              <p className="text-muted px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide">Categories</p>
+              <div className="flex flex-wrap gap-2 px-2 pb-1">
+                {res.categories.map((c) => {
+                  idx += 1; const i = idx;
+                  return (
+                    <button key={c.name} onClick={() => go(`/books?category=${encodeURIComponent(c.name)}`, c.name)}
+                      onMouseEnter={() => setActive(i)}
+                      className={`pill ${active === i ? "!bg-brand-600 !text-white" : ""}`}>
+                      {mark(c.name)} <span className="ml-1 opacity-60">{c.count}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
