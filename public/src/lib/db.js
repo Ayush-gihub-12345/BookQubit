@@ -151,6 +151,12 @@ CREATE TABLE IF NOT EXISTS follows (
   PRIMARY KEY (user_id, target_type, target_id)
 );
 CREATE INDEX IF NOT EXISTS idx_follows_target ON follows(target_type, target_id);
+
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  email TEXT PRIMARY KEY,
+  lang TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.

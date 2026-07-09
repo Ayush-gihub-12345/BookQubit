@@ -9,7 +9,7 @@ import Icon from "@/components/Icon";
 import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import Logo from "@/components/Logo";
-import { listBooks, facets, listAuthors, listPublications, listComics } from "@/lib/repo";
+import { listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const lang = await getLang();
   const _ = t(lang);
-  const [all, topRated, newReleases, f, authors, pubs, comics] = await Promise.all([
+  const [all, topRated, newReleases, f, authors, pubs, comics, recentlyAdded] = await Promise.all([
     listBooks(lang),
     listBooks(lang, { sort: "rating", limit: 10 }),
     listBooks(lang, { sort: "new", limit: 6 }),
@@ -26,6 +26,7 @@ export default async function Home() {
     listAuthors(lang),
     listPublications(lang),
     listComics(lang),
+    getRecentlyAdded(lang, 8),
   ]);
   const heroBooks = all.filter((b) => b.featured).slice(0, 5);
   const surprise = all.length ? all[Math.floor(Math.random() * all.length)] : null;
@@ -60,7 +61,8 @@ export default async function Home() {
     <>
       {/* Hero slider */}
       <section className="mx-auto max-w-7xl px-4 pt-8">
-        <HeroSlider books={heroBooks.length ? heroBooks : topRated.slice(0, 5)} labels={{ summary: _("summary") }} />
+        <HeroSlider books={heroBooks.length ? heroBooks : topRated.slice(0, 5)}
+          labels={{ summary: _("summary"), getBook: _("getBook"), keyFeatures: _("keyFeatures") }} />
       </section>
 
       {/* Continue Reading (signed-in users) */}
@@ -73,7 +75,7 @@ export default async function Home() {
       <RecentlyViewed />
 
       {/* Trending Now */}
-      <Section title="Trending Now" subtitle="What's hot in our community right now" href="/books?sort=rating">
+      <Section title={_("trending")} subtitle={_("trendingSub")} href="/books?sort=rating">
         <div className="hscroll">
           {topRated.map((b, i) => (
             <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-40 overflow-hidden sm:w-44">
@@ -98,10 +100,10 @@ export default async function Home() {
       <section className="band py-16">
         <div className="mx-auto max-w-3xl px-4 text-center">
           <h2 className="text-3xl font-extrabold sm:text-4xl">
-            Discover Your Next <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">Great Read</span>
+            {_("ctaHeading")} <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">{_("ctaHighlight")}</span>
           </h2>
           <p className="mt-3 text-white/70">
-            Join our community of readers exploring {all.length}+ titles across {f.categories.length}+ genres — with summaries and key insights on every book.
+            {_("ctaSub", { count: all.length, genres: f.categories.length })}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/books" className="btn-primary">{_("browse")}</Link>
@@ -119,7 +121,7 @@ export default async function Home() {
 
       {/* Daily quote */}
       <section className="mx-auto max-w-3xl px-4 py-12 text-center">
-        <p className="text-muted text-xs font-bold uppercase tracking-[0.2em]">Quote of the day</p>
+        <p className="text-muted text-xs font-bold uppercase tracking-[0.2em]">{_("quoteOfDay")}</p>
         <blockquote className="mt-3 text-xl font-medium leading-relaxed sm:text-2xl">
           “{quote.text}”
         </blockquote>
@@ -127,7 +129,7 @@ export default async function Home() {
       </section>
 
       {/* Quick Hub */}
-      <Section title="Quick Hub" subtitle="Everything you need to manage your literary journey">
+      <Section title={_("quickHub")} subtitle={_("quickHubSub")}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {HUB.map((h) => (
             <Link key={h.title} href={h.href} className="card group p-6">
@@ -185,7 +187,7 @@ export default async function Home() {
       )}
 
       {/* New Releases */}
-      <Section title={_("newReleases")} subtitle="Fresh on the shelf" href="/books?sort=new">
+      <Section title={_("newReleases")} subtitle={_("newReleasesSub")} href="/books?sort=new">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
           {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
@@ -248,6 +250,20 @@ export default async function Home() {
                   <Rating value={c.rating} />
                 </div>
               </Link>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Recently added — trust signal: the catalog is actively growing */}
+      {recentlyAdded.length > 0 && (
+        <Section title="Recently Added" subtitle="Freshly added to the BookQubit library" href="/books">
+          <div className="hscroll">
+            {recentlyAdded.map((b) => (
+              <div key={b.id} className="relative w-40 sm:w-44">
+                <span className="absolute left-2 top-2 z-10 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">NEW</span>
+                <BookCard book={b} />
+              </div>
             ))}
           </div>
         </Section>

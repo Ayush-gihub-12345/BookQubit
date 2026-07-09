@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
+
 // Renders the real cover image, or a designed placeholder "cover" with the
 // book's title and author on a gradient picked deterministically from the title.
+// Falls back to the placeholder automatically if the real image URL 404s.
 const GRADIENTS = [
   "linear-gradient(135deg,#1e3a5f,#4a7ba6)",
   "linear-gradient(135deg,#5f1e3a,#a64a6b)",
@@ -13,12 +18,20 @@ const GRADIENTS = [
 
 const hash = (s = "") => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-export default function BookCover({ title, author, cover_url, className = "", imgClassName = "" }) {
-  if (cover_url) {
+export default function BookCover({ title, author, cover_url, className = "", imgClassName = "", priority = false }) {
+  const [broken, setBroken] = useState(false);
+
+  if (cover_url && !broken) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={cover_url} alt={`${title} cover`} loading="lazy"
-        className={`h-full w-full object-cover ${imgClassName}`} />
+      <img
+        src={cover_url}
+        alt={`Cover of ${title}${author ? ` by ${author}` : ""}`}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        onError={() => setBroken(true)}
+        className={`h-full w-full object-cover ${imgClassName}`}
+      />
     );
   }
   return (
@@ -26,7 +39,7 @@ export default function BookCover({ title, author, cover_url, className = "", im
       className={`relative flex h-full w-full flex-col justify-between overflow-hidden p-[8%] text-white ${className}`}
       style={{ background: GRADIENTS[hash(title) % GRADIENTS.length], containerType: "inline-size" }}
       role="img"
-      aria-label={`${title} cover`}
+      aria-label={`Cover of ${title}${author ? ` by ${author}` : ""}`}
     >
       {/* spine + sheen */}
       <span className="absolute inset-y-0 left-0 w-[6%] bg-black/25" />

@@ -23,7 +23,7 @@ export default function HeroSlider({ books, labels }) {
         <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
           <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
             style={{ animation: "fadeIn .5s ease" }}>
-            <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
+            <BookCover title={b.title} author={b.author} cover_url={b.cover_url} priority />
           </div>
         </Link>
 
@@ -43,7 +43,7 @@ export default function HeroSlider({ books, labels }) {
 
           {b.keyPoints?.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-600">Key Features</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-600">{labels.keyFeatures}</p>
               <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
                 {b.keyPoints.slice(0, 4).map((k) => (
                   <li key={k} className="flex items-start gap-2 text-sm"><span className="text-brand-500">•</span>{k}</li>
@@ -54,7 +54,7 @@ export default function HeroSlider({ books, labels }) {
 
           <div className="mt-5 flex flex-wrap gap-2">
             {b.buyUrl && (
-              <a href={b.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary text-sm">🛒 Get Book</a>
+              <a href={b.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary text-sm">🛒 {labels.getBook}</a>
             )}
             <Link href={`/books/${encodeURIComponent(b.slug)}`} className="btn-ghost text-sm">📄 {labels.summary}</Link>
           </div>

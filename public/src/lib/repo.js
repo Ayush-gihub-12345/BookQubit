@@ -109,6 +109,23 @@ export async function getBook(slug, lang) {
 
 // All language variants of a book (matched by ISBN prefix-insensitive title
 // fallback) — used for hreflang alternates and the language-switch UX.
+// "Recently added to BookQubit" — ordered by when the row was created, not
+// by the book's publication year (that's the separate "New Releases" sort).
+export async function getRecentlyAdded(lang, limit = 8) {
+  return cached(`recent-added:${lang}:${limit}`, async () => {
+    const db = await getDb();
+    let { results } = await db
+      .prepare("SELECT * FROM books WHERE lang=?1 ORDER BY created_at DESC, id DESC LIMIT ?2")
+      .bind(lang, limit).all();
+    if (!results.length && lang !== "en") {
+      ({ results } = await db
+        .prepare("SELECT * FROM books WHERE lang='en' ORDER BY created_at DESC, id DESC LIMIT ?1")
+        .bind(limit).all());
+    }
+    return results.map(mapBook);
+  }, 300);
+}
+
 export async function getBookAlternates(book) {
   if (!book?.isbn && !book?.title) return [];
   const db = await getDb();
@@ -328,6 +345,20 @@ export async function getLeaderboard(limit = 20) {
     .map((r) => ({ ...r, points: pointsFor(r), level: levelFor(pointsFor(r)) }))
     .sort((a, b) => b.points - a.points)
     .slice(0, limit);
+}
+
+// Platform-wide trust stats for the footer trust bar.
+export async function getPlatformStats() {
+  return cached("platform:stats", async () => {
+    const db = await getDb();
+    const [books, authors, reviews, readers] = await Promise.all([
+      db.prepare("SELECT COUNT(DISTINCT slug) AS n FROM books").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM authors").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM shelf WHERE review IS NOT NULL AND review != ''").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM users").first(),
+    ]);
+    return { books: books.n, authors: authors.n, reviews: reviews.n, readers: readers.n };
+  }, 900);
 }
 
 export async function createDiscussion(userId, { title, body, bookSlug }) {
