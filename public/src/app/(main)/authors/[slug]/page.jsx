@@ -13,7 +13,7 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const author = await getAuthor(slug, await getLang());
   return author
-    ? { title: author.name, description: author.bio?.slice(0, 160) }
+    ? { title: author.name, description: author.bio?.slice(0, 160), alternates: { canonical: `/authors/${author.slug}` } }
     : { title: "Author Not Found", robots: { index: false } };
 }
 

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
 import NewsletterForm from "./NewsletterForm";
-import Icon from "./Icon";
 import SocialIcon from "./SocialIcon";
 import { getPlatformStats, getSiteSettings } from "@/lib/repo";
 import { t } from "@/lib/i18n";
@@ -99,12 +98,7 @@ export default async function Footer({ lang = "en" }) {
       </div>
 
       <div className="border-line border-t px-4 py-4">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 text-center sm:flex-row sm:text-left">
-          <p className="text-muted text-xs">© {new Date().getFullYear()} BookQubit. {_("rightsReserved")}</p>
-          <p className="text-muted flex items-center gap-1.5 text-xs">
-            <Icon name="shieldCheck" size={12} /> {_("footerDisclosure")}
-          </p>
-        </div>
+        <p className="text-muted text-center text-xs">© {new Date().getFullYear()} BookQubit. {_("rightsReserved")}</p>
       </div>
     </footer>
   );

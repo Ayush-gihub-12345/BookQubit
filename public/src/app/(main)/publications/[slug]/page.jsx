@@ -10,7 +10,7 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const pub = await getPublication(slug, await getLang());
   return pub
-    ? { title: pub.name, description: pub.description?.slice(0, 160) }
+    ? { title: pub.name, description: pub.description?.slice(0, 160), alternates: { canonical: `/publications/${pub.slug}` } }
     : { title: "Publisher Not Found", robots: { index: false } };
 }
 

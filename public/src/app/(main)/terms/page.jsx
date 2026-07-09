@@ -17,10 +17,6 @@ export default function TermsPage() {
           others' rights may be removed.
         </p>
         <p>
-          <strong className="text-[var(--fg)]">Affiliate links.</strong> "Buy on Amazon" and similar
-          links may earn BookQubit a commission on qualifying purchases, at no extra cost to you.
-        </p>
-        <p>
           <strong className="text-[var(--fg)]">Availability.</strong> BookQubit is provided
           "as is." We aim for accuracy but can't guarantee every listing is complete or error-free.
         </p>

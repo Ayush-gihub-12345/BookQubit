@@ -71,6 +71,19 @@ export default async function BookPage({ params }) {
     inLanguage: book.language || undefined,
   };
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com";
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Books", item: `${baseUrl}/books` },
+      ...(book.category
+        ? [{ "@type": "ListItem", position: 2, name: book.category, item: `${baseUrl}/books?category=${encodeURIComponent(book.category)}` }]
+        : []),
+      { "@type": "ListItem", position: book.category ? 3 : 2, name: book.title, item: `${baseUrl}/books/${encodeURIComponent(book.slug)}` },
+    ],
+  };
+
   const readingMinutes = book.page_count ? Math.max(5, Math.round(book.page_count * 1.2)) : null;
   const readingTime = readingMinutes
     ? readingMinutes >= 60
@@ -97,6 +110,7 @@ export default async function BookPage({ params }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
 
       <div className="mx-auto max-w-7xl px-4 py-10">
@@ -131,9 +145,6 @@ export default async function BookPage({ params }) {
               )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
               <ShelfControls slug={book.slug} />
-              <p className="text-muted text-center text-xs">
-                As an Amazon Associate we earn from qualifying purchases.
-              </p>
             </div>
 
             {related.length > 0 && (

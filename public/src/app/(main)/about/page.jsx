@@ -15,8 +15,6 @@ export default function AboutPage() {
       <p className="text-muted mt-4 leading-relaxed">
         Every book page includes a summary and key takeaways so you can decide in minutes whether
         a book is right for you, plus community ratings, reviews, and mood tags from real readers.
-        Where available, buy links go through affiliate partners; as an Amazon Associate, BookQubit
-        earns from qualifying purchases made through links on this site, at no extra cost to you.
       </p>
       <p className="text-muted mt-4 leading-relaxed">
         BookQubit is available in multiple languages and is actively growing — new books, authors,

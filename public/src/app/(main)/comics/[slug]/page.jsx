@@ -10,7 +10,7 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const comic = await getComic(slug, await getLang());
   return comic
-    ? { title: comic.title, description: comic.description?.slice(0, 160) }
+    ? { title: comic.title, description: comic.description?.slice(0, 160), alternates: { canonical: `/comics/${comic.slug}` } }
     : { title: "Comic Not Found", robots: { index: false } };
 }
 

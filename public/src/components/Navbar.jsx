@@ -166,6 +166,11 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         </div>
         <div className="flex-1 md:hidden" />
 
+        {/* Liked books */}
+        <Link href="/liked" className={`${iconBtn} hidden sm:grid`} aria-label="Liked books" title="Liked books">
+          <Icon name="heart" size={17} />
+        </Link>
+
         {/* Theme picker */}
         <div className="hidden sm:block">
           <Dropdown
@@ -313,6 +318,9 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                 <Icon name={m.icon} size={15} className="text-muted" /> {m.label}
               </Link>
             ))}
+            <Link href="/liked" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name="heart" size={15} className="text-muted" /> Liked Books
+            </Link>
             <Link href="/login" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
             </Link>

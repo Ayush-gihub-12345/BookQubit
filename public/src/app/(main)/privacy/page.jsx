@@ -22,11 +22,6 @@ export default function PrivacyPage() {
           language and theme preference — not for advertising or third-party tracking.
         </p>
         <p>
-          <strong className="text-[var(--fg)]">Affiliate links.</strong> "Buy on Amazon" links
-          include an Amazon Associates tag. Amazon may set its own cookies once you leave this site;
-          that is governed by Amazon's own privacy policy.
-        </p>
-        <p>
           <strong className="text-[var(--fg)]">Newsletter.</strong> If you subscribe, we store only
           your email address to send book recommendations, and never sell or share it.
         </p>

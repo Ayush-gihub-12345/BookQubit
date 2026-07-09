@@ -6,7 +6,12 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { name } = await params;
-  return { title: `${decodeURIComponent(name)} Collection` };
+  const collection = decodeURIComponent(name);
+  return {
+    title: `${collection} Collection`,
+    description: `Explore the ${collection} collection on BookQubit — curated books with summaries, key insights, and reader reviews.`,
+    alternates: { canonical: `/collections/${encodeURIComponent(name)}` },
+  };
 }
 
 export default async function CollectionPage({ params }) {

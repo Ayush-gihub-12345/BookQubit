@@ -76,16 +76,28 @@ export default function QuickActions({ book }) {
     setTimeout(() => setShared(false), 2000);
   };
 
+  // Clicking an already-active status un-shelves the book entirely (real
+  // toggle, persisted to D1 via DELETE); clicking a different status sets it.
   const setShelfStatus = async (next) => {
     if (!user) { router.push("/login"); return; }
     setBusy(true);
-    setStatus(next);
+    const removing = status === next;
+    setStatus(removing ? null : next);
     try {
-      await fetch("/api/shelf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: await user.getIdToken(), slug: book.slug, status: next }),
-      });
+      const idToken = await user.getIdToken();
+      if (removing) {
+        await fetch("/api/shelf", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, slug: book.slug }),
+        });
+      } else {
+        await fetch("/api/shelf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, slug: book.slug, status: next }),
+        });
+      }
     } finally { setBusy(false); }
   };
 
