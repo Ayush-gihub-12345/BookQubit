@@ -39,6 +39,11 @@ export default async function DiscussionPage({ params }) {
           </div>
         </div>
         <h1 className="mt-4 text-2xl font-bold">{thread.title}</h1>
+        {thread.book_slug && (
+          <Link href={`/books/${encodeURIComponent(thread.book_slug)}`} className="pill mt-2 inline-flex !text-xs">
+            <Icon name="book" size={11} className="mr-1" /> {thread.book_title || thread.book_slug}
+          </Link>
+        )}
         <p className="mt-3 whitespace-pre-line leading-relaxed">{thread.body}</p>
       </div>
 

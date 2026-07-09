@@ -6,10 +6,10 @@ import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "./Icon";
 
-export default function NewDiscussionForm() {
+export default function NewDiscussionForm({ presetBookSlug, presetBookTitle, autoOpen = false }) {
   const [user, setUser] = useState(null);
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
+  const [open, setOpen] = useState(autoOpen);
+  const [title, setTitle] = useState(presetBookTitle ? `About "${presetBookTitle}"` : "");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function NewDiscussionForm() {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-primary w-full sm:w-auto">
-        <Icon name="feather" size={15} /> Start a discussion
+        <Icon name="feather" size={15} /> {presetBookTitle ? "Discuss this book" : "Start a discussion"}
       </button>
     );
   }
@@ -46,7 +46,10 @@ export default function NewDiscussionForm() {
       const res = await fetch("/api/discussions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken: await user.getIdToken(), title: title.trim(), body: body.trim() }),
+        body: JSON.stringify({
+          idToken: await user.getIdToken(), title: title.trim(), body: body.trim(),
+          bookSlug: presetBookSlug || undefined,
+        }),
       });
       const data = await res.json();
       if (data.id) router.push(`/community/${data.id}`);
@@ -55,6 +58,11 @@ export default function NewDiscussionForm() {
 
   return (
     <form onSubmit={submit} className="card w-full space-y-3 p-5 hover:!translate-y-0">
+      {presetBookTitle && (
+        <p className="pill !text-[11px]">
+          <Icon name="book" size={11} className="mr-1" /> Linked to: {presetBookTitle}
+        </p>
+      )}
       <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140}
         placeholder="What do you want to discuss?" className="input font-medium" autoFocus />
       <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} maxLength={3000}

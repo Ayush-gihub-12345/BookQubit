@@ -1,4 +1,4 @@
-import { getDb, cached } from "./db";
+import { getDb, cached, invalidate } from "./db";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -294,7 +294,10 @@ export async function getDiscussion(id) {
   const db = await getDb();
   const [thread, posts] = await Promise.all([
     db.prepare(
-      `SELECT d.*, u.name, u.photo_url FROM discussions d JOIN users u ON u.id=d.user_id WHERE d.id=?1`
+      `SELECT d.*, u.name, u.photo_url, b.title AS book_title FROM discussions d
+       JOIN users u ON u.id=d.user_id
+       LEFT JOIN books b ON b.slug=d.book_slug AND b.lang='en'
+       WHERE d.id=?1`
     ).bind(id).first(),
     db.prepare(
       `SELECT p.*, u.name, u.photo_url FROM discussion_posts p JOIN users u ON u.id=p.user_id
@@ -345,6 +348,34 @@ export async function getLeaderboard(limit = 20) {
     .map((r) => ({ ...r, points: pointsFor(r), level: levelFor(pointsFor(r)) }))
     .sort((a, b) => b.points - a.points)
     .slice(0, limit);
+}
+
+// Admin-editable site config (social links etc.) — cached briefly since it
+// rarely changes but should reflect admin edits without a redeploy.
+const SETTINGS_DEFAULTS = {
+  social_twitter: "", social_instagram: "", social_facebook: "", social_youtube: "", social_goodreads_style: "",
+};
+
+export async function getSiteSettings() {
+  return cached("site:settings", async () => {
+    const db = await getDb();
+    const { results } = await db.prepare("SELECT key, value FROM site_settings").all();
+    const map = { ...SETTINGS_DEFAULTS };
+    for (const r of results) map[r.key] = r.value;
+    return map;
+  }, 120);
+}
+
+export async function updateSiteSettings(patch) {
+  const db = await getDb();
+  const entries = Object.entries(patch);
+  await db.batch(
+    entries.map(([key, value]) =>
+      db.prepare("INSERT INTO site_settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value=?2")
+        .bind(key, value ?? "")
+    )
+  );
+  await invalidate("site:settings");
 }
 
 // Platform-wide trust stats for the footer trust bar.

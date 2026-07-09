@@ -15,6 +15,8 @@ const NAV = [
   { href: "/admin/users", icon: "users", label: "Users" },
   { href: "/admin/reviews", icon: "star", label: "Reviews" },
   { href: "/admin/discussions", icon: "bookOpen", label: "Discussions" },
+  { href: "/admin/reports", icon: "shieldCheck", label: "Reports" },
+  { href: "/admin/settings", icon: "grid", label: "Settings" },
 ];
 
 export default function AdminShell({ children }) {

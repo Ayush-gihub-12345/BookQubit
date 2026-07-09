@@ -6,6 +6,8 @@ import Section from "@/components/Section";
 import WishlistButton from "@/components/WishlistButton";
 import ShelfControls from "@/components/ShelfControls";
 import BookCover from "@/components/BookCover";
+import Icon from "@/components/Icon";
+import ReportIssueButton from "@/components/ReportIssueButton";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
@@ -128,6 +130,13 @@ export default async function BookPage({ params }) {
               )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
               <ShelfControls slug={book.slug} />
+              <Link
+                href={`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`}
+                className="btn-ghost w-full text-sm"
+              >
+                <Icon name="feather" size={14} /> Discuss this book
+              </Link>
+              <div className="pt-1"><ReportIssueButton bookSlug={book.slug} /></div>
               <p className="text-muted text-center text-xs">
                 As an Amazon Associate we earn from qualifying purchases.
               </p>
@@ -213,14 +222,30 @@ export default async function BookPage({ params }) {
                   <p className="text-muted mt-1 text-xs">{community.rating_count} {_("ratingsFromReaders")}</p>
                 </div>
                 <div>
-                  {(community.moods.length > 0 || community.pace.length > 0) && (
-                    <div className="mb-4 flex flex-wrap items-center gap-1.5">
-                      {community.moods.slice(0, 6).map((m) => (
-                        <span key={m.name} className="pill !text-[11px]">{m.name} <span className="ml-1 opacity-60">{m.n}</span></span>
-                      ))}
-                      {community.pace[0] && (
-                        <span className="pill !bg-emerald-500/15 !text-[11px] !text-emerald-600">{community.pace[0].name} pace</span>
-                      )}
+                  {community.moods.length > 0 && (
+                    <div className="mb-5">
+                      <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Moods</p>
+                      <div className="space-y-1">
+                        {community.moods.slice(0, 5).map((m) => {
+                          const moodTotal = community.moods.reduce((n, x) => n + x.n, 0);
+                          const pct = moodTotal ? Math.round((m.n / moodTotal) * 100) : 0;
+                          return (
+                            <div key={m.name} className="flex items-center gap-2 text-xs">
+                              <span className="w-24 shrink-0 truncate">{m.name}</span>
+                              <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                                <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-muted w-9 text-right">{pct}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {community.pace.length > 0 && (
+                    <div className="mb-5 flex items-center gap-2 text-xs">
+                      <span className="text-muted w-24 shrink-0">Pace</span>
+                      <span className="pill !bg-emerald-500/15 !text-emerald-600">{community.pace[0].name}</span>
                     </div>
                   )}
                   <div className="space-y-1.5">

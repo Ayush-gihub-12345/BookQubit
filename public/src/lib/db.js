@@ -157,6 +157,22 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   lang TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Generic admin-editable key/value config (social links, site-wide toggles).
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_slug TEXT,
+  user_id TEXT,
+  message TEXT NOT NULL,
+  resolved INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_reports_resolved ON reports(resolved);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.
@@ -212,4 +228,13 @@ export async function cached(key, fn, ttl = 300) {
   const value = await fn();
   await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
   return value;
+}
+
+// Force a cached() key to be recomputed on next read — used after admin
+// writes so edits (e.g. site settings) show up immediately, not after TTL.
+export async function invalidate(key) {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    if (env.CACHE) await env.CACHE.delete(key);
+  } catch { /* no bindings available, nothing to invalidate */ }
 }

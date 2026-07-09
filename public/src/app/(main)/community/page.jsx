@@ -8,8 +8,10 @@ export const metadata = { title: "Community" };
 
 const ACTION = { read: "finished reading", reading: "started reading" };
 
-export default async function CommunityPage() {
+export default async function CommunityPage({ searchParams }) {
+  const sp = await searchParams;
   const [discussions, activity] = await Promise.all([listDiscussions(30), getRecentActivity(10)]);
+  const presetTitle = sp.title ? decodeURIComponent(sp.title) : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -25,7 +27,9 @@ export default async function CommunityPage() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_320px]">
         <div>
-          <div className="mb-6"><NewDiscussionForm /></div>
+          <div className="mb-6">
+            <NewDiscussionForm presetBookSlug={sp.book} presetBookTitle={presetTitle} autoOpen={Boolean(sp.book)} />
+          </div>
 
           {discussions.length ? (
             <div className="space-y-3">
