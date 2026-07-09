@@ -39,11 +39,11 @@ const PATHS = {
   award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm-3.5-1.5L7 22l5-3 5 3-1.5-8.5",
 };
 
-export default function Icon({ name, size = 16, className = "", strokeWidth = 2 }) {
+export default function Icon({ name, size = 16, className = "", strokeWidth = 2, filled = false }) {
   const d = PATHS[name];
   if (!d) return null;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor"
       strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
       className={`inline-block shrink-0 ${className}`} aria-hidden="true">
       <path d={d} />

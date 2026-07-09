@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Icon from "./Icon";
 
 const KEY = "bq_wishlist";
 export const readWishlist = () => {
@@ -25,7 +26,7 @@ export default function WishlistButton({ book, labels }) {
 
   return (
     <button onClick={toggle} className={`btn-ghost w-full ${saved ? "!border-brand-500 !text-brand-600" : ""}`}>
-      {saved ? "♥" : "♡"} {saved ? labels.saved : labels.save}
+      <Icon name="heart" size={15} filled={saved} /> {saved ? labels.saved : labels.save}
     </button>
   );
 }

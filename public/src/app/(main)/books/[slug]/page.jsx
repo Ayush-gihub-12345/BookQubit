@@ -8,6 +8,7 @@ import ShelfControls from "@/components/ShelfControls";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import ReportIssueButton from "@/components/ReportIssueButton";
+import QuickActions from "@/components/QuickActions";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
@@ -120,12 +121,12 @@ export default async function BookPage({ params }) {
             <div className="mt-5 space-y-3">
               {book.buyUrl && (
                 <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary w-full">
-                  🛒 {_("buy")}
+                  <Icon name="cart" size={15} /> {_("buy")}
                 </a>
               )}
               {book.audiobook_url && (
                 <a href={book.audiobook_url} target="_blank" rel="noopener noreferrer" className="btn-ghost w-full">
-                  🎧 {_("listen")}
+                  <Icon name="headphones" size={15} /> {_("listen")}
                 </a>
               )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
@@ -225,13 +226,15 @@ export default async function BookPage({ params }) {
             )}
 
             {book.summary && (
-              <div className="mt-8">
+              <div id="summary" className="mt-8 scroll-mt-24">
                 <h2 className="text-xl font-bold">{_("summary")}</h2>
                 <p className="mt-3 whitespace-pre-line leading-relaxed opacity-90">
                   {book.summary}
                 </p>
               </div>
             )}
+
+            <QuickActions book={book} />
 
             {meta.length > 0 && (
               <div className="mt-8">
