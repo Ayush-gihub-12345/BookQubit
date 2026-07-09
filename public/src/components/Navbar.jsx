@@ -78,15 +78,8 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         { href: "/publications/harpercollins", icon: "book", label: "HarperCollins" },
       ],
     },
-    {
-      href: "/community", icon: "users", label: "Community",
-      items: [
-        { href: "/community", icon: "feather", label: "Discussions" },
-        { href: "/leaderboard", icon: "trophy", label: "Bookworm Ranking" },
-        { href: "/account", icon: "user", label: labels.account },
-        { href: "/login", icon: "logout", label: labels.signIn },
-      ],
-    },
+    { href: "/community", icon: "users", label: "Community" },
+    { href: "/leaderboard", icon: "trophy", label: "Bookworm Ranking" },
   ];
 
   // Multi-column mega menu ("More") — enterprise-style grouped catalog entry points

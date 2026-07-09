@@ -7,6 +7,8 @@ import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
 
+const PER_PAGE = 32;
+
 const SORTS = [
   ["", "Relevance"],
   ["rating", "Top Rated"],
@@ -16,39 +18,42 @@ const SORTS = [
 const RATINGS = [["4.5", "4.5 & up"], ["4", "4.0 & up"], ["3", "3.0 & up"]];
 const FORMATS = ["Paperback", "Hardcover", "EBook"];
 
-// Instant, client-side catalog browser: filter/sort/paginate clicks apply
-// immediately via a lightweight fetch to /api/books — no full page reload,
-// no server round trip through the whole React tree. URL stays in sync
-// (shareable, back-button friendly) via history.replaceState.
+// Instant, client-side catalog browser: filter/sort clicks apply immediately
+// via a lightweight fetch to /api/books (no full page reload). Results load
+// 32 at a time — only "Load More" triggers the next batch, appended to the
+// list, so changing a filter never silently pulls hundreds of rows at once.
 export default function BooksBrowser({ lang, initialParams, initialData, facets }) {
-  const [params, setParams] = useState(initialParams);
-  const [data, setData] = useState(initialData);
+  const { page: _ignoredPage, ...initialFilters } = initialParams;
+  const [params, setParams] = useState(initialFilters);
+  const [books, setBooks] = useState(initialData.books);
+  const [total, setTotal] = useState(initialData.total);
+  const [pages, setPages] = useState(initialData.pages);
+  const [page, setPage] = useState(initialData.page || 1);
   const [loading, setLoading] = useState(false);
-  const [searchInput, setSearchInput] = useState(initialParams.q || "");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [searchInput, setSearchInput] = useState(initialFilters.q || "");
   const debounceRef = useRef(null);
   const firstRun = useRef(true);
   const reqId = useRef(0);
 
-  const apply = (patch) => {
-    setParams((prev) => {
-      const next = { ...prev, ...patch };
-      if (!("page" in patch)) next.page = undefined; // any filter change resets to page 1
-      return next;
-    });
-  };
+  const apply = (patch) => setParams((prev) => ({ ...prev, ...patch }));
 
+  // Filter/sort change -> reset to page 1 and replace the list
   useEffect(() => {
     if (firstRun.current) { firstRun.current = false; return; }
     const id = ++reqId.current;
     setLoading(true);
     const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries({ ...params, lang }).filter(([, v]) => v))
+      Object.fromEntries(Object.entries({ ...params, lang, perPage: PER_PAGE }).filter(([, v]) => v))
     );
     fetch(`/api/books?${qs}`)
       .then((r) => r.json())
       .then((json) => {
         if (id !== reqId.current) return; // stale response, ignore
-        setData(json);
+        setBooks(json.books);
+        setTotal(json.total);
+        setPages(json.pages);
+        setPage(1);
         setLoading(false);
         const url = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)));
         window.history.replaceState(null, "", `/books${url.size ? `?${url}` : ""}`);
@@ -56,6 +61,19 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
       .catch(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, lang]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries({ ...params, lang, perPage: PER_PAGE, page: nextPage }).filter(([, v]) => v))
+    );
+    try {
+      const json = await fetch(`/api/books?${qs}`).then((r) => r.json());
+      setBooks((prev) => [...prev, ...json.books]);
+      setPage(nextPage);
+    } finally { setLoadingMore(false); }
+  };
 
   // debounce free-text search
   const onSearchChange = (v) => {
@@ -65,7 +83,6 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   };
 
   const { q, category, collection, tag, format, country, rating, sort, view } = params;
-  const { books, total, page, pages } = data;
   const isList = view === "list";
 
   const activeFilters = [
@@ -77,9 +94,6 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     format && { key: "format", label: format },
     country && { key: "country", label: country },
   ].filter(Boolean);
-
-  const win = [];
-  for (let p = Math.max(1, page - 2); p <= Math.min(pages, page + 2); p++) win.push(p);
 
   const Toggle = ({ active, onClick, children }) => (
     <button onClick={onClick}
@@ -104,7 +118,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </h1>
           <p className="text-muted mt-1 text-sm">
             {total.toLocaleString()} {total === 1 ? "book" : "books"}
-            {pages > 1 && ` · page ${page} of ${pages}`}
+            {pages > 1 && ` · showing ${books.length}`}
             {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-600"><span className="spinner" /> updating</span>}
           </p>
         </div>
@@ -264,29 +278,14 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             </div>
           )}
 
-          {pages > 1 && (
-            <nav className="mt-10 flex items-center justify-center gap-1.5" aria-label="Pagination">
-              {page > 1 && <button onClick={() => apply({ page: page - 1 })} aria-label="Previous page" className="btn-ghost !px-3 !py-2 text-sm">←</button>}
-              {win[0] > 1 && (
-                <>
-                  <button onClick={() => apply({ page: 1 })} className="btn-ghost !px-3.5 !py-2 text-sm">1</button>
-                  {win[0] > 2 && <span className="text-muted px-1">…</span>}
-                </>
-              )}
-              {win.map((p) => (
-                <button key={p} onClick={() => apply({ page: p })}
-                  className={p === page ? "btn-primary !px-3.5 !py-2 text-sm" : "btn-ghost !px-3.5 !py-2 text-sm"}>
-                  {p}
-                </button>
-              ))}
-              {win[win.length - 1] < pages && (
-                <>
-                  {win[win.length - 1] < pages - 1 && <span className="text-muted px-1">…</span>}
-                  <button onClick={() => apply({ page: pages })} className="btn-ghost !px-3.5 !py-2 text-sm">{pages}</button>
-                </>
-              )}
-              {page < pages && <button onClick={() => apply({ page: page + 1 })} aria-label="Next page" className="btn-ghost !px-3 !py-2 text-sm">→</button>}
-            </nav>
+          {page < pages && (
+            <div className="mt-10 flex flex-col items-center gap-2">
+              <button onClick={loadMore} disabled={loadingMore} className="btn-primary !px-8">
+                {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}
+                {loadingMore ? "Loading…" : `Load ${Math.min(PER_PAGE, total - books.length)} more books`}
+              </button>
+              <p className="text-muted text-xs">{books.length} of {total.toLocaleString()} loaded</p>
+            </div>
           )}
         </div>
       </div>

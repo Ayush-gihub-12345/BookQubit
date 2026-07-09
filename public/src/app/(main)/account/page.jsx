@@ -7,6 +7,7 @@ import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { readWishlist } from "@/components/WishlistButton";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
+import ShelfItemCard from "@/components/ShelfItemCard";
 
 const TABS = [
   { id: "all", label: "All" },
@@ -194,20 +195,12 @@ export default function AccountPage() {
       {visible.length ? (
         <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
           {visible.map((s) => (
-            <Link key={s.book_slug} href={`/books/${encodeURIComponent(s.book_slug)}`} className="card group overflow-hidden">
-              <div className="relative aspect-[2/3] overflow-hidden bg-black/5">
-                <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url}
-                  imgClassName="transition group-hover:scale-105" />
-                <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">
-                  {s.status === "read" ? "✅ Read" : s.status === "reading" ? `📖 ${s.progress || 0}%` : "🔖 Want"}
-                </span>
-              </div>
-              <div className="p-3">
-                <p className="line-clamp-1 text-sm font-semibold">{s.title || s.book_slug}</p>
-                <p className="text-muted line-clamp-1 text-xs">{s.author}</p>
-                {s.rating && <p className="mt-0.5 text-xs text-amber-400">{"★".repeat(s.rating)}</p>}
-              </div>
-            </Link>
+            <ShelfItemCard
+              key={s.book_slug}
+              entry={s}
+              getIdToken={() => user.getIdToken()}
+              onUpdate={(updated) => setShelf((prev) => prev.map((x) => (x.book_slug === updated.book_slug ? updated : x)))}
+            />
           ))}
         </div>
       ) : (

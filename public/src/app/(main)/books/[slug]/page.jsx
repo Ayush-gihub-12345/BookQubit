@@ -130,16 +130,32 @@ export default async function BookPage({ params }) {
               )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
               <ShelfControls slug={book.slug} />
-              <Link
-                href={`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`}
-                className="btn-ghost w-full text-sm"
-              >
-                <Icon name="feather" size={14} /> Discuss this book
-              </Link>
-              <div className="pt-1"><ReportIssueButton bookSlug={book.slug} /></div>
               <p className="text-muted text-center text-xs">
                 As an Amazon Associate we earn from qualifying purchases.
               </p>
+            </div>
+
+            {related.length > 0 && (
+              <div className="mt-5 border-t border-line pt-4">
+                <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
+                  <Icon name="layers" size={14} /> Browse Similar Books
+                </a>
+              </div>
+            )}
+
+            <div className="mt-2 border-t border-line pt-4">
+              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Read with others</p>
+              <Link
+                href={`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`}
+                className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600"
+              >
+                <Icon name="feather" size={14} /> Discuss this book
+              </Link>
+            </div>
+
+            <div className="mt-2 border-t border-line pt-4">
+              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Book information</p>
+              <ReportIssueButton bookSlug={book.slug} />
             </div>
           </div>
 
@@ -151,7 +167,23 @@ export default async function BookPage({ params }) {
                 {book.author}
               </Link>
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            {/* Compact meta line — StoryGraph-style at-a-glance facts */}
+            <p className="text-muted mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              {[book.page_count && `${book.page_count} pages`, book.format, book.published && `first pub. ${book.published}`]
+                .filter(Boolean)
+                .map((part, i) => <span key={i}>{i > 0 && <span className="mx-1 opacity-50">·</span>}{part}</span>)}
+            </p>
+
+            {/* Top facet pills — category + top moods/pace at a glance */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {book.category && <Link href={`/books?category=${encodeURIComponent(book.category)}`} className="pill !text-[11px]">{book.category}</Link>}
+              {book.tags.slice(0, 4).map((tg) => (
+                <Link key={tg} href={`/books?tag=${encodeURIComponent(tg)}`} className="pill !text-[11px]">{tg}</Link>
+              ))}
+              {community.pace[0] && <span className="pill !bg-emerald-500/15 !text-[11px] !text-emerald-600">{community.pace[0].name}</span>}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <Rating value={book.rating} />
               {community.reviews.length > 0 && (
                 <a href="#reviews" className="text-muted hover:text-brand-600">
@@ -167,6 +199,17 @@ export default async function BookPage({ params }) {
             </div>
 
             {book.description && <p className="mt-6 text-lg leading-relaxed">{book.description}</p>}
+
+            {(book.category || book.subjects?.length > 0) && (
+              <div className="tint-brand mt-6 rounded-xl p-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Who's it for</p>
+                <p className="mt-2 text-sm leading-relaxed">
+                  A good fit for readers who enjoy {book.category ? <strong>{book.category.toLowerCase()}</strong> : "this genre"}
+                  {book.subjects?.length > 0 && <> and want to explore {book.subjects.slice(0, 2).join(" and ")}</>}
+                  {readingTime && <> — a {readingTime} read{difficulty ? ` at a "${difficulty.toLowerCase()}" level` : ""}</>}.
+                </p>
+              </div>
+            )}
 
             {book.keyPoints.length > 0 && (
               <div className="mt-8">
@@ -305,7 +348,7 @@ export default async function BookPage({ params }) {
       </div>
 
       {related.length > 0 && (
-        <Section title={_("related")}>
+        <Section id="related" title={_("related")}>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
             {related.map((b) => <BookCard key={b.id} book={b} />)}
           </div>

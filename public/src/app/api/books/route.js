@@ -16,7 +16,7 @@ export async function GET(request) {
     minRating: searchParams.get("rating") || undefined,
     sort: searchParams.get("sort") || undefined,
     page: parseInt(searchParams.get("page")) || 1,
-    perPage: parseInt(searchParams.get("perPage")) || 24,
+    perPage: parseInt(searchParams.get("perPage")) || 32,
   };
   const result = await queryBooks(lang, opts);
   return NextResponse.json(result);

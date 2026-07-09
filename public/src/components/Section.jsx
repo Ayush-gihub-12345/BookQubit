@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-export default function Section({ title, subtitle, href, children }) {
+export default function Section({ id, title, subtitle, href, children }) {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10">
+    <section id={id} className="mx-auto max-w-7xl scroll-mt-24 px-4 py-10">
       <div className="mb-6 flex items-end justify-between">
         <div>
           <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>

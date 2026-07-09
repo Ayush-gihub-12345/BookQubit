@@ -9,6 +9,7 @@ const STATUSES = [
   { id: "reading", label: "Reading", icon: "📖" },
   { id: "read", label: "Read", icon: "✅" },
 ];
+const STATUS_MAP = Object.fromEntries(STATUSES.map((s) => [s.id, s]));
 
 const MOODS = ["✨ inspiring", "🌧️ emotional", "😂 funny", "🌑 dark", "🧠 informative", "🫀 hopeful", "😰 tense", "🕯️ reflective"];
 const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
@@ -60,24 +61,25 @@ export default function ShelfControls({ slug }) {
     } finally { setBusy(false); }
   };
 
+  const current = entry?.status ? STATUS_MAP[entry.status] : null;
+
   return (
     <div className="card space-y-4 p-4 hover:!translate-y-0">
-      <div className="grid grid-cols-3 gap-2">
-        {STATUSES.map((s) => (
-          <button
-            key={s.id}
-            disabled={busy}
-            onClick={() => update({ status: s.id })}
-            className={`rounded-xl px-2 py-2.5 text-xs font-semibold transition ${
-              entry?.status === s.id
-                ? "bg-brand-600 text-white shadow-lg shadow-brand-600/30"
-                : "border-line border hover:border-brand-500"
-            }`}
-          >
-            {s.icon} {s.label}
-          </button>
-        ))}
+      <div className="relative">
+        <select
+          value={entry?.status || ""}
+          disabled={busy}
+          onChange={(e) => update({ status: e.target.value })}
+          className="input w-full cursor-pointer appearance-none !border-brand-600 !bg-brand-600 py-2.5 pl-4 pr-9 text-sm font-semibold !text-white"
+        >
+          <option value="" disabled>Add to shelf…</option>
+          {STATUSES.map((s) => (
+            <option key={s.id} value={s.id} className="bg-surface text-[var(--fg)]">{s.icon} {s.label}</option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-white">▾</span>
       </div>
+      {current && <p className="text-muted -mt-2 text-center text-[11px]">Currently: {current.icon} {current.label}</p>}
 
       <div className="flex items-center justify-center gap-1">
         <span className="text-muted mr-2 text-xs font-medium">Your rating</span>
