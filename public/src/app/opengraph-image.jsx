@@ -22,11 +22,11 @@ export default function OpengraphImage() {
             width: 84, height: 84, borderRadius: 20, background: "linear-gradient(135deg,#6366f1,#4f46e5)",
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 46, fontWeight: 800,
           }}>B</div>
-          <div style={{ fontSize: 68, fontWeight: 800, letterSpacing: -1 }}>
-            Book<span style={{ color: "#a5b4fc" }}>Qubit</span>
+          <div style={{ display: "flex", fontSize: 68, fontWeight: 800, letterSpacing: -1 }}>
+            <span>Book</span><span style={{ color: "#a5b4fc" }}>Qubit</span>
           </div>
         </div>
-        <div style={{ marginTop: 26, fontSize: 30, color: "#c7cbe8" }}>
+        <div style={{ display: "flex", marginTop: 26, fontSize: 30, color: "#c7cbe8" }}>
           Discover, summarize, and buy great books
         </div>
       </div>
