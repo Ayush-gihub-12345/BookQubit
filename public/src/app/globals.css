@@ -89,29 +89,59 @@
 .hscroll::-webkit-scrollbar { display: none; }
 .hscroll > * { scroll-snap-align: start; flex-shrink: 0; }
 
-.hscroll-btn {
+/* Soft edge fades so cards appear to glide under the arrows rather than get
+   cut off by them — the row content never looks abruptly clipped. */
+.hscroll-fade {
   position: absolute;
-  top: 40%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 2.25rem;
-  height: 2.25rem;
+  top: 0;
+  bottom: 4px;
+  width: 56px;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.hscroll-fade-visible { opacity: 1; }
+.hscroll-fade-left { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
+.hscroll-fade-right { right: 0; background: linear-gradient(to left, var(--bg), transparent); }
+
+/* Round icon button — the shared visual style for every prev/next control
+   on the site (carousels + hero slider). Position is layered on separately
+   per context so this same look works both absolutely-positioned and inline. */
+.icon-btn {
+  width: 2.5rem;
+  height: 2.5rem;
   display: grid;
   place-items: center;
   border-radius: 9999px;
   border: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
-  transition: transform 0.15s, opacity 0.15s;
-  opacity: 0.95;
+  color: var(--color-brand-600);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.14);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.hscroll-btn:hover { transform: translateY(-50%) scale(1.08); }
-.hscroll-btn-left { left: -2px; }
-.hscroll-btn-right { right: -2px; }
+.icon-btn:hover {
+  transform: scale(1.1);
+  background: var(--color-brand-600);
+  color: #fff;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-brand-600) 35%, transparent);
+}
+.icon-btn:active { transform: scale(0.96); }
+.icon-btn-sm { width: 2.1rem; height: 2.1rem; }
+
+.hscroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+.hscroll-btn:hover { transform: translateY(-50%) scale(1.1); }
+.hscroll-btn:active { transform: translateY(-50%) scale(0.96); }
+.hscroll-btn-left { left: 8px; }
+.hscroll-btn-right { right: 8px; }
 @media (max-width: 640px) {
-  .hscroll-btn { width: 1.9rem; height: 1.9rem; }
-  .hscroll-btn-left { left: -4px; }
-  .hscroll-btn-right { right: -4px; }
+  .icon-btn { width: 2.1rem; height: 2.1rem; }
+  .hscroll-fade { width: 36px; }
 }
 
 html { scroll-behavior: smooth; }

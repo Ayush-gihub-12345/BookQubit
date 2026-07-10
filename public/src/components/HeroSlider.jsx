@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
 import Translated from "./Translated";
+import Icon from "./Icon";
 
 export default function HeroSlider({ books, labels }) {
   const [i, setI] = useState(0);
@@ -23,10 +24,12 @@ export default function HeroSlider({ books, labels }) {
       {/* Mobile: small corner buttons, clear of both the cover and the text */}
       {n > 1 && (
         <div className="absolute right-4 top-4 z-10 flex gap-2 md:hidden">
-          <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous"
-            className="bg-surface border-line grid h-8 w-8 place-items-center rounded-full border shadow-lg transition hover:scale-110">‹</button>
-          <button onClick={() => setI((i + 1) % n)} aria-label="Next"
-            className="bg-surface border-line grid h-8 w-8 place-items-center rounded-full border shadow-lg transition hover:scale-110">›</button>
+          <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous" className="icon-btn icon-btn-sm">
+            <Icon name="chevronDown" size={15} className="rotate-90" strokeWidth={2.5} />
+          </button>
+          <button onClick={() => setI((i + 1) % n)} aria-label="Next" className="icon-btn icon-btn-sm">
+            <Icon name="chevronDown" size={15} className="-rotate-90" strokeWidth={2.5} />
+          </button>
         </div>
       )}
 
@@ -75,16 +78,27 @@ export default function HeroSlider({ books, labels }) {
       {n > 1 && (
         <>
           {/* Desktop: original edge-of-card arrows */}
-          <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous"
-            className="bg-surface border-line absolute left-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border shadow-lg transition hover:scale-110 md:grid">‹</button>
-          <button onClick={() => setI((i + 1) % n)} aria-label="Next"
-            className="bg-surface border-line absolute right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border shadow-lg transition hover:scale-110 md:grid">›</button>
+          <div className="hidden md:block">
+            <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous" className="icon-btn hscroll-btn hscroll-btn-left">
+              <Icon name="chevronDown" size={18} className="rotate-90" strokeWidth={2.5} />
+            </button>
+            <button onClick={() => setI((i + 1) % n)} aria-label="Next" className="icon-btn hscroll-btn hscroll-btn-right">
+              <Icon name="chevronDown" size={18} className="-rotate-90" strokeWidth={2.5} />
+            </button>
+          </div>
 
-          <div className="mt-6 flex justify-center gap-1.5">
-            {books.map((_, d) => (
-              <button key={d} onClick={() => setI(d)} aria-label={`Slide ${d + 1}`}
-                className={`h-1.5 rounded-full transition-all ${d === i ? "w-6 bg-brand-600" : "w-1.5 bg-brand-600/30"}`} />
-            ))}
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <div className="flex gap-1.5">
+              {books.map((_, d) => (
+                <button key={d} onClick={() => setI(d)} aria-label={`Slide ${d + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    d === i
+                      ? "w-7 bg-gradient-to-r from-brand-500 to-brand-600 shadow-[0_0_8px_rgba(79,70,229,0.5)]"
+                      : "w-1.5 bg-brand-600/25 hover:bg-brand-600/50"
+                  }`} />
+              ))}
+            </div>
+            <span className="text-muted text-xs font-medium tabular-nums">{i + 1}/{n}</span>
           </div>
         </>
       )}

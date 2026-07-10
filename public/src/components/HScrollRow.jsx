@@ -40,15 +40,17 @@ export default function HScrollRow({ children, className = "" }) {
 
   return (
     <div className="relative">
+      <div className={`hscroll-fade hscroll-fade-left ${canLeft ? "hscroll-fade-visible" : ""}`} />
+      <div className={`hscroll-fade hscroll-fade-right ${canRight ? "hscroll-fade-visible" : ""}`} />
       <div ref={ref} className={`hscroll ${className}`}>{children}</div>
       {canLeft && (
-        <button onClick={() => scroll(-1)} aria-label="Scroll left" className="hscroll-btn hscroll-btn-left">
-          <Icon name="chevronDown" size={16} className="rotate-90" />
+        <button onClick={() => scroll(-1)} aria-label="Scroll left" className="icon-btn hscroll-btn hscroll-btn-left">
+          <Icon name="chevronDown" size={17} className="rotate-90" strokeWidth={2.5} />
         </button>
       )}
       {canRight && (
-        <button onClick={() => scroll(1)} aria-label="Scroll right" className="hscroll-btn hscroll-btn-right">
-          <Icon name="chevronDown" size={16} className="-rotate-90" />
+        <button onClick={() => scroll(1)} aria-label="Scroll right" className="icon-btn hscroll-btn hscroll-btn-right">
+          <Icon name="chevronDown" size={17} className="-rotate-90" strokeWidth={2.5} />
         </button>
       )}
     </div>
