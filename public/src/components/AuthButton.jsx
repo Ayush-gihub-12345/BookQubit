@@ -37,7 +37,7 @@ export default function AuthButton({ labels }) {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 w-48 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
+        <div className="absolute right-0 top-12 z-[60] w-48 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
           <p className="truncate border-b border-line px-4 py-3 text-sm font-medium">
             {user.displayName || user.email}
           </p>

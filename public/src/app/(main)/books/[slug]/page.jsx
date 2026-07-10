@@ -9,6 +9,7 @@ import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import ReportIssueButton from "@/components/ReportIssueButton";
 import QuickActions from "@/components/QuickActions";
+import Translated from "@/components/Translated";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
@@ -171,7 +172,7 @@ export default async function BookPage({ params }) {
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold sm:text-4xl">{book.title}</h1>
+            <h1 className="text-3xl font-bold sm:text-4xl"><Translated text={book.title} /></h1>
             <p className="text-muted mt-2 text-lg">
               by{" "}
               <Link href={`/books?q=${encodeURIComponent(book.author || "")}`} className="font-medium text-brand-600 hover:underline">
@@ -209,7 +210,7 @@ export default async function BookPage({ params }) {
               )}
             </div>
 
-            {book.description && <p className="mt-6 text-lg leading-relaxed">{book.description}</p>}
+            {book.description && <Translated as="p" className="mt-6 text-lg leading-relaxed" text={book.description} />}
 
             {(book.category || book.subjects?.length > 0) && (
               <div className="tint-brand mt-6 rounded-xl p-5">
@@ -228,7 +229,7 @@ export default async function BookPage({ params }) {
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {book.keyPoints.map((k) => (
                     <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
-                      <span className="text-brand-600">✓</span> {k}
+                      <span className="text-brand-600">✓</span> <Translated text={k} />
                     </li>
                   ))}
                 </ul>
@@ -238,17 +239,11 @@ export default async function BookPage({ params }) {
             {book.summary && (
               <div id="summary" className="mt-8 scroll-mt-24">
                 <h2 className="text-xl font-bold">{_("summary")}</h2>
-                <p className="mt-3 whitespace-pre-line leading-relaxed opacity-90">
-                  {book.summary}
-                </p>
+                <Translated as="p" className="mt-3 whitespace-pre-line leading-relaxed opacity-90" text={book.summary} />
               </div>
             )}
 
             <QuickActions book={book} />
-
-            <div className="mt-8 scroll-mt-24" id="write-review">
-              <ShelfControls slug={book.slug} />
-            </div>
 
             {meta.length > 0 && (
               <div className="mt-8">
@@ -263,6 +258,10 @@ export default async function BookPage({ params }) {
                 </dl>
               </div>
             )}
+
+            <div className="mt-8 scroll-mt-24" id="write-review">
+              <ShelfControls slug={book.slug} />
+            </div>
 
             {book.tags.length > 0 && (
               <div className="mt-8 flex flex-wrap gap-2">

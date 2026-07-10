@@ -8,6 +8,7 @@ import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
 import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
+import HScrollRow from "@/components/HScrollRow";
 import Logo from "@/components/Logo";
 import { listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
@@ -76,7 +77,7 @@ export default async function Home() {
 
       {/* Trending Now */}
       <Section title={_("trending")} subtitle={_("trendingSub")} href="/books?sort=rating">
-        <div className="hscroll">
+        <HScrollRow>
           {topRated.map((b, i) => (
             <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-40 overflow-hidden sm:w-44">
               <div className="relative aspect-[2/3] overflow-hidden bg-black/5">
@@ -93,7 +94,7 @@ export default async function Home() {
               </div>
             </Link>
           ))}
-        </div>
+        </HScrollRow>
       </Section>
 
       {/* CTA band */}
@@ -146,11 +147,11 @@ export default async function Home() {
 
       {/* Explore Books */}
       <Section title={_("featured")} subtitle="Dive into our curated selection of must-read titles" href="/books">
-        <div className="hscroll">
+        <HScrollRow>
           {all.slice(0, 12).map((b) => (
             <div key={b.id} className="w-40 sm:w-44"><BookCard book={b} /></div>
           ))}
-        </div>
+        </HScrollRow>
       </Section>
 
       {/* Featured Collections */}
@@ -196,7 +197,7 @@ export default async function Home() {
       {/* Featured Authors */}
       {authors.length > 0 && (
         <Section title="Featured Authors" subtitle="Our most influential writers and thinkers" href="/authors">
-          <div className="hscroll">
+          <HScrollRow>
             {authors.map((a) => (
               <Link key={a.id} href={`/authors/${a.slug}`} className="card w-44 p-5 text-center">
                 {a.image_url ? (
@@ -210,7 +211,7 @@ export default async function Home() {
                 <p className="mt-2 text-xs font-semibold text-brand-600">Know More →</p>
               </Link>
             ))}
-          </div>
+          </HScrollRow>
         </Section>
       )}
 
@@ -237,7 +238,7 @@ export default async function Home() {
       {/* Comics */}
       {comics.length > 0 && (
         <Section title="Explore Comics" subtitle="Legendary issues and timeless adventures" href="/comics">
-          <div className="hscroll">
+          <HScrollRow>
             {comics.map((c) => (
               <Link key={c.id} href={`/comics/${c.slug}`} className="card group w-40 overflow-hidden sm:w-44">
                 <div className="aspect-[2/3] overflow-hidden bg-black/5">
@@ -251,21 +252,21 @@ export default async function Home() {
                 </div>
               </Link>
             ))}
-          </div>
+          </HScrollRow>
         </Section>
       )}
 
       {/* Recently added — trust signal: the catalog is actively growing */}
       {recentlyAdded.length > 0 && (
         <Section title="Recently Added" subtitle="Freshly added to the BookQubit library" href="/books">
-          <div className="hscroll">
+          <HScrollRow>
             {recentlyAdded.map((b) => (
               <div key={b.id} className="relative w-40 sm:w-44">
                 <span className="absolute left-2 top-2 z-10 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">NEW</span>
                 <BookCard book={b} />
               </div>
             ))}
-          </div>
+          </HScrollRow>
         </Section>
       )}
 

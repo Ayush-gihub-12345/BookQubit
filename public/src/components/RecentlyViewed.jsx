@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
 import Icon from "./Icon";
+import HScrollRow from "./HScrollRow";
 
 const KEY = "bq_recent_books";
 const read = () => {
@@ -35,7 +36,7 @@ export default function RecentlyViewed() {
         <Icon name="clock" size={18} className="text-brand-600" />
         <h2 className="text-2xl font-bold">Recently Viewed</h2>
       </div>
-      <div className="hscroll">
+      <HScrollRow>
         {items.map((b) => (
           <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-32 overflow-hidden sm:w-36">
             <div className="aspect-[2/3] overflow-hidden">
@@ -45,7 +46,7 @@ export default function RecentlyViewed() {
             <p className="line-clamp-1 p-2.5 text-xs font-semibold group-hover:text-brand-600">{b.title}</p>
           </Link>
         ))}
-      </div>
+      </HScrollRow>
     </section>
   );
 }

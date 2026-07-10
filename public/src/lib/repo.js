@@ -1,5 +1,4 @@
 import { getDb, cached, invalidate } from "./db";
-import { translateBook, translateBooks } from "./translate";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -17,19 +16,6 @@ function mapBook(r) {
       ? `https://www.amazon.com/dp/${r.amazon_asin}?tag=${tag}`
       : r.amazon_url || null,
   };
-}
-
-// Machine-translates books whose row is actually in a different language
-// than requested (i.e. rows we fell back to — `book.lang` still carries the
-// language of the underlying content). Books with real native-language rows
-// (book.lang === lang) are left untouched — human-authored content wins.
-async function localizeBooks(books, lang) {
-  if (lang === "en") return books;
-  const needsTranslation = books.filter((b) => b.lang !== lang);
-  if (!needsTranslation.length) return books;
-  const translated = await translateBooks(needsTranslation, lang);
-  const bySlug = new Map(translated.map((b) => [b.slug, b]));
-  return books.map((b) => bySlug.get(b.slug) || b);
 }
 
 async function allBooks(lang) {
@@ -61,7 +47,7 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
   if (sort === "new") books = [...books].sort((a, b) => String(b.published || "").localeCompare(String(a.published || "")));
   if (sort === "title") books = [...books].sort((a, b) => a.title.localeCompare(b.title));
   books = limit ? books.slice(0, limit) : books;
-  return localizeBooks(books, lang);
+  return books;
 }
 
 // SQL-level catalog query with real pagination — scales to very large catalogs
@@ -102,9 +88,7 @@ export async function queryBooks(lang, opts = {}) {
       .bind(...binds, perPage, (page - 1) * perPage).all(),
   ]);
 
-  // Empty language falls back to English rows with the same filters, but we
-  // keep `lang` as the language to translate INTO (not silently switch the
-  // whole response to English) — same reason localizeBooks exists below.
+  // Empty language falls back to English rows with the same filters.
   if (!count.n && lang !== "en") {
     const enBinds = [...binds];
     enBinds[0] = "en";
@@ -116,7 +100,7 @@ export async function queryBooks(lang, opts = {}) {
   }
 
   return {
-    books: await localizeBooks(rows.results.map(mapBook), lang),
+    books: rows.results.map(mapBook),
     total: count.n,
     page: Number(page),
     pages: Math.max(1, Math.ceil(count.n / perPage)),
@@ -127,14 +111,12 @@ export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
   const books = (await allBooks(lang)).map(mapBook);
   const hit = books.find((b) => b.slug === decoded);
-  if (hit) return hit.lang === lang ? hit : translateBook(hit, lang);
+  if (hit) return hit;
   // Localized-slug support: the slug may belong to another language's row
   // (e.g. a Devanagari slug opened while the UI language is English).
   const db = await getDb();
   const row = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
-  if (!row) return null;
-  const book = mapBook(row);
-  return book.lang === lang ? book : translateBook(book, lang);
+  return row ? mapBook(row) : null;
 }
 
 // All language variants of a book (matched by ISBN prefix-insensitive title
@@ -154,7 +136,7 @@ export async function getRecentlyAdded(lang, limit = 8) {
     }
     return results.map(mapBook);
   }, 300);
-  return localizeBooks(books, lang);
+  return books;
 }
 
 export async function getBookAlternates(book) {

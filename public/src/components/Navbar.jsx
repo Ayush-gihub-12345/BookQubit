@@ -141,6 +141,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
   const setCookie = (name, value) => {
     document.cookie = `${name}=${value};path=/;max-age=31536000`;
+    if (name === "lang") window.dispatchEvent(new Event("bq:langchange"));
     router.refresh();
   };
   const currentTheme = themes.find((t) => t.id === theme) || themes[0];
