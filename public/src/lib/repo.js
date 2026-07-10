@@ -1,4 +1,5 @@
 import { getDb, cached, invalidate } from "./db";
+import { translateBook, translateBooks } from "./translate";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -16,6 +17,19 @@ function mapBook(r) {
       ? `https://www.amazon.com/dp/${r.amazon_asin}?tag=${tag}`
       : r.amazon_url || null,
   };
+}
+
+// Machine-translates books whose row is actually in a different language
+// than requested (i.e. rows we fell back to — `book.lang` still carries the
+// language of the underlying content). Books with real native-language rows
+// (book.lang === lang) are left untouched — human-authored content wins.
+async function localizeBooks(books, lang) {
+  if (lang === "en") return books;
+  const needsTranslation = books.filter((b) => b.lang !== lang);
+  if (!needsTranslation.length) return books;
+  const translated = await translateBooks(needsTranslation, lang);
+  const bySlug = new Map(translated.map((b) => [b.slug, b]));
+  return books.map((b) => bySlug.get(b.slug) || b);
 }
 
 async function allBooks(lang) {
@@ -46,7 +60,8 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
   if (sort === "rating") books = [...books].sort((a, b) => (b.rating || 0) - (a.rating || 0));
   if (sort === "new") books = [...books].sort((a, b) => String(b.published || "").localeCompare(String(a.published || "")));
   if (sort === "title") books = [...books].sort((a, b) => a.title.localeCompare(b.title));
-  return limit ? books.slice(0, limit) : books;
+  books = limit ? books.slice(0, limit) : books;
+  return localizeBooks(books, lang);
 }
 
 // SQL-level catalog query with real pagination — scales to very large catalogs
@@ -81,17 +96,27 @@ export async function queryBooks(lang, opts = {}) {
   const orderBy = ORDER[sort] || ORDER.default;
   const wsql = where.join(" AND ");
 
-  const [count, rows] = await Promise.all([
+  let [count, rows] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...binds).first(),
     db.prepare(`SELECT * FROM books WHERE ${wsql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
       .bind(...binds, perPage, (page - 1) * perPage).all(),
   ]);
 
-  // Empty language falls back to English with the same filters
-  if (!count.n && lang !== "en") return queryBooks("en", opts);
+  // Empty language falls back to English rows with the same filters, but we
+  // keep `lang` as the language to translate INTO (not silently switch the
+  // whole response to English) — same reason localizeBooks exists below.
+  if (!count.n && lang !== "en") {
+    const enBinds = [...binds];
+    enBinds[0] = "en";
+    [count, rows] = await Promise.all([
+      db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...enBinds).first(),
+      db.prepare(`SELECT * FROM books WHERE ${wsql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+        .bind(...enBinds, perPage, (page - 1) * perPage).all(),
+    ]);
+  }
 
   return {
-    books: rows.results.map(mapBook),
+    books: await localizeBooks(rows.results.map(mapBook), lang),
     total: count.n,
     page: Number(page),
     pages: Math.max(1, Math.ceil(count.n / perPage)),
@@ -102,12 +127,14 @@ export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
   const books = (await allBooks(lang)).map(mapBook);
   const hit = books.find((b) => b.slug === decoded);
-  if (hit) return hit;
+  if (hit) return hit.lang === lang ? hit : translateBook(hit, lang);
   // Localized-slug support: the slug may belong to another language's row
   // (e.g. a Devanagari slug opened while the UI language is English).
   const db = await getDb();
   const row = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
-  return row ? mapBook(row) : null;
+  if (!row) return null;
+  const book = mapBook(row);
+  return book.lang === lang ? book : translateBook(book, lang);
 }
 
 // All language variants of a book (matched by ISBN prefix-insensitive title
@@ -115,7 +142,7 @@ export async function getBook(slug, lang) {
 // "Recently added to BookQubit" — ordered by when the row was created, not
 // by the book's publication year (that's the separate "New Releases" sort).
 export async function getRecentlyAdded(lang, limit = 8) {
-  return cached(`recent-added:${lang}:${limit}`, async () => {
+  const books = await cached(`recent-added:${lang}:${limit}`, async () => {
     const db = await getDb();
     let { results } = await db
       .prepare("SELECT * FROM books WHERE lang=?1 ORDER BY created_at DESC, id DESC LIMIT ?2")
@@ -127,6 +154,7 @@ export async function getRecentlyAdded(lang, limit = 8) {
     }
     return results.map(mapBook);
   }, 300);
+  return localizeBooks(books, lang);
 }
 
 export async function getBookAlternates(book) {

@@ -21,6 +21,12 @@
       "id": "70c79257dad043be8b1401edd5d3f6d9"
     }
   ],
+  // Powers automatic translation of book content into non-English languages
+  // (src/lib/translate.js). No separate account setup needed — every
+  // Cloudflare account has Workers AI enabled with a free usage allocation.
+  "ai": {
+    "binding": "AI"
+  },
   "vars": {
     "AMAZON_ASSOC_TAG": ""
   }
