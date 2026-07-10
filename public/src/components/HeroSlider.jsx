@@ -20,23 +20,23 @@ export default function HeroSlider({ books, labels }) {
 
   return (
     <div className="card relative overflow-hidden p-6 hover:!translate-y-0 sm:p-10">
-      <div className="grid items-center gap-8 md:grid-cols-[240px_1fr]">
-        <div className="relative mx-auto w-44 sm:w-56">
-          <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group block">
-            <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
-              style={{ animation: "fadeIn .5s ease" }}>
-              <BookCover title={b.title} author={b.author} cover_url={b.cover_url} priority />
-            </div>
-          </Link>
-          {n > 1 && (
-            <>
-              <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous"
-                className="bg-surface border-line absolute left-1 top-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border shadow-lg transition hover:scale-110">‹</button>
-              <button onClick={() => setI((i + 1) % n)} aria-label="Next"
-                className="bg-surface border-line absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 translate-x-1/2 place-items-center rounded-full border shadow-lg transition hover:scale-110">›</button>
-            </>
-          )}
+      {/* Mobile: small corner buttons, clear of both the cover and the text */}
+      {n > 1 && (
+        <div className="absolute right-4 top-4 z-10 flex gap-2 md:hidden">
+          <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous"
+            className="bg-surface border-line grid h-8 w-8 place-items-center rounded-full border shadow-lg transition hover:scale-110">‹</button>
+          <button onClick={() => setI((i + 1) % n)} aria-label="Next"
+            className="bg-surface border-line grid h-8 w-8 place-items-center rounded-full border shadow-lg transition hover:scale-110">›</button>
         </div>
+      )}
+
+      <div className="grid items-center gap-8 md:grid-cols-[240px_1fr]">
+        <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
+          <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
+            style={{ animation: "fadeIn .5s ease" }}>
+            <BookCover title={b.title} author={b.author} cover_url={b.cover_url} priority />
+          </div>
+        </Link>
 
         <div>
           {b.category && <span className="pill">{b.category}</span>}
@@ -73,12 +73,20 @@ export default function HeroSlider({ books, labels }) {
       </div>
 
       {n > 1 && (
-        <div className="mt-6 flex justify-center gap-1.5">
-          {books.map((_, d) => (
-            <button key={d} onClick={() => setI(d)} aria-label={`Slide ${d + 1}`}
-              className={`h-1.5 rounded-full transition-all ${d === i ? "w-6 bg-brand-600" : "w-1.5 bg-brand-600/30"}`} />
-          ))}
-        </div>
+        <>
+          {/* Desktop: original edge-of-card arrows */}
+          <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous"
+            className="bg-surface border-line absolute left-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border shadow-lg transition hover:scale-110 md:grid">‹</button>
+          <button onClick={() => setI((i + 1) % n)} aria-label="Next"
+            className="bg-surface border-line absolute right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border shadow-lg transition hover:scale-110 md:grid">›</button>
+
+          <div className="mt-6 flex justify-center gap-1.5">
+            {books.map((_, d) => (
+              <button key={d} onClick={() => setI(d)} aria-label={`Slide ${d + 1}`}
+                className={`h-1.5 rounded-full transition-all ${d === i ? "w-6 bg-brand-600" : "w-1.5 bg-brand-600/30"}`} />
+            ))}
+          </div>
+        </>
       )}
       <style jsx>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }`}</style>
     </div>
