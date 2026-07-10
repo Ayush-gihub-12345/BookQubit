@@ -53,6 +53,9 @@ export default function AccountPage() {
     });
   }, [router]);
 
+  const [shelfQuery, setShelfQuery] = useState("");
+  const [shelfSort, setShelfSort] = useState("recent");
+
   const stats = useMemo(() => {
     const read = shelf.filter((s) => s.status === "read");
     const reading = shelf.filter((s) => s.status === "reading");
@@ -69,11 +72,59 @@ export default function AccountPage() {
     };
   }, [shelf]);
 
+  // Books finished per month, last 6 months — pure client-side aggregation, no new API.
+  const activity = useMemo(() => {
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString(undefined, { month: "short" }), count: 0 };
+    });
+    shelf.forEach((s) => {
+      if (s.status !== "read" || !s.finished_at) return;
+      const d = new Date(s.finished_at);
+      const m = months.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
+      if (m) m.count++;
+    });
+    const max = Math.max(1, ...months.map((m) => m.count));
+    return { months, max };
+  }, [shelf]);
+
+  // Top genres across the whole shelf, by book category.
+  const genres = useMemo(() => {
+    const counts = new Map();
+    shelf.forEach((s) => { if (s.category) counts.set(s.category, (counts.get(s.category) || 0) + 1); });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [shelf]);
+
+  const reviews = useMemo(
+    () => shelf.filter((s) => s.review && s.review.trim()).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)),
+    [shelf]
+  );
+
   if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">Sign-in is not configured.</div>;
-  if (user === undefined) return <div className="text-muted grid min-h-[50vh] place-items-center">Loading…</div>;
+  if (user === undefined) {
+    return (
+      <div className="mx-auto max-w-7xl animate-pulse px-4 py-10">
+        <div className="card h-[140px] hover:!translate-y-0" />
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="card h-24 hover:!translate-y-0" />)}
+        </div>
+        <div className="card mt-6 h-24 hover:!translate-y-0" />
+      </div>
+    );
+  }
   if (!user) return null;
 
-  const visible = tab === "all" ? shelf : shelf.filter((s) => s.status === tab);
+  let visible = tab === "all" ? shelf : shelf.filter((s) => s.status === tab);
+  if (shelfQuery.trim()) {
+    const q = shelfQuery.trim().toLowerCase();
+    visible = visible.filter((s) => (s.title || "").toLowerCase().includes(q) || (s.author || "").toLowerCase().includes(q));
+  }
+  visible = [...visible].sort((a, b) => {
+    if (shelfSort === "title") return (a.title || "").localeCompare(b.title || "");
+    if (shelfSort === "rating") return (b.rating || 0) - (a.rating || 0);
+    return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -179,10 +230,49 @@ export default function AccountPage() {
         </form>
       </div>
 
+      {/* Activity + genres */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="card p-5 hover:!translate-y-0">
+          <p className="mb-4 flex items-center gap-2 text-sm font-bold">
+            <Icon name="trendingUp" size={16} className="text-brand-600" /> Reading activity
+            <span className="text-muted font-normal">— books finished, last 6 months</span>
+          </p>
+          <div className="flex h-28 items-end gap-3">
+            {activity.months.map((m) => (
+              <div key={m.key} className="flex flex-1 flex-col items-center gap-1.5">
+                <span className="text-xs font-semibold">{m.count > 0 ? m.count : ""}</span>
+                <div
+                  className="w-full rounded-t-md bg-brand-600/80 transition-all"
+                  style={{ height: `${Math.max(4, (m.count / activity.max) * 80)}px` }}
+                />
+                <span className="text-muted text-[11px]">{m.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5 hover:!translate-y-0">
+          <p className="mb-4 flex items-center gap-2 text-sm font-bold">
+            <Icon name="compass" size={16} className="text-brand-600" /> Favorite genres
+          </p>
+          {genres.length ? (
+            <div className="flex flex-wrap gap-2">
+              {genres.map(([g, n]) => (
+                <Link key={g} href={`/books?category=${encodeURIComponent(g)}`} className="pill !text-xs">
+                  {g} <span className="text-muted">· {n}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted text-sm">Add books to your shelf to see your favorite genres.</p>
+          )}
+        </div>
+      </div>
+
       {/* Shelf */}
       <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">My Shelf</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`pill ${tab === t.id ? "!bg-brand-600 !text-white" : ""}`}>
@@ -190,6 +280,21 @@ export default function AccountPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Icon name="search" size={14} className="text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            value={shelfQuery} onChange={(e) => setShelfQuery(e.target.value)}
+            placeholder="Search your shelf…" className="input w-full !pl-9 text-sm"
+          />
+        </div>
+        <select value={shelfSort} onChange={(e) => setShelfSort(e.target.value)} className="input !w-auto text-sm">
+          <option value="recent">Recently updated</option>
+          <option value="title">Title A–Z</option>
+          <option value="rating">Highest rated</option>
+        </select>
       </div>
 
       {visible.length ? (
@@ -209,6 +314,27 @@ export default function AccountPage() {
           <p className="mt-2">Nothing here yet — open any book and mark it.</p>
           <Link href="/books" className="btn-primary mt-4 inline-flex">Browse Books</Link>
         </div>
+      )}
+
+      {/* Your reviews */}
+      {reviews.length > 0 && (
+        <>
+          <h2 className="mt-12 text-2xl font-bold">Your Reviews <span className="text-muted text-sm font-normal">({reviews.length})</span></h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {reviews.map((s) => (
+              <Link key={s.book_slug} href={`/books/${encodeURIComponent(s.book_slug)}#reviews`} className="card flex gap-3 p-4 hover:!translate-y-0">
+                <div className="h-20 w-14 shrink-0 overflow-hidden rounded-lg bg-black/5">
+                  <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-1 text-sm font-semibold">{s.title || s.book_slug}</p>
+                  {s.rating ? <p className="text-xs text-amber-400">{"★".repeat(s.rating)}</p> : null}
+                  <p className="text-muted mt-1 line-clamp-2 text-xs leading-relaxed">{s.review}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Wishlist */}

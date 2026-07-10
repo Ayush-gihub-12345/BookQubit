@@ -19,7 +19,7 @@ export async function GET(request) {
 
   const { results } = await db
     .prepare(
-      `SELECT s.*, b.title, b.author, b.cover_url, b.rating AS book_rating, b.page_count
+      `SELECT s.*, b.title, b.author, b.cover_url, b.rating AS book_rating, b.page_count, b.category
        FROM shelf s LEFT JOIN books b ON b.slug = s.book_slug AND b.lang='en'
        WHERE s.user_id=?1 ORDER BY s.updated_at DESC`
     )

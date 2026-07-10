@@ -144,7 +144,6 @@ export default async function BookPage({ params }) {
                 </a>
               )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
-              <ShelfControls slug={book.slug} />
             </div>
 
             {related.length > 0 && (
@@ -246,6 +245,10 @@ export default async function BookPage({ params }) {
             )}
 
             <QuickActions book={book} />
+
+            <div className="mt-8 scroll-mt-24" id="write-review">
+              <ShelfControls slug={book.slug} />
+            </div>
 
             {meta.length > 0 && (
               <div className="mt-8">

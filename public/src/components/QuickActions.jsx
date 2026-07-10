@@ -21,6 +21,7 @@ export default function QuickActions({ book }) {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(null);
   const [status, setStatus] = useState(null);
+  const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
   const [shared, setShared] = useState(false);
   const router = useRouter();
@@ -40,7 +41,10 @@ export default function QuickActions({ book }) {
       loadLike(u?.uid);
       if (u) {
         fetch(`/api/shelf?uid=${u.uid}&slug=${encodeURIComponent(book.slug)}`)
-          .then((r) => r.json()).then((d) => setStatus(d.entry?.status || null));
+          .then((r) => r.json()).then((d) => {
+            setStatus(d.entry?.status || null);
+            setProgress(d.entry?.progress || 0);
+          });
       }
     });
   }, [book.slug]);
@@ -101,6 +105,20 @@ export default function QuickActions({ book }) {
     } finally { setBusy(false); }
   };
 
+  // Debounced so dragging the slider doesn't fire a write per pixel.
+  const saveProgress = (value) => {
+    setProgress(value);
+    clearTimeout(saveProgress._t);
+    saveProgress._t = setTimeout(async () => {
+      const idToken = await user.getIdToken();
+      await fetch("/api/shelf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, slug: book.slug, status: "reading", progress: value }),
+      });
+    }, 500);
+  };
+
   if (!firebaseEnabled) return null;
 
   return (
@@ -129,10 +147,25 @@ export default function QuickActions({ book }) {
         <button disabled={busy} onClick={() => setShelfStatus("want")} className={status === "want" ? pillActive : pillOutline}>
           <Icon name="bookmark" size={15} filled={status === "want"} /> {status === "want" ? "In My Library" : "Add to My Library"}
         </button>
+        <button disabled={busy} onClick={() => setShelfStatus("reading")} className={status === "reading" ? pillActive : pillOutline}>
+          <Icon name="clock" size={15} filled={status === "reading"} /> {status === "reading" ? "Currently Reading" : "Track Book"}
+        </button>
         <button disabled={busy} onClick={() => setShelfStatus("read")} className={status === "read" ? pillActive : pillOutline}>
           <Icon name="check" size={15} /> {status === "read" ? "Marked Read" : "Mark Read"}
         </button>
       </div>
+
+      {status === "reading" && (
+        <div className="card mt-1 flex items-center gap-3 rounded-xl px-4 py-3">
+          <Icon name="trendingUp" size={15} className="text-brand-600 shrink-0" />
+          <input
+            type="range" min={0} max={100} value={progress}
+            onChange={(e) => saveProgress(Number(e.target.value))}
+            className="accent-brand-600 h-1.5 flex-1"
+          />
+          <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">{progress}%</span>
+        </div>
+      )}
     </div>
   );
 }
