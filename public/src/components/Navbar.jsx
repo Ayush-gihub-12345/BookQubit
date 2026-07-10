@@ -305,6 +305,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               </div>
             </div>
           </div>
+
+          <Link href="/about"
+            className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/about" ? "text-brand-600" : ""}`}>
+            <Icon name="shieldCheck" size={14} className="opacity-70" /> About
+            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
+          </Link>
         </nav>
       </div>
 
@@ -320,6 +326,9 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             ))}
             <Link href="/liked" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="heart" size={15} className="text-muted" /> Liked Books
+            </Link>
+            <Link href="/about" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name="shieldCheck" size={15} className="text-muted" /> About
             </Link>
             <Link href="/login" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="user" size={15} className="text-muted" /> {labels.signIn}

@@ -71,7 +71,10 @@ export async function queryBooks(lang, opts = {}) {
 
   const ORDER = {
     rating: "rating DESC NULLS LAST",
-    new: "published DESC",
+    // "Newest" reflects when a book was actually added to the catalog
+    // (created_at), not its original publication year — a book published in
+    // 1950 that we just added should still show up as new here.
+    new: "created_at DESC, id DESC",
     title: "title COLLATE NOCASE ASC",
     default: "id ASC",
   };

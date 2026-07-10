@@ -16,6 +16,7 @@ const NAV = [
   { href: "/admin/reviews", icon: "star", label: "Reviews" },
   { href: "/admin/discussions", icon: "bookOpen", label: "Discussions" },
   { href: "/admin/reports", icon: "shieldCheck", label: "Reports" },
+  { href: "/admin/contact", icon: "feather", label: "Contact" },
   { href: "/admin/settings", icon: "grid", label: "Settings" },
 ];
 

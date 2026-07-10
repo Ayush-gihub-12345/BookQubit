@@ -173,6 +173,16 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_reports_resolved ON reports(resolved);
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT,
+  email TEXT NOT NULL,
+  message TEXT NOT NULL,
+  resolved INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_contact_resolved ON contact_messages(resolved);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.
