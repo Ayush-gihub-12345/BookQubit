@@ -257,7 +257,7 @@ CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
 -- storage needed) — each row is one small batch of pre-filtered, deduped
 -- books as a JSON blob. Uploading the whole queue is a handful of row
 -- writes (one per chunk), not one per book; the cron worker expands a few
--- unconsumed chunks into real `books` rows on each run, at a controlled pace.
+-- unconsumed chunks into real 'books' rows on each run, at a controlled pace.
 CREATE TABLE IF NOT EXISTS import_chunks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   chunk_data TEXT NOT NULL,
