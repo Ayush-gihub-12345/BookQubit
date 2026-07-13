@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/Toast";
 import Icon from "@/components/Icon";
 
 // Two-step creation flow: pick a book or author first, then (only then) the
 // title/tags/description fields unlock. No file/image attachments by design.
 export default function NewDiscussionModal({ user, presetBook, onClose, onCreated }) {
+  const toast = useToast();
   const [target, setTarget] = useState(presetBook ? { type: "book", slug: presetBook.slug, label: presetBook.title } : null);
   const [q, setQ] = useState("");
   const [results, setResults] = useState({ books: [], authors: [] });
@@ -45,6 +47,7 @@ export default function NewDiscussionModal({ user, presetBook, onClose, onCreate
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error || "Couldn't start the discussion"); return; }
+      toast("Discussion started");
       onCreated(d.id);
     } finally { setBusy(false); }
   };

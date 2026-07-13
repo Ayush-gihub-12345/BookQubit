@@ -238,6 +238,20 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_contact_resolved ON contact_messages(resolved);
+
+-- Reader-submitted "please add this book" requests — how the catalog grows
+-- from what people actually want, reviewed by an admin (pending/added/declined).
+CREATE TABLE IF NOT EXISTS book_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT,
+  title TEXT NOT NULL,
+  author TEXT,
+  note TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_requests_status ON book_requests(status);
+CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.

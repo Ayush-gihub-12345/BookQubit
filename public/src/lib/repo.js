@@ -574,7 +574,7 @@ export async function getNotifications(uid) {
   const db = await getDb();
   const { results } = await db.prepare(
     `SELECT n.id, n.status, n.created_at, d.id AS discussion_id, d.title, d.body, d.tags,
-       b.title AS book_title, a.name AS author_name, u.name AS starter_name
+       d.book_slug, b.title AS book_title, a.name AS author_name, u.name AS starter_name
      FROM discussion_notifications n
      JOIN discussions d ON d.id = n.discussion_id
      JOIN users u ON u.id = d.user_id

@@ -327,9 +327,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                     </ul>
                   </div>
                 </div>
-                <div className="border-line border-t p-4 text-center">
+                <div className="border-line flex justify-center gap-3 border-t p-4">
                   <Link href="/categories" className="btn-primary !py-2 text-sm">
                     Browse All Categories <Icon name="arrowRight" size={14} />
+                  </Link>
+                  <Link href="/request-a-book" className="btn-ghost !py-2 text-sm">
+                    <Icon name="bookmark" size={14} /> Request a Book
                   </Link>
                 </div>
               </div>

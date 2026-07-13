@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { useToast } from "@/components/Toast";
 import Icon from "@/components/Icon";
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const toast = useToast();
   const [user, setUser] = useState(undefined);
   const [items, setItems] = useState([]);
   const [busyId, setBusyId] = useState(null);
@@ -32,8 +34,14 @@ export default function NotificationsPage() {
         body: JSON.stringify({ idToken, action }),
       });
       if (r.ok) {
+        const discussionId = items.find((n) => n.id === id)?.discussion_id;
         setItems((prev) => prev.filter((n) => n.id !== id));
-        if (action === "join") router.push(`/community?open=${items.find((n) => n.id === id)?.discussion_id}`);
+        if (action === "join") {
+          toast("Joined the discussion");
+          router.push(`/community?open=${discussionId}`);
+        } else {
+          toast("Notification dismissed");
+        }
       }
     } finally { setBusyId(null); }
   };
@@ -55,7 +63,9 @@ export default function NotificationsPage() {
             <div key={n.id} className="card p-4 hover:!translate-y-0">
               <p className="text-muted text-xs">
                 {n.starter_name} started a discussion {n.book_title ? `on ` : n.author_name ? `about ` : ""}
-                {n.book_title ? <Link href="#" className="font-medium text-brand-600">{n.book_title}</Link> : n.author_name}
+                {n.book_title ? (
+                  <Link href={`/books/${encodeURIComponent(n.book_slug)}`} className="font-medium text-brand-600 hover:underline">{n.book_title}</Link>
+                ) : n.author_name}
               </p>
               <h2 className="mt-1 font-semibold">{n.title}</h2>
               {n.body && <p className="text-muted mt-1 line-clamp-2 text-sm">{n.body}</p>}

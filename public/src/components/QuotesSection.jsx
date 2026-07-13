@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { useToast } from "./Toast";
 import Icon from "./Icon";
 
 // A lightweight "commonplace book" — readers save favorite passages from a
 // book, visible to everyone here and on the saver's public profile.
 export default function QuotesSection({ bookSlug }) {
+  const toast = useToast();
   const [user, setUser] = useState(null);
   const [quotes, setQuotes] = useState([]);
   const [adding, setAdding] = useState(false);
@@ -40,6 +42,9 @@ export default function QuotesSection({ bookSlug }) {
       if (r.ok) {
         setText(""); setPage(""); setAdding(false);
         await load();
+        toast("Quote saved to your profile");
+      } else {
+        toast("Couldn't save that quote — try again.", "error");
       }
     } finally { setBusy(false); }
   };
@@ -52,6 +57,7 @@ export default function QuotesSection({ bookSlug }) {
       body: JSON.stringify({ idToken }),
     });
     setQuotes((prev) => prev.filter((q) => q.id !== id));
+    toast("Quote removed");
   };
 
   return (

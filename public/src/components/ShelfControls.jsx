@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { useToast } from "./Toast";
 
 const MOODS = ["✨ inspiring", "🌧️ emotional", "😂 funny", "🌑 dark", "🧠 informative", "🫀 hopeful", "😰 tense", "🕯️ reflective"];
 const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
@@ -12,6 +13,7 @@ const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
 // page — publishing a review here just makes sure the book is on the shelf
 // (defaults to "read" if it isn't shelved yet at all).
 export default function ShelfControls({ slug }) {
+  const toast = useToast();
   const [user, setUser] = useState(null);
   const [entry, setEntry] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -66,6 +68,7 @@ export default function ShelfControls({ slug }) {
     setSpoiler(false);
     setReviewOpen(true);
     setReviewSaved(false);
+    toast("Review deleted");
   };
 
   const selectedMoods = entry?.moods ? JSON.parse(entry.moods) : [];
@@ -156,6 +159,7 @@ export default function ShelfControls({ slug }) {
                 await update({ review: reviewText.trim(), spoiler, status: entry?.status || "read" });
                 setReviewSaved(true);
                 setReviewOpen(false);
+                toast("Review published");
               }}
               className="btn-primary !px-4 !py-1.5 text-xs"
             >

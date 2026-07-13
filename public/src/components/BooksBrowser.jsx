@@ -265,7 +265,10 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
               <Icon name="search" size={40} className="text-muted mx-auto" />
               <p className="mt-4 text-lg font-semibold">No books found</p>
               <p className="text-muted mt-1 text-sm">Try adjusting your filters or search terms.</p>
-              <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary mt-5 inline-flex">Clear filters</button>
+              <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">Clear filters</button>
+                <Link href="/request-a-book" className="btn-ghost inline-flex">Can't find it? Request it</Link>
+              </div>
             </div>
           ) : isList ? (
             <div className="space-y-4">
