@@ -10,7 +10,10 @@ import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import HScrollRow from "@/components/HScrollRow";
 import Logo from "@/components/Logo";
-import { listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded, getMoodCounts } from "@/lib/repo";
+import {
+  listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded, getMoodCounts,
+  getFeaturedBooks, getRandomBook, getPlatformStats,
+} from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -19,19 +22,21 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const lang = await getLang();
   const _ = t(lang);
-  const [all, topRated, newReleases, f, authors, pubs, comics, recentlyAdded, moods] = await Promise.all([
-    listBooks(lang),
+  const [featuredBooks, topRated, newReleases, exploreBooks, f, authors, pubs, comics, recentlyAdded, moods, stats, surprise] = await Promise.all([
+    getFeaturedBooks(lang, 5),
     listBooks(lang, { sort: "rating", limit: 10 }),
     listBooks(lang, { sort: "new", limit: 6 }),
+    listBooks(lang, { limit: 12 }),
     facets(lang),
     listAuthors(lang),
     listPublications(lang),
     listComics(lang),
     getRecentlyAdded(lang, 8),
     getMoodCounts(),
+    getPlatformStats(),
+    getRandomBook(lang),
   ]);
-  const heroBooks = all.filter((b) => b.featured).slice(0, 5);
-  const surprise = all.length ? all[Math.floor(Math.random() * all.length)] : null;
+  const heroBooks = featuredBooks.length ? featuredBooks : topRated.slice(0, 5);
 
   const QUOTES = [
     { text: "A reader lives a thousand lives before he dies. The man who never reads lives only one.", by: "George R.R. Martin" },
@@ -47,10 +52,10 @@ export default async function Home() {
   ];
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
   const quote = QUOTES[dayOfYear % QUOTES.length];
-  const collectionsWithBooks = f.collections.slice(0, 3).map((c) => ({
-    ...c,
-    books: all.filter((b) => b.collection === c.name).slice(0, 2),
-  }));
+  const topCollections = f.collections.slice(0, 3);
+  const collectionsWithBooks = await Promise.all(
+    topCollections.map(async (c) => ({ ...c, books: await listBooks(lang, { collection: c.name, limit: 2 }) }))
+  );
 
   const HUB = [
     { icon: "compass", title: "Explore Library", desc: "Discover new worlds and hidden literary gems", href: "/books", color: "from-sky-500 to-blue-600" },
@@ -105,7 +110,7 @@ export default async function Home() {
             {_("ctaHeading")} <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">{_("ctaHighlight")}</span>
           </h2>
           <p className="mt-3 text-white/70">
-            {_("ctaSub", { count: all.length, genres: f.categories.length })}
+            {_("ctaSub", { count: stats.books, genres: f.categories.length })}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/books" className="btn-primary">{_("browse")}</Link>
@@ -163,7 +168,7 @@ export default async function Home() {
       {/* Explore Books */}
       <Section title={_("featured")} subtitle="Dive into our curated selection of must-read titles" href="/books">
         <HScrollRow>
-          {all.slice(0, 12).map((b) => (
+          {exploreBooks.map((b) => (
             <div key={b.id} className="w-40 sm:w-44"><BookCard book={b} /></div>
           ))}
         </HScrollRow>

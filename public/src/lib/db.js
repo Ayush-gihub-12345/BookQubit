@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS books (
 CREATE INDEX IF NOT EXISTS idx_books_lang ON books(lang);
 CREATE INDEX IF NOT EXISTS idx_books_cat ON books(lang, category);
 CREATE INDEX IF NOT EXISTS idx_books_rating ON books(lang, rating DESC);
+CREATE INDEX IF NOT EXISTS idx_books_collection ON books(lang, collection);
+CREATE INDEX IF NOT EXISTS idx_books_country ON books(lang, country);
+CREATE INDEX IF NOT EXISTS idx_books_created ON books(lang, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_books_featured ON books(lang, featured);
+CREATE INDEX IF NOT EXISTS idx_books_author ON books(lang, author);
 
 CREATE TABLE IF NOT EXISTS authors (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

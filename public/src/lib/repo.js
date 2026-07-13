@@ -39,42 +39,22 @@ function mapBook(r) {
   };
 }
 
-async function allBooks(lang) {
-  return cached(`books:${lang}`, async () => {
-    const db = await getDb();
-    let { results } = await db
-      .prepare("SELECT * FROM books WHERE lang=?1 ORDER BY id")
-      .bind(lang).all();
-    if (!results.length && lang !== "en") {
-      ({ results } = await db
-        .prepare("SELECT * FROM books WHERE lang='en' ORDER BY id").all());
-    }
-    return results;
-  });
-}
-
-export async function listBooks(lang, { category, collection, tag, q, sort, limit } = {}) {
-  let books = (await allBooks(lang)).map(mapBook);
-  if (category) books = books.filter((b) => b.category?.toLowerCase() === category.toLowerCase());
-  if (collection) books = books.filter((b) => b.collection?.toLowerCase() === collection.toLowerCase());
-  if (tag) books = books.filter((b) => b.tags.some((t) => t.toLowerCase() === tag.toLowerCase()));
-  if (q) {
-    const s = q.toLowerCase();
-    books = books.filter((b) =>
-      [b.title, b.author, b.description, b.category].some((f) => f?.toLowerCase().includes(s)) ||
-      b.tags.some((t) => t.toLowerCase().includes(s)));
-  }
-  if (sort === "rating") books = [...books].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-  if (sort === "new") books = [...books].sort((a, b) => String(b.published || "").localeCompare(String(a.published || "")));
-  if (sort === "title") books = [...books].sort((a, b) => a.title.localeCompare(b.title));
-  books = limit ? books.slice(0, limit) : books;
+// Convenience wrapper around queryBooks() for callers that just want a plain
+// array (not pagination metadata) — always SQL-bound via an explicit or
+// default cap. Never loads more of the catalog than the caller asked for, no
+// matter how large the books table gets.
+export async function listBooks(lang, { category, collection, tag, q, sort, limit = 60 } = {}) {
+  const { books } = await queryBooks(lang, { category, collection, tag, q, sort, perPage: limit, page: 1 });
   return books;
 }
 
 // SQL-level catalog query with real pagination — scales to very large catalogs
 // (never loads the full table). Used by the /books browser.
 export async function queryBooks(lang, opts = {}) {
-  const { q, category, collection, tag, format, country, minRating, mood, sort, page = 1, perPage = 32 } = opts;
+  const { q, category, collection, tag, format, country, minRating, mood, sort, page = 1 } = opts;
+  // Clamped regardless of caller — protects against an accidental (or
+  // malicious) request for perPage=1000000 forcing a huge unbounded read.
+  const perPage = Math.min(Math.max(1, Number(opts.perPage) || 32), 200);
   const db = await getDb();
 
   const where = ["lang = ?"];
@@ -89,9 +69,9 @@ export async function queryBooks(lang, opts = {}) {
   // not book metadata — StoryGraph-style discovery instead of genre-only.
   if (mood) { where.push("slug IN (SELECT DISTINCT book_slug FROM shelf WHERE moods LIKE ?)"); binds.push(`%"${mood}"%`); }
   if (q) {
-    where.push("(title LIKE ? OR author LIKE ? OR description LIKE ?)");
+    where.push("(title LIKE ? OR author LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)");
     const like = `%${q}%`;
-    binds.push(like, like, like);
+    binds.push(like, like, like, like, like);
   }
 
   const ORDER = {
@@ -131,16 +111,17 @@ export async function queryBooks(lang, opts = {}) {
   };
 }
 
+// Direct indexed lookup (UNIQUE(slug, lang)) — never scans the catalog,
+// so this stays fast whether there are dozens of books or millions.
 export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
-  const books = (await allBooks(lang)).map(mapBook);
-  const hit = books.find((b) => b.slug === decoded);
-  if (hit) return hit;
+  const db = await getDb();
+  const row = await db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first();
+  if (row) return mapBook(row);
   // Localized-slug support: the slug may belong to another language's row
   // (e.g. a Devanagari slug opened while the UI language is English).
-  const db = await getDb();
-  const row = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
-  return row ? mapBook(row) : null;
+  const fallback = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
+  return fallback ? mapBook(fallback) : null;
 }
 
 // All language variants of a book (matched by ISBN prefix-insensitive title
@@ -163,39 +144,99 @@ export async function getRecentlyAdded(lang, limit = 8) {
   return books;
 }
 
+export async function getFeaturedBooks(lang, limit = 5) {
+  return cached(`featured:${lang}:${limit}`, async () => {
+    const db = await getDb();
+    let { results } = await db
+      .prepare("SELECT * FROM books WHERE lang=?1 AND featured=1 ORDER BY id LIMIT ?2")
+      .bind(lang, limit).all();
+    if (!results.length && lang !== "en") {
+      ({ results } = await db
+        .prepare("SELECT * FROM books WHERE lang='en' AND featured=1 ORDER BY id LIMIT ?1")
+        .bind(limit).all());
+    }
+    return results.map(mapBook);
+  }, 300);
+}
+
+// Picks a random id in range instead of ORDER BY RANDOM() — the latter forces
+// a full-table scan+sort that gets slower as the catalog grows; this stays
+// O(log n) via the primary key index no matter how many books there are.
+export async function getRandomBook(lang) {
+  const db = await getDb();
+  const bounds = await db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first();
+  if (!bounds?.hi) return null;
+  const randomId = bounds.lo + Math.floor(Math.random() * (bounds.hi - bounds.lo + 1));
+  const row = await db.prepare("SELECT * FROM books WHERE lang=?1 AND id >= ?2 ORDER BY id LIMIT 1").bind(lang, randomId).first();
+  return row ? mapBook(row) : null;
+}
+
+// Slugs only, uncapped by design — used exclusively by the (server-only,
+// never publicly exposed) sitemap generator, which needs to enumerate the
+// entire catalog a shard at a time rather than a UI-sized page.
+export async function getBookSlugsPage(lang, { page = 1, perPage = 40000 } = {}) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    "SELECT slug FROM books WHERE lang=?1 ORDER BY id LIMIT ?2 OFFSET ?3"
+  ).bind(lang, perPage, (page - 1) * perPage).all();
+  return results.map((r) => r.slug);
+}
+
 export async function getBookAlternates(book) {
   if (!book?.isbn && !book?.title) return [];
   const db = await getDb();
   const { results } = await db
-    .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2")
+    .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2 LIMIT 25")
     .bind(book.isbn || "", book.title)
     .all();
   return results;
 }
 
+// Direct SQL query, bounded by `limit` — matches on the same category or
+// author, ranked by rating. Never loads the catalog to find these.
 export async function relatedBooks(book, lang, limit = 4) {
-  const books = await listBooks(lang);
-  return books
-    .filter((b) => b.id !== book.id && (b.category === book.category || b.author === book.author))
-    .slice(0, limit);
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
+     ORDER BY rating DESC NULLS LAST LIMIT ?5`
+  ).bind(lang, book.id, book.category || "", book.author || "", limit).all();
+  return results.map(mapBook);
 }
 
+// Facet counts computed entirely in SQL (GROUP BY / json_each) — no matter
+// how large the catalog gets, this only ever returns the top N per facet,
+// never touches every row in application memory.
 export async function facets(lang) {
   return cached(`facets:${lang}`, async () => {
-    const books = (await allBooks(lang)).map(mapBook);
-    const count = (arr) => {
-      const m = new Map();
-      arr.forEach((v) => v && m.set(v, (m.get(v) || 0) + 1));
-      return [...m.entries()].map(([name, n]) => ({ name, count: n }))
-        .sort((a, b) => b.count - a.count);
-    };
+    const db = await getDb();
+    const [categories, collections, countries, tags] = await Promise.all([
+      db.prepare(
+        `SELECT category AS name, COUNT(*) AS count FROM books
+         WHERE lang=?1 AND category IS NOT NULL AND category != ''
+         GROUP BY category ORDER BY count DESC LIMIT 60`
+      ).bind(lang).all(),
+      db.prepare(
+        `SELECT collection AS name, COUNT(*) AS count FROM books
+         WHERE lang=?1 AND collection IS NOT NULL AND collection != ''
+         GROUP BY collection ORDER BY count DESC LIMIT 40`
+      ).bind(lang).all(),
+      db.prepare(
+        `SELECT country AS name, COUNT(*) AS count FROM books
+         WHERE lang=?1 AND country IS NOT NULL AND country != ''
+         GROUP BY country ORDER BY count DESC LIMIT 40`
+      ).bind(lang).all(),
+      db.prepare(
+        `SELECT value AS name, COUNT(*) AS count FROM books, json_each(books.tags)
+         WHERE books.lang=?1 GROUP BY value ORDER BY count DESC LIMIT 60`
+      ).bind(lang).all(),
+    ]);
     return {
-      categories: count(books.map((b) => b.category)),
-      collections: count(books.map((b) => b.collection)),
-      countries: count(books.map((b) => b.country)),
-      tags: count(books.flatMap((b) => b.tags)),
+      categories: categories.results,
+      collections: collections.results,
+      countries: countries.results,
+      tags: tags.results,
     };
-  });
+  }, 600);
 }
 
 // How readers actually felt about books, aggregated across every shelf entry
@@ -244,14 +285,22 @@ export async function getComic(slug, lang) {
   return (await listComics(lang)).find((c) => c.slug === decodeURIComponent(slug)) || null;
 }
 
+// Direct, indexed (lang, author) query — an author page never needs to
+// filter the whole catalog to find their own books.
 export async function booksByAuthor(name, lang) {
-  const books = await listBooks(lang);
-  return books.filter((b) => b.author?.toLowerCase() === name?.toLowerCase());
+  const db = await getDb();
+  const { results } = await db.prepare(
+    "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
+  ).bind(lang, name || "").all();
+  return results.map(mapBook);
 }
 
 export async function booksByPublisher(name, lang) {
-  const books = await listBooks(lang);
-  return books.filter((b) => b.publisher?.toLowerCase().includes(name?.toLowerCase()));
+  const db = await getDb();
+  const { results } = await db.prepare(
+    "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
+  ).bind(lang, `%${name || ""}%`).all();
+  return results.map(mapBook);
 }
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────
