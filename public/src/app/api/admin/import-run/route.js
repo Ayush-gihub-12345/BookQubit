@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
-const CRON_WORKER_URL = "https://bookqubit-import-cron.webpagewale.workers.dev/run";
-
 // POST /api/admin/import-run — admin-only proxy that triggers one bulk-import
-// pass right now. The cron worker's /run route is itself locked behind
-// IMPORT_TRIGGER_SECRET, which only ever lives server-side here — the
-// browser never sees it, so the raw worker URL isn't usable by anyone else.
+// pass right now. Calls the cron worker via a Cloudflare Service Binding
+// (IMPORT_CRON, see wrangler.jsonc) rather than a plain fetch() to its public
+// *.workers.dev URL — Cloudflare blocks Worker-to-Worker fetches across the
+// shared workers.dev zone (error 1042), so a service binding is the only way
+// for one Worker to call another directly. It's also inherently private (not
+// internet-reachable), though the worker's own IMPORT_TRIGGER_SECRET check
+// stays in place as defense in depth.
 //
 // { maxChunks } lets the dashboard process one chunk per call (looping
 // client-side) so it can show live per-chunk progress instead of one
@@ -14,14 +17,17 @@ const CRON_WORKER_URL = "https://bookqubit-import-cron.webpagewale.workers.dev/r
 export async function POST(request) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const secret = process.env.IMPORT_TRIGGER_SECRET;
-  if (!secret) return NextResponse.json({ error: "IMPORT_TRIGGER_SECRET not configured" }, { status: 500 });
+  const { env } = await getCloudflareContext({ async: true });
+  if (!env.IMPORT_CRON) return NextResponse.json({ error: "IMPORT_CRON service binding not configured" }, { status: 500 });
 
   const body = await request.json().catch(() => ({}));
-  const url = new URL(CRON_WORKER_URL);
+  const url = new URL("https://bookqubit-import-cron/run");
   if (body.maxChunks) url.searchParams.set("maxChunks", String(body.maxChunks));
 
-  const res = await fetch(url, { method: "POST", headers: { "X-Import-Secret": secret } });
+  const res = await env.IMPORT_CRON.fetch(url, {
+    method: "POST",
+    headers: { "X-Import-Secret": env.IMPORT_TRIGGER_SECRET || "" },
+  });
   if (!res.ok) {
     // Surface the worker's own response body (e.g. "unauthorized" on a secret
     // mismatch) so a bad deploy is diagnosable from the browser console

@@ -20,5 +20,11 @@
       "binding": "CACHE",
       "id": "70c79257dad043be8b1401edd5d3f6d9"
     }
+  ],
+  "services": [
+    {
+      "binding": "IMPORT_CRON",
+      "service": "bookqubit-import-cron"
+    }
   ]
 }
