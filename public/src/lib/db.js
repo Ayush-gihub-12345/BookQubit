@@ -256,7 +256,7 @@ CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
 -- The bulk-import queue itself, staged entirely in D1 (no R2/external
 -- storage needed) — each row is one small batch of pre-filtered, deduped
 -- books as a JSON blob. Uploading the whole queue is a handful of row
--- writes (one per chunk), not one per book; the cron worker expands a few
+-- writes (one per chunk), not one per book. The cron worker expands a few
 -- unconsumed chunks into real 'books' rows on each run, at a controlled pace.
 CREATE TABLE IF NOT EXISTS import_chunks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
