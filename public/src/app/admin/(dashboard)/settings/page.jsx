@@ -10,6 +10,8 @@ const FIELDS = [
   { key: "social_youtube", label: "YouTube URL", placeholder: "https://youtube.com/@bookqubit" },
 ];
 
+const AFFILIATE_FIELD = { key: "amazon_assoc_tag", label: "Amazon Associate Tag", placeholder: "yourtag-20" };
+
 export default function AdminSettingsPage() {
   const [values, setValues] = useState({});
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,23 @@ export default function AdminSettingsPage() {
       </p>
 
       <form onSubmit={save} className="mt-6 space-y-4">
+        <div className="rounded-xl border border-emerald-500/20 bg-[#0f2018] p-4">
+          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">
+            <Icon name="cart" size={13} /> {AFFILIATE_FIELD.label}
+          </label>
+          <input
+            value={values[AFFILIATE_FIELD.key] || ""}
+            onChange={(e) => setValues((v) => ({ ...v, [AFFILIATE_FIELD.key]: e.target.value }))}
+            placeholder={AFFILIATE_FIELD.placeholder}
+            className="w-full rounded-lg border border-white/10 bg-[#131c31] px-3 py-2 text-sm text-white outline-none focus:border-brand-500"
+          />
+          <p className="text-muted mt-2 text-xs">
+            Takes effect immediately, site-wide — no redeploy needed. Every "Get Book" link uses this tag:
+            direct product links when a book has an Amazon ASIN, otherwise an Amazon search link built from
+            the book's title and author, so every book gets a working, tracked buy link even before you add ASINs.
+          </p>
+        </div>
+
         {FIELDS.map((f) => (
           <div key={f.key}>
             <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">{f.label}</label>

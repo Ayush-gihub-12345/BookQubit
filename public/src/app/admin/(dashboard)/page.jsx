@@ -22,8 +22,12 @@ const MODERATION = [
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const [importStatus, setImportStatus] = useState(null);
 
-  useEffect(() => { fetch("/api/admin/stats").then((r) => r.json()).then(setStats); }, []);
+  useEffect(() => {
+    fetch("/api/admin/stats").then((r) => r.json()).then(setStats);
+    fetch("/api/admin/import-status").then((r) => r.json()).then((d) => setImportStatus(d.progress));
+  }, []);
 
   if (!stats) return <p className="text-muted text-sm">Loading dashboard…</p>;
 
@@ -183,6 +187,45 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Bulk import (Open Library cron worker) */}
+      {importStatus && (
+        <div className="mt-6 rounded-2xl border border-white/10 bg-[#131c31] p-5">
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-2 text-sm font-bold text-white">
+              <Icon name="trendingUp" size={15} className="text-brand-400" /> Bulk Import (Open Library)
+            </p>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+              importStatus.last_status === "complete" ? "bg-emerald-500/15 text-emerald-400" : "bg-brand-600/15 text-brand-400"
+            }`}>
+              {importStatus.last_status === "complete" ? "Complete" : "In progress"}
+            </span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <p className="text-lg font-bold text-white">{importStatus.total_imported.toLocaleString()}</p>
+              <p className="text-muted text-[11px]">Imported</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">{importStatus.total_skipped.toLocaleString()}</p>
+              <p className="text-muted text-[11px]">Skipped (duplicates)</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">{importStatus.next_chunk} / {importStatus.total_chunks}</p>
+              <p className="text-muted text-[11px]">Chunks processed</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">{importStatus.last_run_at ? new Date(importStatus.last_run_at).toLocaleString() : "—"}</p>
+              <p className="text-muted text-[11px]">Last run</p>
+            </div>
+          </div>
+          {importStatus.total_chunks > 0 && (
+            <div className="bg-line mt-4 h-1.5 w-full overflow-hidden rounded-full">
+              <div className="h-full bg-brand-500" style={{ width: `${Math.min(100, (importStatus.next_chunk / importStatus.total_chunks) * 100)}%` }} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

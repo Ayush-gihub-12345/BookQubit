@@ -252,6 +252,21 @@ CREATE TABLE IF NOT EXISTS book_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_requests_status ON book_requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
+
+-- Tracks the bulk-import cron's position in the R2-staged chunk queue —
+-- single row (id=1) since there's one active import stream at a time.
+-- Lets the daily cron worker resume exactly where yesterday left off, and
+-- lets the admin dashboard show live progress.
+CREATE TABLE IF NOT EXISTS import_progress (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  source_prefix TEXT,
+  next_chunk INTEGER DEFAULT 0,
+  total_chunks INTEGER DEFAULT 0,
+  total_imported INTEGER DEFAULT 0,
+  total_skipped INTEGER DEFAULT 0,
+  last_run_at TEXT,
+  last_status TEXT
+);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.

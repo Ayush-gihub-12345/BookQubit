@@ -25,17 +25,29 @@ export async function upsertUser(uid, name, photo) {
   ).bind(uid, name, photo || null, slug).run();
 }
 
-function mapBook(r) {
-  const tag = process.env.AMAZON_ASSOC_TAG;
+// `assocTag` comes from site_settings (admin-editable, takes effect
+// immediately) rather than a build-time env var, so setting it once in the
+// admin panel turns on affiliate tracking for every book without a redeploy.
+// Books without a real Amazon ASIN/URL (e.g. bulk-imported ones) still get a
+// working buy link via an Amazon search built from title+author — it just
+// upgrades to a direct product link once a real amazon_asin is added later.
+function mapBook(r, assocTag = "") {
+  let buyUrl;
+  if (r.amazon_asin) {
+    buyUrl = `https://www.amazon.com/dp/${r.amazon_asin}${assocTag ? `?tag=${assocTag}` : ""}`;
+  } else if (r.amazon_url) {
+    buyUrl = assocTag ? `${r.amazon_url}${r.amazon_url.includes("?") ? "&" : "?"}tag=${assocTag}` : r.amazon_url;
+  } else {
+    const q = encodeURIComponent([r.title, r.author].filter(Boolean).join(" "));
+    buyUrl = `https://www.amazon.com/s?k=${q}${assocTag ? `&tag=${assocTag}` : ""}`;
+  }
   return {
     ...r,
     genres: J(r.genres),
     subjects: J(r.subjects),
     tags: J(r.tags),
     keyPoints: J(r.key_points),
-    buyUrl: r.amazon_asin && tag
-      ? `https://www.amazon.com/dp/${r.amazon_asin}?tag=${tag}`
-      : r.amazon_url || null,
+    buyUrl,
   };
 }
 
@@ -103,8 +115,9 @@ export async function queryBooks(lang, opts = {}) {
     ]);
   }
 
+  const { amazon_assoc_tag } = await getSiteSettings();
   return {
-    books: rows.results.map(mapBook),
+    books: rows.results.map((r) => mapBook(r, amazon_assoc_tag)),
     total: count.n,
     page: Number(page),
     pages: Math.max(1, Math.ceil(count.n / perPage)),
@@ -116,47 +129,60 @@ export async function queryBooks(lang, opts = {}) {
 export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
   const db = await getDb();
-  const row = await db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first();
-  if (row) return mapBook(row);
+  const [row, { amazon_assoc_tag }] = await Promise.all([
+    db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first(),
+    getSiteSettings(),
+  ]);
+  if (row) return mapBook(row, amazon_assoc_tag);
   // Localized-slug support: the slug may belong to another language's row
   // (e.g. a Devanagari slug opened while the UI language is English).
   const fallback = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
-  return fallback ? mapBook(fallback) : null;
+  return fallback ? mapBook(fallback, amazon_assoc_tag) : null;
 }
 
 // All language variants of a book (matched by ISBN prefix-insensitive title
 // fallback) — used for hreflang alternates and the language-switch UX.
 // "Recently added to BookQubit" — ordered by when the row was created, not
 // by the book's publication year (that's the separate "New Releases" sort).
+// Note: caches the raw rows, not the mapped book (buyUrl is applied after
+// the cache lookup) — so an admin changing the Amazon associate tag takes
+// effect on the very next request instead of waiting out this cache's TTL.
 export async function getRecentlyAdded(lang, limit = 8) {
-  const books = await cached(`recent-added:${lang}:${limit}`, async () => {
-    const db = await getDb();
-    let { results } = await db
-      .prepare("SELECT * FROM books WHERE lang=?1 ORDER BY created_at DESC, id DESC LIMIT ?2")
-      .bind(lang, limit).all();
-    if (!results.length && lang !== "en") {
-      ({ results } = await db
-        .prepare("SELECT * FROM books WHERE lang='en' ORDER BY created_at DESC, id DESC LIMIT ?1")
-        .bind(limit).all());
-    }
-    return results.map(mapBook);
-  }, 300);
-  return books;
+  const [rows, { amazon_assoc_tag }] = await Promise.all([
+    cached(`recent-added:${lang}:${limit}`, async () => {
+      const db = await getDb();
+      let { results } = await db
+        .prepare("SELECT * FROM books WHERE lang=?1 ORDER BY created_at DESC, id DESC LIMIT ?2")
+        .bind(lang, limit).all();
+      if (!results.length && lang !== "en") {
+        ({ results } = await db
+          .prepare("SELECT * FROM books WHERE lang='en' ORDER BY created_at DESC, id DESC LIMIT ?1")
+          .bind(limit).all());
+      }
+      return results;
+    }, 300),
+    getSiteSettings(),
+  ]);
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 export async function getFeaturedBooks(lang, limit = 5) {
-  return cached(`featured:${lang}:${limit}`, async () => {
-    const db = await getDb();
-    let { results } = await db
-      .prepare("SELECT * FROM books WHERE lang=?1 AND featured=1 ORDER BY id LIMIT ?2")
-      .bind(lang, limit).all();
-    if (!results.length && lang !== "en") {
-      ({ results } = await db
-        .prepare("SELECT * FROM books WHERE lang='en' AND featured=1 ORDER BY id LIMIT ?1")
-        .bind(limit).all());
-    }
-    return results.map(mapBook);
-  }, 300);
+  const [rows, { amazon_assoc_tag }] = await Promise.all([
+    cached(`featured:${lang}:${limit}`, async () => {
+      const db = await getDb();
+      let { results } = await db
+        .prepare("SELECT * FROM books WHERE lang=?1 AND featured=1 ORDER BY id LIMIT ?2")
+        .bind(lang, limit).all();
+      if (!results.length && lang !== "en") {
+        ({ results } = await db
+          .prepare("SELECT * FROM books WHERE lang='en' AND featured=1 ORDER BY id LIMIT ?1")
+          .bind(limit).all());
+      }
+      return results;
+    }, 300),
+    getSiteSettings(),
+  ]);
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // Picks a random id in range instead of ORDER BY RANDOM() — the latter forces
@@ -167,8 +193,11 @@ export async function getRandomBook(lang) {
   const bounds = await db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first();
   if (!bounds?.hi) return null;
   const randomId = bounds.lo + Math.floor(Math.random() * (bounds.hi - bounds.lo + 1));
-  const row = await db.prepare("SELECT * FROM books WHERE lang=?1 AND id >= ?2 ORDER BY id LIMIT 1").bind(lang, randomId).first();
-  return row ? mapBook(row) : null;
+  const [row, { amazon_assoc_tag }] = await Promise.all([
+    db.prepare("SELECT * FROM books WHERE lang=?1 AND id >= ?2 ORDER BY id LIMIT 1").bind(lang, randomId).first(),
+    getSiteSettings(),
+  ]);
+  return row ? mapBook(row, amazon_assoc_tag) : null;
 }
 
 // Slugs only, uncapped by design — used exclusively by the (server-only,
@@ -196,11 +225,14 @@ export async function getBookAlternates(book) {
 // author, ranked by rating. Never loads the catalog to find these.
 export async function relatedBooks(book, lang, limit = 4) {
   const db = await getDb();
-  const { results } = await db.prepare(
-    `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
-     ORDER BY rating DESC NULLS LAST LIMIT ?5`
-  ).bind(lang, book.id, book.category || "", book.author || "", limit).all();
-  return results.map(mapBook);
+  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
+    db.prepare(
+      `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
+       ORDER BY rating DESC NULLS LAST LIMIT ?5`
+    ).bind(lang, book.id, book.category || "", book.author || "", limit).all(),
+    getSiteSettings(),
+  ]);
+  return results.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // Facet counts computed entirely in SQL (GROUP BY / json_each) — no matter
@@ -289,18 +321,24 @@ export async function getComic(slug, lang) {
 // filter the whole catalog to find their own books.
 export async function booksByAuthor(name, lang) {
   const db = await getDb();
-  const { results } = await db.prepare(
-    "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
-  ).bind(lang, name || "").all();
-  return results.map(mapBook);
+  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
+    db.prepare(
+      "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
+    ).bind(lang, name || "").all(),
+    getSiteSettings(),
+  ]);
+  return results.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 export async function booksByPublisher(name, lang) {
   const db = await getDb();
-  const { results } = await db.prepare(
-    "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
-  ).bind(lang, `%${name || ""}%`).all();
-  return results.map(mapBook);
+  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
+    db.prepare(
+      "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
+    ).bind(lang, `%${name || ""}%`).all(),
+    getSiteSettings(),
+  ]);
+  return results.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────
@@ -887,6 +925,7 @@ export async function upsertUserPreferences(uid, { genres, onboarded } = {}) {
 // rarely changes but should reflect admin edits without a redeploy.
 const SETTINGS_DEFAULTS = {
   social_twitter: "", social_instagram: "", social_facebook: "", social_youtube: "", social_goodreads_style: "",
+  amazon_assoc_tag: "",
 };
 
 export async function getSiteSettings() {
