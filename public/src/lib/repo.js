@@ -648,6 +648,29 @@ export async function getUserProfile(idOrSlug) {
   return { user, shelf: shelf.results };
 }
 
+// A reader's social graph — who they follow and who follows them (readers
+// only, via the generic `follows` table's target_type='reader' rows) — plus
+// total counts, since the returned lists are capped for display.
+export async function getReaderNetwork(uid, limit = 12) {
+  const db = await getDb();
+  const [following, followers, followingCount, followerCount] = await Promise.all([
+    db.prepare(
+      `SELECT u.id, u.name, u.photo_url, u.slug FROM follows f JOIN users u ON u.id = f.target_id
+       WHERE f.user_id=?1 AND f.target_type='reader' ORDER BY f.created_at DESC LIMIT ?2`
+    ).bind(uid, limit).all(),
+    db.prepare(
+      `SELECT u.id, u.name, u.photo_url, u.slug FROM follows f JOIN users u ON u.id = f.user_id
+       WHERE f.target_id=?1 AND f.target_type='reader' ORDER BY f.created_at DESC LIMIT ?2`
+    ).bind(uid, limit).all(),
+    db.prepare("SELECT COUNT(*) AS n FROM follows WHERE user_id=?1 AND target_type='reader'").bind(uid).first(),
+    db.prepare("SELECT COUNT(*) AS n FROM follows WHERE target_id=?1 AND target_type='reader'").bind(uid).first(),
+  ]);
+  return {
+    following: following.results, followers: followers.results,
+    followingCount: followingCount.n, followerCount: followerCount.n,
+  };
+}
+
 export async function addQuote(userId, { bookSlug, text, page }) {
   const db = await getDb();
   const res = await db.prepare(

@@ -36,6 +36,8 @@ export default function AccountPage() {
   const [prefs, setPrefs] = useState(null);
   const [allCategories, setAllCategories] = useState([]);
   const [editingPrefs, setEditingPrefs] = useState(false);
+  const [network, setNetwork] = useState(null);
+  const [networkTab, setNetworkTab] = useState("following");
 
   useEffect(() => {
     setWishlist(readWishlist());
@@ -45,15 +47,17 @@ export default function AccountPage() {
     return auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (!u) { router.push("/login"); return; }
-      const [shelfRes, lbRes, goalRes, prefsRes] = await Promise.all([
+      const [shelfRes, lbRes, goalRes, prefsRes, networkRes] = await Promise.all([
         fetch(`/api/shelf?uid=${u.uid}`).then((r) => r.json()),
         fetch("/api/leaderboard").then((r) => r.json()).catch(() => ({ readers: [] })),
         fetch(`/api/goal?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
         fetch(`/api/preferences?uid=${u.uid}`).then((r) => r.json()).catch(() => ({ genres: [], onboarded: true })),
+        fetch(`/api/network?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
       ]);
       setShelf(shelfRes.shelf || []);
       setGoal(goalRes);
       setPrefs(prefsRes);
+      setNetwork(networkRes);
       const i = (lbRes.readers || []).findIndex((r) => r.id === u.uid);
       if (i >= 0) setRank({ position: i + 1, ...lbRes.readers[i] });
     });
@@ -116,6 +120,20 @@ export default function AccountPage() {
     () => shelf.filter((s) => s.review && s.review.trim()).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)),
     [shelf]
   );
+
+  const currentlyReading = useMemo(
+    () => shelf.filter((s) => s.status === "reading").sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0] || null,
+    [shelf]
+  );
+
+  const updateProgress = async (value) => {
+    setShelf((prev) => prev.map((s) => (s.book_slug === currentlyReading.book_slug ? { ...s, progress: value } : s)));
+    await fetch("/api/shelf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: await user.getIdToken(), slug: currentlyReading.book_slug, status: "reading", progress: value }),
+    });
+  };
 
   if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">Sign-in is not configured.</div>;
   if (user === undefined) {
@@ -185,6 +203,39 @@ export default function AccountPage() {
         <Link href="/leaderboard" className="btn-ghost text-sm"><Icon name="trophy" size={15} /> Bookworm Ranking</Link>
         <Link href="/community" className="btn-ghost text-sm"><Icon name="users" size={15} /> Community</Link>
       </div>
+
+      {/* Currently reading spotlight */}
+      {currentlyReading && (
+        <div className="card mt-6 flex flex-col gap-5 p-6 hover:!translate-y-0 sm:flex-row">
+          <Link href={`/books/${encodeURIComponent(currentlyReading.book_slug)}`} className="mx-auto h-40 w-28 shrink-0 overflow-hidden rounded-xl shadow-lg sm:mx-0">
+            <BookCover title={currentlyReading.title || currentlyReading.book_slug} author={currentlyReading.author} cover_url={currentlyReading.cover_url} />
+          </Link>
+          <div className="flex-1">
+            <p className="text-muted flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+              <Icon name="bookOpen" size={13} className="text-brand-600" /> Currently Reading
+            </p>
+            <Link href={`/books/${encodeURIComponent(currentlyReading.book_slug)}`} className="mt-1 block text-lg font-bold hover:text-brand-600">
+              {currentlyReading.title || currentlyReading.book_slug}
+            </Link>
+            {currentlyReading.author && <p className="text-muted text-sm">{currentlyReading.author}</p>}
+
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                type="range" min="0" max="100" step="5"
+                value={currentlyReading.progress || 0}
+                onChange={(e) => updateProgress(Number(e.target.value))}
+                className="accent-brand-600 h-1.5 flex-1"
+              />
+              <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">{currentlyReading.progress || 0}%</span>
+            </div>
+            {currentlyReading.page_count > 0 && (
+              <p className="text-muted mt-1.5 text-xs">
+                ~{Math.max(0, Math.round(((100 - (currentlyReading.progress || 0)) / 100) * currentlyReading.page_count))} pages left of {currentlyReading.page_count}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Reading preferences — editable any time, seeded during onboarding */}
       {prefs && (
@@ -336,6 +387,47 @@ export default function AccountPage() {
           )}
         </div>
       </div>
+
+      {/* Your network */}
+      {network && (network.followingCount > 0 || network.followerCount > 0) && (
+        <div className="card mt-6 p-5 hover:!translate-y-0">
+          <div className="flex items-center gap-2">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <Icon name="users" size={16} className="text-brand-600" /> Your Network
+            </p>
+            <div className="ml-auto flex gap-1.5">
+              <button onClick={() => setNetworkTab("following")}
+                className={`pill !text-xs ${networkTab === "following" ? "!bg-brand-600 !text-white" : ""}`}>
+                Following ({network.followingCount})
+              </button>
+              <button onClick={() => setNetworkTab("followers")}
+                className={`pill !text-xs ${networkTab === "followers" ? "!bg-brand-600 !text-white" : ""}`}>
+                Followers ({network.followerCount})
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-4">
+            {(networkTab === "following" ? network.following : network.followers).map((r) => (
+              <Link key={r.id} href={`/readers/${r.slug || r.id}`} className="group flex w-16 flex-col items-center gap-1.5 text-center">
+                {r.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={r.photo_url} alt="" className="h-12 w-12 rounded-full ring-2 ring-transparent transition group-hover:ring-brand-500" />
+                ) : (
+                  <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white ring-2 ring-transparent transition group-hover:ring-brand-500">
+                    {(r.name || "R")[0].toUpperCase()}
+                  </span>
+                )}
+                <span className="line-clamp-1 text-[11px] font-medium group-hover:text-brand-600">{r.name}</span>
+              </Link>
+            ))}
+            {(networkTab === "following" ? network.following : network.followers).length === 0 && (
+              <p className="text-muted text-sm">
+                {networkTab === "following" ? "You aren't following any readers yet." : "No one is following you yet."}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Shelf */}
       <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
