@@ -21,8 +21,14 @@ export async function POST(request) {
   const url = new URL(CRON_WORKER_URL);
   if (body.maxChunks) url.searchParams.set("maxChunks", String(body.maxChunks));
 
-  const res = await fetch(url, { headers: { "X-Import-Secret": secret } });
-  if (!res.ok) return NextResponse.json({ error: `worker returned ${res.status}` }, { status: 502 });
+  const res = await fetch(url, { method: "POST", headers: { "X-Import-Secret": secret } });
+  if (!res.ok) {
+    // Surface the worker's own response body (e.g. "unauthorized" on a secret
+    // mismatch) so a bad deploy is diagnosable from the browser console
+    // instead of requiring a direct curl test against the cron worker.
+    const detail = await res.text().catch(() => "");
+    return NextResponse.json({ error: `worker returned ${res.status}`, detail }, { status: 502 });
+  }
 
   return NextResponse.json(await res.json());
 }

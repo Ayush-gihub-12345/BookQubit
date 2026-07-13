@@ -80,7 +80,7 @@ export default function AdminDashboard() {
           body: JSON.stringify({ maxChunks: 1 }),
         });
         const d = await r.json();
-        if (!r.ok) { toast(d.error || "Import run failed", "error"); break; }
+        if (!r.ok) { toast([d.error, d.detail].filter(Boolean).join(" — ") || "Import run failed", "error"); break; }
 
         if (d.capped) {
           toast("Daily write cap reached — try again tomorrow.", "info");
