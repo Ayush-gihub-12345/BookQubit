@@ -7,6 +7,7 @@ import AuthButton from "./AuthButton";
 import SearchBar from "./SearchBar";
 import Icon from "./Icon";
 import { LogoMark } from "./Logo";
+import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 
 function Dropdown({ button, children, width = "w-48" }) {
   const [open, setOpen] = useState(false);
@@ -34,9 +35,26 @@ const iconBtn =
 
 export default function Navbar({ lang, theme, languages, themes, labels }) {
   const [open, setOpen] = useState(false);
+  const [myGenres, setMyGenres] = useState([]);
+  const [notifCount, setNotifCount] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
   const headerRef = useRef(null);
+
+  // Powers the "Your Genres" row in the Discover dropdown — set during
+  // onboarding, editable from the account page.
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    const auth = getFirebaseAuth();
+    if (!auth) return;
+    return auth.onAuthStateChanged((u) => {
+      if (!u) { setMyGenres([]); setNotifCount(0); return; }
+      fetch(`/api/preferences?uid=${u.uid}`).then((r) => r.json())
+        .then((d) => setMyGenres(d.genres || [])).catch(() => setMyGenres([]));
+      fetch(`/api/notifications?uid=${u.uid}`).then((r) => r.json())
+        .then((d) => setNotifCount((d.notifications || []).length)).catch(() => setNotifCount(0));
+    });
+  }, []);
 
   // Close the mobile sheet on any click/tap outside the header
   useEffect(() => {
@@ -58,6 +76,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         { href: "/books?sort=new", icon: "clock", label: "New Releases" },
         { href: "/books?sort=rating", icon: "star", label: "Top Rated" },
         { href: "/collections", icon: "layers", label: labels.collections },
+        ...myGenres.map((g) => ({ href: `/books?category=${encodeURIComponent(g)}`, icon: "heart", label: g })),
       ],
     },
     {
@@ -166,6 +185,16 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           </div>
         </div>
         <div className="flex-1 md:hidden" />
+
+        {/* Notifications */}
+        <Link href="/notifications" className={`${iconBtn} relative hidden sm:grid`} aria-label="Notifications" title="Notifications">
+          <Icon name="bell" size={17} />
+          {notifCount > 0 && (
+            <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[9px] font-bold text-white">
+              {notifCount > 9 ? "9+" : notifCount}
+            </span>
+          )}
+        </Link>
 
         {/* Liked books */}
         <Link href="/liked" className={`${iconBtn} hidden sm:grid`} aria-label="Liked books" title="Liked books">
@@ -325,6 +354,9 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                 <Icon name={m.icon} size={15} className="text-muted" /> {m.label}
               </Link>
             ))}
+            <Link href="/notifications" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name="bell" size={15} className="text-muted" /> Notifications {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
+            </Link>
             <Link href="/liked" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="heart" size={15} className="text-muted" /> Liked Books
             </Link>

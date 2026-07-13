@@ -31,11 +31,23 @@ export default function LoginPage() {
     );
   }
 
+  // New accounts (and anyone who never finished it) land on the guided
+  // profile setup; everyone else goes straight to their dashboard.
+  const routeAfterAuth = async (uid) => {
+    try {
+      const r = await fetch(`/api/preferences?uid=${uid}`);
+      const { onboarded } = await r.json();
+      router.push(onboarded ? "/account" : "/onboarding");
+    } catch {
+      router.push("/account");
+    }
+  };
+
   const google = async () => {
     setBusy(true); setError("");
     try {
-      await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
-      router.push("/account");
+      const cred = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
+      await routeAfterAuth(cred.user.uid);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
 
@@ -44,9 +56,13 @@ export default function LoginPage() {
     setBusy(true); setError("");
     try {
       const auth = getFirebaseAuth();
-      if (mode === "signin") await signInWithEmailAndPassword(auth, email, password);
-      else await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/account");
+      if (mode === "signin") {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        await routeAfterAuth(cred.user.uid);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+        router.push("/onboarding");
+      }
     } catch (e) { setError(e.message.replace("Firebase: ", "")); } finally { setBusy(false); }
   };
 

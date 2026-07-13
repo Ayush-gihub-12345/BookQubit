@@ -218,11 +218,11 @@ export async function booksByPublisher(name, lang) {
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────
 export const LEVELS = [
-  { min: 400, name: "Grand Librarian", icon: "🏛️" },
-  { min: 150, name: "Bibliophile", icon: "📚" },
-  { min: 50, name: "Bookworm", icon: "🐛" },
-  { min: 10, name: "Page Turner", icon: "📖" },
-  { min: 0, name: "New Reader", icon: "🌱" },
+  { min: 400, name: "Grand Librarian", icon: "award" },
+  { min: 150, name: "Bibliophile", icon: "layers" },
+  { min: 50, name: "Bookworm", icon: "book" },
+  { min: 10, name: "Page Turner", icon: "bookOpen" },
+  { min: 0, name: "New Reader", icon: "compass" },
 ];
 export const levelFor = (points) => LEVELS.find((l) => points >= l.min);
 export const pointsFor = (r) =>
@@ -289,35 +289,224 @@ export async function getRecentActivity(limit = 12) {
   return results;
 }
 
-export async function listDiscussions(limit = 30) {
+export async function listDiscussions(limit = 30, { q } = {}) {
   const db = await getDb();
+  const where = q ? "WHERE d.title LIKE ?2 OR d.tags LIKE ?2" : "";
+  const binds = q ? [limit, `%${q}%`] : [limit];
   const { results } = await db.prepare(
     `SELECT d.*, u.name, u.photo_url,
        (SELECT COUNT(*) FROM discussion_posts p WHERE p.discussion_id = d.id) AS replies,
-       b.title AS book_title
+       (SELECT COUNT(*) FROM discussion_members m WHERE m.discussion_id = d.id AND m.active = 1) AS members,
+       b.title AS book_title, a.name AS author_name
      FROM discussions d
      JOIN users u ON u.id = d.user_id
-     LEFT JOIN books b ON b.slug = d.book_slug AND b.lang='en'
+     LEFT JOIN books b ON b.slug = d.book_slug AND b.lang = 'en'
+     LEFT JOIN authors a ON a.slug = d.author_slug AND a.lang = 'en'
+     ${where}
      ORDER BY d.created_at DESC LIMIT ?1`
-  ).bind(limit).all();
-  return results;
+  ).bind(...binds).all();
+  return results.map((r) => ({ ...r, tags: J(r.tags) }));
 }
 
-export async function getDiscussion(id) {
+// Discussions a specific reader can see joining/leaving/messaging on — includes
+// their own membership row (null if they've never interacted with it) so the
+// UI knows whether to show Join, Open, or "rejoin blocked".
+export async function getDiscussion(id, uid) {
   const db = await getDb();
-  const [thread, posts] = await Promise.all([
+  const [thread, posts, member] = await Promise.all([
     db.prepare(
-      `SELECT d.*, u.name, u.photo_url, b.title AS book_title FROM discussions d
+      `SELECT d.*, u.name, u.photo_url, b.title AS book_title, a.name AS author_name
+       FROM discussions d
        JOIN users u ON u.id=d.user_id
        LEFT JOIN books b ON b.slug=d.book_slug AND b.lang='en'
+       LEFT JOIN authors a ON a.slug=d.author_slug AND a.lang='en'
        WHERE d.id=?1`
     ).bind(id).first(),
     db.prepare(
       `SELECT p.*, u.name, u.photo_url FROM discussion_posts p JOIN users u ON u.id=p.user_id
        WHERE p.discussion_id=?1 ORDER BY p.created_at ASC`
     ).bind(id).all(),
+    uid
+      ? db.prepare("SELECT * FROM discussion_members WHERE discussion_id=?1 AND user_id=?2").bind(id, uid).first()
+      : Promise.resolve(null),
   ]);
-  return thread ? { ...thread, posts: posts.results } : null;
+  if (!thread) return null;
+  return { ...thread, tags: J(thread.tags), posts: posts.results, membership: member || null };
+}
+
+export async function isActiveDiscussionMember(uid, discussionId) {
+  const db = await getDb();
+  const row = await db.prepare(
+    "SELECT active FROM discussion_members WHERE discussion_id=?1 AND user_id=?2"
+  ).bind(discussionId, uid).first();
+  return Boolean(row?.active);
+}
+
+export async function getDiscussionMessagesSince(discussionId, sinceId = 0) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT p.*, u.name, u.photo_url FROM discussion_posts p JOIN users u ON u.id=p.user_id
+     WHERE p.discussion_id=?1 AND p.id > ?2 ORDER BY p.created_at ASC`
+  ).bind(discussionId, sinceId).all();
+  return results;
+}
+
+// A reader can leave a given discussion at most twice — after that, joining
+// it again is blocked outright (prevents join/leave spam on the same thread).
+const EXIT_LIMIT = 2;
+
+export async function joinDiscussion(uid, discussionId) {
+  const db = await getDb();
+  const existing = await db.prepare(
+    "SELECT * FROM discussion_members WHERE discussion_id=?1 AND user_id=?2"
+  ).bind(discussionId, uid).first();
+
+  if (existing?.active) return { ok: true };
+  if (existing && existing.exit_count >= EXIT_LIMIT) {
+    return { ok: false, error: "You've left this discussion twice already and can't rejoin." };
+  }
+  if (existing) {
+    await db.prepare(
+      "UPDATE discussion_members SET active=1, last_read_at=CURRENT_TIMESTAMP WHERE discussion_id=?1 AND user_id=?2"
+    ).bind(discussionId, uid).run();
+  } else {
+    await db.prepare(
+      "INSERT INTO discussion_members (discussion_id, user_id) VALUES (?1, ?2)"
+    ).bind(discussionId, uid).run();
+  }
+  return { ok: true };
+}
+
+export async function leaveDiscussion(uid, discussionId) {
+  const db = await getDb();
+  const existing = await db.prepare(
+    "SELECT * FROM discussion_members WHERE discussion_id=?1 AND user_id=?2"
+  ).bind(discussionId, uid).first();
+  if (!existing?.active) return { ok: true };
+  if (existing.exit_count >= EXIT_LIMIT) {
+    return { ok: false, error: "You've already used both exits for this discussion." };
+  }
+  await db.prepare(
+    "UPDATE discussion_members SET active=0, exit_count=exit_count+1, archived=0 WHERE discussion_id=?1 AND user_id=?2"
+  ).bind(discussionId, uid).run();
+  return { ok: true };
+}
+
+export async function setDiscussionArchived(uid, discussionId, archived) {
+  const db = await getDb();
+  await db.prepare(
+    "UPDATE discussion_members SET archived=?3 WHERE discussion_id=?1 AND user_id=?2 AND active=1"
+  ).bind(discussionId, uid, archived ? 1 : 0).run();
+}
+
+export async function markDiscussionRead(uid, discussionId) {
+  const db = await getDb();
+  await db.prepare(
+    "UPDATE discussion_members SET last_read_at=CURRENT_TIMESTAMP WHERE discussion_id=?1 AND user_id=?2"
+  ).bind(discussionId, uid).run();
+}
+
+// The reader's WhatsApp-style chat list: every discussion they're currently
+// a member of, with unread counts and a last-message preview.
+export async function getMyDiscussions(uid) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT d.id, d.title, d.book_slug, d.author_slug, d.tags, m.archived, m.last_read_at,
+       b.title AS book_title, a.name AS author_name,
+       (SELECT COUNT(*) FROM discussion_posts p WHERE p.discussion_id=d.id AND p.created_at > m.last_read_at AND p.user_id != ?1) AS unread,
+       (SELECT p.body FROM discussion_posts p WHERE p.discussion_id=d.id ORDER BY p.created_at DESC LIMIT 1) AS last_message,
+       (SELECT p.created_at FROM discussion_posts p WHERE p.discussion_id=d.id ORDER BY p.created_at DESC LIMIT 1) AS last_message_at
+     FROM discussion_members m
+     JOIN discussions d ON d.id = m.discussion_id
+     LEFT JOIN books b ON b.slug=d.book_slug AND b.lang='en'
+     LEFT JOIN authors a ON a.slug=d.author_slug AND a.lang='en'
+     WHERE m.user_id=?1 AND m.active=1
+     ORDER BY COALESCE(last_message_at, d.created_at) DESC`
+  ).bind(uid).all();
+  return results.map((r) => ({ ...r, tags: J(r.tags) }));
+}
+
+// Discovery/search for discussions to join — annotated with the viewer's own
+// membership state so the UI can grey out threads they're locked out of.
+export async function searchDiscussions(q, uid, limit = 30) {
+  const db = await getDb();
+  const like = `%${q || ""}%`;
+  const { results } = await db.prepare(
+    `SELECT d.*, u.name, u.photo_url, b.title AS book_title, a.name AS author_name,
+       (SELECT COUNT(*) FROM discussion_members m WHERE m.discussion_id=d.id AND m.active=1) AS members,
+       mine.active AS my_active, mine.exit_count AS my_exit_count
+     FROM discussions d
+     JOIN users u ON u.id=d.user_id
+     LEFT JOIN books b ON b.slug=d.book_slug AND b.lang='en'
+     LEFT JOIN authors a ON a.slug=d.author_slug AND a.lang='en'
+     LEFT JOIN discussion_members mine ON mine.discussion_id=d.id AND mine.user_id=?2
+     WHERE d.title LIKE ?1 OR d.tags LIKE ?1
+     ORDER BY d.created_at DESC LIMIT ?3`
+  ).bind(like, uid || "", limit).all();
+  return results.map((r) => ({ ...r, tags: J(r.tags) }));
+}
+
+// Surfaced on a book's page (and for books on a reader's "want to read"
+// shelf) so readers can find the conversation instead of starting a duplicate.
+export async function getDiscussionsForBook(bookSlug, limit = 5) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT d.id, d.title, d.created_at,
+       (SELECT COUNT(*) FROM discussion_members m WHERE m.discussion_id=d.id AND m.active=1) AS members
+     FROM discussions d WHERE d.book_slug=?1 ORDER BY d.created_at DESC LIMIT ?2`
+  ).bind(bookSlug, limit).all();
+  return results;
+}
+
+// Notifies readers whose saved genre preferences overlap the new
+// discussion's book/author — they see it in their Notifications tab with a
+// simple Join/Pass choice, never an unsolicited auto-join.
+async function notifyMatchingReaders(discussionId, { bookSlug, authorSlug, creatorId }) {
+  const db = await getDb();
+  let genre = null;
+  if (bookSlug) {
+    const b = await db.prepare("SELECT category FROM books WHERE slug=?1 AND lang='en'").bind(bookSlug).first();
+    genre = b?.category || null;
+  } else if (authorSlug) {
+    const a = await db.prepare("SELECT genres FROM authors WHERE slug=?1 AND lang='en'").bind(authorSlug).first();
+    genre = J(a?.genres)[0] || null;
+  }
+  if (!genre) return;
+
+  const { results } = await db.prepare("SELECT user_id, genres FROM user_preferences").all();
+  const matches = results.filter((r) => r.user_id !== creatorId && J(r.genres).includes(genre));
+  if (!matches.length) return;
+  await db.batch(
+    matches.map((m) =>
+      db.prepare("INSERT INTO discussion_notifications (user_id, discussion_id) VALUES (?1, ?2)").bind(m.user_id, discussionId)
+    )
+  );
+}
+
+export async function getNotifications(uid) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT n.id, n.status, n.created_at, d.id AS discussion_id, d.title, d.body, d.tags,
+       b.title AS book_title, a.name AS author_name, u.name AS starter_name
+     FROM discussion_notifications n
+     JOIN discussions d ON d.id = n.discussion_id
+     JOIN users u ON u.id = d.user_id
+     LEFT JOIN books b ON b.slug=d.book_slug AND b.lang='en'
+     LEFT JOIN authors a ON a.slug=d.author_slug AND a.lang='en'
+     WHERE n.user_id=?1 AND n.status='pending'
+     ORDER BY n.created_at DESC`
+  ).bind(uid).all();
+  return results.map((r) => ({ ...r, tags: J(r.tags) }));
+}
+
+export async function respondNotification(uid, notifId, action) {
+  const db = await getDb();
+  const notif = await db.prepare("SELECT * FROM discussion_notifications WHERE id=?1 AND user_id=?2").bind(notifId, uid).first();
+  if (!notif) return { ok: false, error: "not found" };
+  await db.prepare("UPDATE discussion_notifications SET status=?1 WHERE id=?2")
+    .bind(action === "join" ? "joined" : "passed", notifId).run();
+  if (action === "join") return joinDiscussion(uid, notif.discussion_id);
+  return { ok: true };
 }
 
 // Public profile: user info + full shelf with book data
@@ -335,32 +524,115 @@ export async function getUserProfile(uid) {
   return { user, shelf: shelf.results };
 }
 
-export async function getLeaderboard(limit = 20) {
+// Badges are book-accomplishment based (never personal info) — the whole
+// point of the ranking is to celebrate reading, not identity.
+function badgesFor(r) {
+  const badges = [];
+  if (r.reads >= 100) badges.push("Century Club");
+  else if (r.reads >= 50) badges.push("50 Books Club");
+  else if (r.reads >= 10) badges.push("Page Turner");
+  if (r.reviews >= 20) badges.push("Top Reviewer");
+  if (r.discussions >= 10) badges.push("Discussion Starter");
+  if (r.ratings >= 30) badges.push("Prolific Rater");
+  return badges;
+}
+
+export async function getLeaderboard({ limit = 20, year, minBooks, genre } = {}) {
+  const db = await getDb();
+  const [base, shelfBooks] = await Promise.all([
+    db.prepare(
+      `SELECT u.id, u.name, u.photo_url,
+         COALESCE(sh.reads, 0) AS reads,
+         COALESCE(sh.ratings, 0) AS ratings,
+         COALESCE(sh.reviews, 0) AS reviews,
+         COALESCE(d.n, 0) AS discussions,
+         COALESCE(p.n, 0) AS posts
+       FROM users u
+       LEFT JOIN (
+         SELECT user_id,
+           SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS reads,
+           SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
+           SUM(CASE WHEN review IS NOT NULL AND review != '' THEN 1 ELSE 0 END) AS reviews
+         FROM shelf GROUP BY user_id
+       ) sh ON sh.user_id = u.id
+       LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussions GROUP BY user_id) d ON d.user_id = u.id
+       LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussion_posts GROUP BY user_id) p ON p.user_id = u.id
+       WHERE COALESCE(sh.reads,0)+COALESCE(sh.ratings,0)+COALESCE(sh.reviews,0)+COALESCE(d.n,0)+COALESCE(p.n,0) > 0
+       LIMIT 500`
+    ).all(),
+    // Per-book read history (for "favorite genre" + "books read in year Y") —
+    // aggregated in JS below since the dataset is small enough that a second
+    // SQL pass per stat would be more complex than it's worth.
+    db.prepare(
+      `SELECT s.user_id, s.finished_at, b.category
+       FROM shelf s LEFT JOIN books b ON b.slug = s.book_slug AND b.lang = 'en'
+       WHERE s.status = 'read'`
+    ).all(),
+  ]);
+
+  const perUser = new Map();
+  for (const row of shelfBooks.results) {
+    const agg = perUser.get(row.user_id) || { years: {}, genres: {} };
+    if (row.finished_at) {
+      const y = new Date(row.finished_at).getFullYear();
+      if (!Number.isNaN(y)) agg.years[y] = (agg.years[y] || 0) + 1;
+    }
+    if (row.category) agg.genres[row.category] = (agg.genres[row.category] || 0) + 1;
+    perUser.set(row.user_id, agg);
+  }
+
+  let readers = base.results.map((r) => {
+    const agg = perUser.get(r.id) || { years: {}, genres: {} };
+    const favoriteGenre = Object.entries(agg.genres).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const points = pointsFor(r);
+    return {
+      ...r, points, level: levelFor(points), favoriteGenre,
+      yearCounts: agg.years,
+      genreCounts: agg.genres,
+      badges: badgesFor(r),
+    };
+  });
+
+  if (minBooks) {
+    const n = Number(minBooks);
+    readers = readers.filter((r) => (year ? (r.yearCounts[year] || 0) : r.reads) >= n);
+  }
+  if (genre) readers = readers.filter((r) => (r.genreCounts[genre] || 0) > 0);
+
+  return readers.sort((a, b) => b.points - a.points).slice(0, limit);
+}
+
+// Ranked by follower count, not activity — a separate "who the community
+// looks up to" view alongside the activity-based Bookworm Ranking.
+export async function getPopularReaders(limit = 20) {
   const db = await getDb();
   const { results } = await db.prepare(
-    `SELECT u.id, u.name, u.photo_url,
-       COALESCE(sh.reads, 0) AS reads,
-       COALESCE(sh.ratings, 0) AS ratings,
-       COALESCE(sh.reviews, 0) AS reviews,
-       COALESCE(d.n, 0) AS discussions,
-       COALESCE(p.n, 0) AS posts
-     FROM users u
-     LEFT JOIN (
-       SELECT user_id,
-         SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS reads,
-         SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
-         SUM(CASE WHEN review IS NOT NULL AND review != '' THEN 1 ELSE 0 END) AS reviews
-       FROM shelf GROUP BY user_id
-     ) sh ON sh.user_id = u.id
-     LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussions GROUP BY user_id) d ON d.user_id = u.id
-     LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussion_posts GROUP BY user_id) p ON p.user_id = u.id
-     WHERE COALESCE(sh.reads,0)+COALESCE(sh.ratings,0)+COALESCE(sh.reviews,0)+COALESCE(d.n,0)+COALESCE(p.n,0) > 0
-     LIMIT 500`
-  ).all();
-  return results
-    .map((r) => ({ ...r, points: pointsFor(r), level: levelFor(pointsFor(r)) }))
-    .sort((a, b) => b.points - a.points)
-    .slice(0, limit);
+    `SELECT u.id, u.name, u.photo_url, COUNT(f.user_id) AS followers
+     FROM users u JOIN follows f ON f.target_type = 'reader' AND f.target_id = u.id
+     GROUP BY u.id ORDER BY followers DESC LIMIT ?1`
+  ).bind(limit).all();
+  return results;
+}
+
+export async function getUserPreferences(uid) {
+  const db = await getDb();
+  const row = await db.prepare("SELECT * FROM user_preferences WHERE user_id=?1").bind(uid).first();
+  return row ? { genres: J(row.genres), onboarded: Boolean(row.onboarded) } : { genres: [], onboarded: false };
+}
+
+export async function upsertUserPreferences(uid, { genres, onboarded } = {}) {
+  const db = await getDb();
+  await db.prepare(
+    `INSERT INTO user_preferences (user_id, genres, onboarded, updated_at) VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP)
+     ON CONFLICT(user_id) DO UPDATE SET
+       genres = COALESCE(?2, genres),
+       onboarded = COALESCE(?3, onboarded),
+       updated_at = CURRENT_TIMESTAMP`
+  ).bind(
+    uid,
+    genres !== undefined ? JSON.stringify(genres) : null,
+    onboarded === undefined ? null : onboarded ? 1 : 0
+  ).run();
 }
 
 // Admin-editable site config (social links etc.) — cached briefly since it
@@ -405,12 +677,18 @@ export async function getPlatformStats() {
   }, 900);
 }
 
-export async function createDiscussion(userId, { title, body, bookSlug }) {
+// Starting a discussion requires a book or author to be picked first — the
+// title/tags/description come after, and there is deliberately no
+// attachment/image support.
+export async function createDiscussion(userId, { title, body, bookSlug, authorSlug, tags }) {
   const db = await getDb();
   const res = await db.prepare(
-    "INSERT INTO discussions (user_id, title, body, book_slug) VALUES (?1, ?2, ?3, ?4)"
-  ).bind(userId, title, body, bookSlug || null).run();
-  return res.meta.last_row_id;
+    "INSERT INTO discussions (user_id, title, body, book_slug, author_slug, tags) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+  ).bind(userId, title, body || null, bookSlug || null, authorSlug || null, tags?.length ? JSON.stringify(tags) : null).run();
+  const id = res.meta.last_row_id;
+  await db.prepare("INSERT INTO discussion_members (discussion_id, user_id) VALUES (?1, ?2)").bind(id, userId).run();
+  await notifyMatchingReaders(id, { bookSlug, authorSlug, creatorId: userId });
+  return id;
 }
 
 export async function addDiscussionPost(discussionId, userId, body) {
@@ -418,4 +696,7 @@ export async function addDiscussionPost(discussionId, userId, body) {
   await db.prepare(
     "INSERT INTO discussion_posts (discussion_id, user_id, body) VALUES (?1, ?2, ?3)"
   ).bind(discussionId, userId, body).run();
+  await db.prepare(
+    "UPDATE discussion_members SET last_read_at=CURRENT_TIMESTAMP WHERE discussion_id=?1 AND user_id=?2"
+  ).bind(discussionId, userId).run();
 }

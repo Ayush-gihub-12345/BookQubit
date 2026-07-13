@@ -11,17 +11,17 @@ import ShelfItemCard from "@/components/ShelfItemCard";
 
 const TABS = [
   { id: "all", label: "All" },
-  { id: "reading", label: "📖 Reading" },
-  { id: "read", label: "✅ Read" },
-  { id: "want", label: "🔖 Want to Read" },
+  { id: "reading", icon: "bookOpen", label: "Reading" },
+  { id: "read", icon: "check", label: "Read" },
+  { id: "want", icon: "bookmark", label: "Want to Read" },
 ];
 
 const LEVELS = [
-  { min: 400, name: "Grand Librarian", icon: "🏛️" },
-  { min: 150, name: "Bibliophile", icon: "📚" },
-  { min: 50, name: "Bookworm", icon: "🐛" },
-  { min: 10, name: "Page Turner", icon: "📖" },
-  { min: 0, name: "New Reader", icon: "🌱" },
+  { min: 400, name: "Grand Librarian", icon: "award" },
+  { min: 150, name: "Bibliophile", icon: "layers" },
+  { min: 50, name: "Bookworm", icon: "book" },
+  { min: 10, name: "Page Turner", icon: "bookOpen" },
+  { min: 0, name: "New Reader", icon: "compass" },
 ];
 
 export default function AccountPage() {
@@ -33,25 +33,41 @@ export default function AccountPage() {
   const [rank, setRank] = useState(null);
   const [goal, setGoal] = useState(null);
   const [goalInput, setGoalInput] = useState("");
+  const [prefs, setPrefs] = useState(null);
+  const [allCategories, setAllCategories] = useState([]);
+  const [editingPrefs, setEditingPrefs] = useState(false);
 
   useEffect(() => {
     setWishlist(readWishlist());
+    fetch("/api/categories").then((r) => r.json()).then((d) => setAllCategories(d.categories || []));
     const auth = getFirebaseAuth();
     if (!auth) { setUser(null); return; }
     return auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (!u) { router.push("/login"); return; }
-      const [shelfRes, lbRes, goalRes] = await Promise.all([
+      const [shelfRes, lbRes, goalRes, prefsRes] = await Promise.all([
         fetch(`/api/shelf?uid=${u.uid}`).then((r) => r.json()),
         fetch("/api/leaderboard").then((r) => r.json()).catch(() => ({ readers: [] })),
         fetch(`/api/goal?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
+        fetch(`/api/preferences?uid=${u.uid}`).then((r) => r.json()).catch(() => ({ genres: [], onboarded: true })),
       ]);
       setShelf(shelfRes.shelf || []);
       setGoal(goalRes);
+      setPrefs(prefsRes);
       const i = (lbRes.readers || []).findIndex((r) => r.id === u.uid);
       if (i >= 0) setRank({ position: i + 1, ...lbRes.readers[i] });
     });
   }, [router]);
+
+  const toggleGenre = async (g) => {
+    const next = prefs.genres.includes(g) ? prefs.genres.filter((x) => x !== g) : [...prefs.genres, g];
+    setPrefs((p) => ({ ...p, genres: next }));
+    await fetch("/api/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: await user.getIdToken(), genres: next }),
+    });
+  };
 
   const [shelfQuery, setShelfQuery] = useState("");
   const [shelfSort, setShelfSort] = useState("recent");
@@ -128,6 +144,20 @@ export default function AccountPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
+      {/* Onboarding nudge — only shown until profile setup is completed */}
+      {prefs && !prefs.onboarded && (
+        <div className="card mb-6 flex flex-col items-center gap-4 border-brand-500/30 p-5 hover:!translate-y-0 sm:flex-row">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+            <Icon name="compass" size={20} />
+          </span>
+          <div className="flex-1 text-center sm:text-left">
+            <p className="font-semibold">Finish setting up your profile</p>
+            <p className="text-muted text-sm">Pick your favorite genres and rate a few books to get personalized recommendations.</p>
+          </div>
+          <Link href="/onboarding" className="btn-primary shrink-0 text-sm">Complete setup</Link>
+        </div>
+      )}
+
       {/* Profile + level */}
       <div className="card flex flex-col items-center gap-6 p-8 hover:!translate-y-0 sm:flex-row">
         {user.photoURL ? (
@@ -142,15 +172,47 @@ export default function AccountPage() {
           <h1 className="text-2xl font-bold">{user.displayName || "Reader"}</h1>
           <p className="text-muted text-sm">{user.email}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-            <span className="pill !text-sm">{stats.level.icon} {stats.level.name}</span>
-            <span className="pill !text-sm">⚡ {stats.points} pts</span>
-            {goal?.streak > 0 && <span className="pill !bg-orange-500/15 !text-sm !text-orange-500">🔥 {goal.streak}-day streak</span>}
-            {rank && <Link href="/leaderboard" className="pill !text-sm">🏆 Rank #{rank.position}</Link>}
+            <span className="pill !text-sm"><Icon name={stats.level.icon} size={13} /> {stats.level.name}</span>
+            <span className="pill !text-sm"><Icon name="zap" size={13} /> {stats.points} pts</span>
+            {goal?.streak > 0 && (
+              <span className="pill !bg-orange-500/15 !text-sm !text-orange-500"><Icon name="flame" size={13} /> {goal.streak}-day streak</span>
+            )}
+            {rank && <Link href="/leaderboard" className="pill !text-sm"><Icon name="trophy" size={13} /> Rank #{rank.position}</Link>}
           </div>
         </div>
-        <Link href="/leaderboard" className="btn-ghost text-sm">🏆 Bookworm Ranking</Link>
-        <Link href="/community" className="btn-ghost text-sm">Community</Link>
+        <Link href="/leaderboard" className="btn-ghost text-sm"><Icon name="trophy" size={15} /> Bookworm Ranking</Link>
+        <Link href="/community" className="btn-ghost text-sm"><Icon name="users" size={15} /> Community</Link>
       </div>
+
+      {/* Reading preferences — editable any time, seeded during onboarding */}
+      {prefs && (
+        <div className="card mt-6 p-5 hover:!translate-y-0">
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <Icon name="grid" size={16} className="text-brand-600" /> Reading Preferences
+            </p>
+            <button onClick={() => setEditingPrefs((v) => !v)} className="text-xs font-semibold text-brand-600 hover:underline">
+              {editingPrefs ? "Done" : "Edit"}
+            </button>
+          </div>
+          <p className="text-muted mt-1 text-xs">Used to personalize your recommendations and the Discover menu.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(editingPrefs ? allCategories.map((c) => c.name) : prefs.genres).length ? (
+              (editingPrefs ? allCategories.map((c) => c.name) : prefs.genres).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => editingPrefs && toggleGenre(g)}
+                  className={`pill !text-xs ${prefs.genres.includes(g) ? "!bg-brand-600 !text-white" : ""} ${!editingPrefs ? "cursor-default" : ""}`}
+                >
+                  {g}
+                </button>
+              ))
+            ) : (
+              <p className="text-muted text-sm">No preferences set yet — click Edit to pick your favorite genres.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -189,17 +251,21 @@ export default function AccountPage() {
               </div>
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <h3 className="font-bold">📅 {goal.year} Reading Challenge</h3>
+              <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
+                <Icon name="calendar" size={16} className="text-brand-600" /> {goal.year} Reading Challenge
+              </h3>
               <p className="text-muted mt-1 text-sm">
                 {goal.done >= goal.target
-                  ? "🎉 Goal complete — you're unstoppable!"
-                  : `${goal.target - goal.done} more ${goal.target - goal.done === 1 ? "book" : "books"} to reach your goal. Keep going!`}
+                  ? "Goal complete — you're unstoppable."
+                  : `${goal.target - goal.done} more ${goal.target - goal.done === 1 ? "book" : "books"} to reach your goal. Keep going.`}
               </p>
             </div>
           </>
         ) : (
           <div className="flex-1 text-center sm:text-left">
-            <h3 className="font-bold">📅 Set your {new Date().getFullYear()} Reading Challenge</h3>
+            <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
+              <Icon name="calendar" size={16} className="text-brand-600" /> Set your {new Date().getFullYear()} Reading Challenge
+            </h3>
             <p className="text-muted mt-1 text-sm">How many books will you read this year?</p>
           </div>
         )}
@@ -253,7 +319,7 @@ export default function AccountPage() {
 
         <div className="card p-5 hover:!translate-y-0">
           <p className="mb-4 flex items-center gap-2 text-sm font-bold">
-            <Icon name="compass" size={16} className="text-brand-600" /> Favorite genres
+            <Icon name="barChart" size={16} className="text-brand-600" /> Most-read genres
           </p>
           {genres.length ? (
             <div className="flex flex-wrap gap-2">
@@ -264,7 +330,7 @@ export default function AccountPage() {
               ))}
             </div>
           ) : (
-            <p className="text-muted text-sm">Add books to your shelf to see your favorite genres.</p>
+            <p className="text-muted text-sm">Add books to your shelf to see your most-read genres.</p>
           )}
         </div>
       </div>
@@ -275,8 +341,8 @@ export default function AccountPage() {
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`pill ${tab === t.id ? "!bg-brand-600 !text-white" : ""}`}>
-              {t.label}
+              className={`pill flex items-center gap-1.5 ${tab === t.id ? "!bg-brand-600 !text-white" : ""}`}>
+              {t.icon && <Icon name={t.icon} size={13} />} {t.label}
             </button>
           ))}
         </div>
@@ -310,8 +376,10 @@ export default function AccountPage() {
         </div>
       ) : (
         <div className="text-muted mt-10 text-center">
-          <p className="text-4xl">📚</p>
-          <p className="mt-2">Nothing here yet — open any book and mark it.</p>
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+            <Icon name="book" size={24} />
+          </span>
+          <p className="mt-3">Nothing here yet — open any book and mark it.</p>
           <Link href="/books" className="btn-primary mt-4 inline-flex">Browse Books</Link>
         </div>
       )}

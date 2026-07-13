@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserProfile, levelFor } from "@/lib/repo";
 import BookCover from "@/components/BookCover";
+import Icon from "@/components/Icon";
+import { FollowButton } from "@/components/FollowButton";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +29,9 @@ export default async function ReaderProfilePage({ params }) {
   const level = levelFor(points);
 
   const GROUPS = [
-    ["📖 Currently Reading", reading],
-    ["✅ Read", read],
-    ["🔖 Want to Read", shelf.filter((s) => s.status === "want")],
+    ["bookOpen", "Currently Reading", reading],
+    ["check", "Read", read],
+    ["bookmark", "Want to Read", shelf.filter((s) => s.status === "want")],
   ];
 
   return (
@@ -47,18 +49,23 @@ export default async function ReaderProfilePage({ params }) {
           <h1 className="text-2xl font-bold">{user.name}</h1>
           <p className="text-muted text-sm">Reader since {user.created_at?.slice(0, 10)}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
-            <span className="pill">{level.icon} {level.name}</span>
-            <span className="pill">⚡ {points} pts</span>
-            <span className="pill">✅ {read.length} read</span>
-            <span className="pill">✍️ {reviews.length} reviews</span>
+            <span className="pill"><Icon name={level.icon} size={13} /> {level.name}</span>
+            <span className="pill"><Icon name="zap" size={13} /> {points} pts</span>
+            <span className="pill"><Icon name="check" size={13} /> {read.length} read</span>
+            <span className="pill"><Icon name="feather" size={13} /> {reviews.length} reviews</span>
+          </div>
+          <div className="mt-4 flex justify-center sm:justify-start">
+            <FollowButton type="reader" id={user.id} label="Follow" />
           </div>
         </div>
       </div>
 
-      {GROUPS.map(([title, items]) =>
+      {GROUPS.map(([icon, title, items]) =>
         items.length ? (
           <div key={title}>
-            <h2 className="mt-10 text-xl font-bold">{title} <span className="text-muted text-sm font-normal">({items.length})</span></h2>
+            <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
+              <Icon name={icon} size={18} className="text-brand-600" /> {title} <span className="text-muted text-sm font-normal">({items.length})</span>
+            </h2>
             <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-6">
               {items.map((s) => (
                 <Link key={s.book_slug} href={`/books/${encodeURIComponent(s.book_slug)}`} className="card group overflow-hidden">

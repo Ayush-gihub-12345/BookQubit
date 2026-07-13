@@ -143,6 +143,32 @@ CREATE TABLE IF NOT EXISTS discussion_posts (
 );
 CREATE INDEX IF NOT EXISTS idx_dposts_disc ON discussion_posts(discussion_id);
 
+-- Chat-style membership: who's in a discussion, whether they've archived it,
+-- how many times they've left (capped at 2 — a third exit is blocked so
+-- people can't join/leave repeatedly), and their read cursor for unread counts.
+CREATE TABLE IF NOT EXISTS discussion_members (
+  discussion_id INTEGER NOT NULL,
+  user_id TEXT NOT NULL,
+  joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  exit_count INTEGER DEFAULT 0,
+  archived INTEGER DEFAULT 0,
+  active INTEGER DEFAULT 1,
+  last_read_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (discussion_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_discmembers_user ON discussion_members(user_id, active);
+
+-- Preference-matched discussion alerts — created when a new discussion's
+-- book/author genre overlaps a reader's saved preferences.
+CREATE TABLE IF NOT EXISTS discussion_notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  discussion_id INTEGER NOT NULL,
+  status TEXT DEFAULT 'pending',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_discnotif_user ON discussion_notifications(user_id, status);
+
 CREATE TABLE IF NOT EXISTS follows (
   user_id TEXT NOT NULL,
   target_type TEXT NOT NULL,
@@ -174,6 +200,16 @@ CREATE TABLE IF NOT EXISTS reports (
 );
 CREATE INDEX IF NOT EXISTS idx_reports_resolved ON reports(resolved);
 
+-- Reading preferences collected during onboarding (favorite genres) — also
+-- editable later from the account page. Drives personalized recommendations
+-- and the nav's "Favorite Genres" quick links.
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id TEXT PRIMARY KEY,
+  genres TEXT,
+  onboarded INTEGER DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT,
@@ -194,6 +230,8 @@ const MIGRATIONS = [
   "ALTER TABLE shelf ADD COLUMN pace TEXT",
   "ALTER TABLE shelf ADD COLUMN spoiler INTEGER DEFAULT 0",
   "ALTER TABLE authors ADD COLUMN verified INTEGER DEFAULT 0",
+  "ALTER TABLE discussions ADD COLUMN author_slug TEXT",
+  "ALTER TABLE discussions ADD COLUMN tags TEXT",
 ];
 
 let schemaReady;

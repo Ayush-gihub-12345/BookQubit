@@ -11,7 +11,7 @@ import ReportIssueButton from "@/components/ReportIssueButton";
 import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
 import { TrackView } from "@/components/RecentlyViewed";
-import { getBook, relatedBooks, getBookAlternates, getBookCommunity } from "@/lib/repo";
+import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -49,9 +49,10 @@ export default async function BookPage({ params }) {
   const lang = await getLang();
   const book = await getBook(slug, lang);
   if (!book) notFound();
-  const [related, community] = await Promise.all([
+  const [related, community, bookDiscussions] = await Promise.all([
     relatedBooks(book, lang),
     getBookCommunity(book.slug),
+    getDiscussionsForBook(book.slug, 3),
   ]);
   const _ = t(lang);
 
@@ -157,11 +158,19 @@ export default async function BookPage({ params }) {
 
             <div className="mt-2 border-t border-line pt-4">
               <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Read with others</p>
+              {bookDiscussions.map((d) => (
+                <Link key={d.id} href={`/community?open=${d.id}`}
+                  className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
+                  <Icon name="users" size={13} className="shrink-0" />
+                  <span className="truncate">{d.title}</span>
+                  <span className="shrink-0 text-xs opacity-70">· {d.members}</span>
+                </Link>
+              ))}
               <Link
                 href={`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`}
                 className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600"
               >
-                <Icon name="feather" size={14} /> Discuss this book
+                <Icon name="feather" size={14} /> Start a discussion
               </Link>
             </div>
 
