@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT,
   photo_url TEXT,
+  slug TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -210,6 +211,19 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Reader-saved favorite passages — shown on the book page and the reader's
+-- public profile, like a lightweight commonplace book.
+CREATE TABLE IF NOT EXISTS quotes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  book_slug TEXT NOT NULL,
+  text TEXT NOT NULL,
+  page INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_quotes_book ON quotes(book_slug);
+CREATE INDEX IF NOT EXISTS idx_quotes_user ON quotes(user_id);
+
 CREATE TABLE IF NOT EXISTS contact_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT,
@@ -232,6 +246,7 @@ const MIGRATIONS = [
   "ALTER TABLE authors ADD COLUMN verified INTEGER DEFAULT 0",
   "ALTER TABLE discussions ADD COLUMN author_slug TEXT",
   "ALTER TABLE discussions ADD COLUMN tags TEXT",
+  "ALTER TABLE users ADD COLUMN slug TEXT",
 ];
 
 let schemaReady;

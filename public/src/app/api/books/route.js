@@ -14,6 +14,7 @@ export async function GET(request) {
     format: searchParams.get("format") || undefined,
     country: searchParams.get("country") || undefined,
     minRating: searchParams.get("rating") || undefined,
+    mood: searchParams.get("mood") || undefined,
     sort: searchParams.get("sort") || undefined,
     page: parseInt(searchParams.get("page")) || 1,
     perPage: parseInt(searchParams.get("perPage")) || 32,

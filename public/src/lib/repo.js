@@ -4,6 +4,27 @@ const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
 };
 
+function slugify(name) {
+  const base = (name || "reader").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  return base || "reader";
+}
+
+// Every authenticated write upserts the caller's user row through here —
+// centralizes the pattern that used to be duplicated inline in ~7 API
+// routes, and assigns a stable, readable public slug (name + a short id
+// suffix for uniqueness) the first time a reader is ever seen. The slug is
+// never overwritten once set, so /readers/[slug] links stay permanent even
+// if the reader later renames their account; existing rows from before this
+// column existed get backfilled with COALESCE on their next write.
+export async function upsertUser(uid, name, photo) {
+  const db = await getDb();
+  const slug = `${slugify(name)}-${uid.slice(0, 6).toLowerCase()}`;
+  await db.prepare(
+    `INSERT INTO users (id, name, photo_url, slug) VALUES (?1, ?2, ?3, ?4)
+     ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3, slug=COALESCE(slug, ?4)`
+  ).bind(uid, name, photo || null, slug).run();
+}
+
 function mapBook(r) {
   const tag = process.env.AMAZON_ASSOC_TAG;
   return {
@@ -53,7 +74,7 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
 // SQL-level catalog query with real pagination — scales to very large catalogs
 // (never loads the full table). Used by the /books browser.
 export async function queryBooks(lang, opts = {}) {
-  const { q, category, collection, tag, format, country, minRating, sort, page = 1, perPage = 32 } = opts;
+  const { q, category, collection, tag, format, country, minRating, mood, sort, page = 1, perPage = 32 } = opts;
   const db = await getDb();
 
   const where = ["lang = ?"];
@@ -64,6 +85,9 @@ export async function queryBooks(lang, opts = {}) {
   if (country) { where.push("country = ?"); binds.push(country); }
   if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
   if (tag) { where.push("tags LIKE ?"); binds.push(`%"${tag}"%`); }
+  // Mood/pace come from what readers actually felt while reading (shelf.moods),
+  // not book metadata — StoryGraph-style discovery instead of genre-only.
+  if (mood) { where.push("slug IN (SELECT DISTINCT book_slug FROM shelf WHERE moods LIKE ?)"); binds.push(`%"${mood}"%`); }
   if (q) {
     where.push("(title LIKE ? OR author LIKE ? OR description LIKE ?)");
     const like = `%${q}%`;
@@ -174,6 +198,20 @@ export async function facets(lang) {
   });
 }
 
+// How readers actually felt about books, aggregated across every shelf entry
+// — powers "Browse by Mood" discovery, distinct from genre/category facets.
+export async function getMoodCounts() {
+  return cached("facets:moods", async () => {
+    const db = await getDb();
+    const { results } = await db.prepare("SELECT moods FROM shelf WHERE moods IS NOT NULL").all();
+    const counts = new Map();
+    for (const row of results) {
+      for (const m of J(row.moods)) counts.set(m, (counts.get(m) || 0) + 1);
+    }
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  }, 600);
+}
+
 async function listEntity(table, lang, jsonCols) {
   return cached(`${table}:${lang}`, async () => {
     const db = await getDb();
@@ -251,7 +289,7 @@ export async function getBookCommunity(slug) {
        WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
     ).bind(slug).all(),
     db.prepare(
-      `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url
+      `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url, u.slug
        FROM shelf s JOIN users u ON u.id=s.user_id
        WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
        ORDER BY s.updated_at DESC LIMIT 20`
@@ -278,7 +316,7 @@ export async function getRecentActivity(limit = 12) {
   const db = await getDb();
   const { results } = await db.prepare(
     `SELECT s.book_slug, s.status, s.rating, s.review, s.updated_at,
-            u.id AS user_id, u.name, u.photo_url,
+            u.id AS user_id, u.name, u.photo_url, u.slug,
             b.title, b.cover_url
      FROM shelf s
      JOIN users u ON u.id = s.user_id
@@ -294,7 +332,7 @@ export async function listDiscussions(limit = 30, { q } = {}) {
   const where = q ? "WHERE d.title LIKE ?2 OR d.tags LIKE ?2" : "";
   const binds = q ? [limit, `%${q}%`] : [limit];
   const { results } = await db.prepare(
-    `SELECT d.*, u.name, u.photo_url,
+    `SELECT d.*, u.name, u.photo_url, u.slug,
        (SELECT COUNT(*) FROM discussion_posts p WHERE p.discussion_id = d.id) AS replies,
        (SELECT COUNT(*) FROM discussion_members m WHERE m.discussion_id = d.id AND m.active = 1) AS members,
        b.title AS book_title, a.name AS author_name
@@ -315,7 +353,7 @@ export async function getDiscussion(id, uid) {
   const db = await getDb();
   const [thread, posts, member] = await Promise.all([
     db.prepare(
-      `SELECT d.*, u.name, u.photo_url, b.title AS book_title, a.name AS author_name
+      `SELECT d.*, u.name, u.photo_url, u.slug, b.title AS book_title, a.name AS author_name
        FROM discussions d
        JOIN users u ON u.id=d.user_id
        LEFT JOIN books b ON b.slug=d.book_slug AND b.lang='en'
@@ -323,7 +361,7 @@ export async function getDiscussion(id, uid) {
        WHERE d.id=?1`
     ).bind(id).first(),
     db.prepare(
-      `SELECT p.*, u.name, u.photo_url FROM discussion_posts p JOIN users u ON u.id=p.user_id
+      `SELECT p.*, u.name, u.photo_url, u.slug FROM discussion_posts p JOIN users u ON u.id=p.user_id
        WHERE p.discussion_id=?1 ORDER BY p.created_at ASC`
     ).bind(id).all(),
     uid
@@ -345,7 +383,7 @@ export async function isActiveDiscussionMember(uid, discussionId) {
 export async function getDiscussionMessagesSince(discussionId, sinceId = 0) {
   const db = await getDb();
   const { results } = await db.prepare(
-    `SELECT p.*, u.name, u.photo_url FROM discussion_posts p JOIN users u ON u.id=p.user_id
+    `SELECT p.*, u.name, u.photo_url, u.slug FROM discussion_posts p JOIN users u ON u.id=p.user_id
      WHERE p.discussion_id=?1 AND p.id > ?2 ORDER BY p.created_at ASC`
   ).bind(discussionId, sinceId).all();
   return results;
@@ -432,7 +470,7 @@ export async function searchDiscussions(q, uid, limit = 30) {
   const db = await getDb();
   const like = `%${q || ""}%`;
   const { results } = await db.prepare(
-    `SELECT d.*, u.name, u.photo_url, b.title AS book_title, a.name AS author_name,
+    `SELECT d.*, u.name, u.photo_url, u.slug, b.title AS book_title, a.name AS author_name,
        (SELECT COUNT(*) FROM discussion_members m WHERE m.discussion_id=d.id AND m.active=1) AS members,
        mine.active AS my_active, mine.exit_count AS my_exit_count
      FROM discussions d
@@ -510,18 +548,156 @@ export async function respondNotification(uid, notifId, action) {
 }
 
 // Public profile: user info + full shelf with book data
-export async function getUserProfile(uid) {
+// Accepts either the friendly slug (used in new links) or the raw Firebase
+// uid (older links, or readers who haven't triggered a slug backfill yet).
+// A shareable annual recap — everything computed from books the reader
+// actually finished that year, nothing else.
+export async function getYearInBooks(uid, year) {
   const db = await getDb();
-  const [user, shelf] = await Promise.all([
-    db.prepare("SELECT * FROM users WHERE id=?1").bind(uid).first(),
-    db.prepare(
-      `SELECT s.*, b.title, b.author, b.cover_url
-       FROM shelf s LEFT JOIN books b ON b.slug=s.book_slug AND b.lang='en'
-       WHERE s.user_id=?1 ORDER BY s.updated_at DESC`
-    ).bind(uid).all(),
-  ]);
+  const { results: books } = await db.prepare(
+    `SELECT s.*, b.title, b.author, b.cover_url, b.category, b.page_count
+     FROM shelf s LEFT JOIN books b ON b.slug = s.book_slug AND b.lang = 'en'
+     WHERE s.user_id=?1 AND s.status='read' AND strftime('%Y', COALESCE(s.finished_at, s.updated_at)) = ?2`
+  ).bind(uid, String(year)).all();
+
+  const totalBooks = books.length;
+  const totalPages = books.reduce((n, b) => n + (b.page_count || 0), 0);
+  const rated = books.filter((b) => b.rating);
+  const avgRating = rated.length ? rated.reduce((n, b) => n + b.rating, 0) / rated.length : null;
+
+  const genreCounts = new Map();
+  const authorCounts = new Map();
+  for (const b of books) {
+    if (b.category) genreCounts.set(b.category, (genreCounts.get(b.category) || 0) + 1);
+    if (b.author) authorCounts.set(b.author, (authorCounts.get(b.author) || 0) + 1);
+  }
+  const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  const longestBook = books.reduce((max, b) => ((b.page_count || 0) > (max?.page_count || 0) ? b : max), null);
+  const topRatedBook = [...books].sort((a, b) => (b.rating || 0) - (a.rating || 0))[0] || null;
+  const reviewsWritten = books.filter((b) => b.review && b.review.trim()).length;
+
+  const months = Array.from({ length: 12 }, (_, i) => ({ month: i, count: 0 }));
+  for (const b of books) {
+    const d = new Date(b.finished_at || b.updated_at);
+    if (!Number.isNaN(d.getTime())) months[d.getMonth()].count += 1;
+  }
+
+  return { year, totalBooks, totalPages, avgRating: avgRating ? Number(avgRating.toFixed(1)) : null, topGenre, topAuthor, longestBook, topRatedBook, reviewsWritten, months };
+}
+
+export async function getUserProfile(idOrSlug) {
+  const db = await getDb();
+  const user = await db.prepare("SELECT * FROM users WHERE slug=?1 OR id=?1").bind(idOrSlug).first();
   if (!user) return null;
+  const shelf = await db.prepare(
+    `SELECT s.*, b.title, b.author, b.cover_url
+     FROM shelf s LEFT JOIN books b ON b.slug=s.book_slug AND b.lang='en'
+     WHERE s.user_id=?1 ORDER BY s.updated_at DESC`
+  ).bind(user.id).all();
   return { user, shelf: shelf.results };
+}
+
+export async function addQuote(userId, { bookSlug, text, page }) {
+  const db = await getDb();
+  const res = await db.prepare(
+    "INSERT INTO quotes (user_id, book_slug, text, page) VALUES (?1, ?2, ?3, ?4)"
+  ).bind(userId, bookSlug, text, page || null).run();
+  return res.meta.last_row_id;
+}
+
+export async function getQuotesForBook(bookSlug, limit = 20) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT q.*, u.name, u.photo_url, u.slug FROM quotes q JOIN users u ON u.id = q.user_id
+     WHERE q.book_slug = ?1 ORDER BY q.created_at DESC LIMIT ?2`
+  ).bind(bookSlug, limit).all();
+  return results;
+}
+
+export async function getQuotesByUser(uid, limit = 100) {
+  const db = await getDb();
+  const { results } = await db.prepare(
+    `SELECT q.*, b.title, b.author, b.cover_url FROM quotes q
+     LEFT JOIN books b ON b.slug = q.book_slug AND b.lang = 'en'
+     WHERE q.user_id = ?1 ORDER BY q.created_at DESC LIMIT ?2`
+  ).bind(uid, limit).all();
+  return results;
+}
+
+export async function deleteQuote(uid, quoteId) {
+  const db = await getDb();
+  await db.prepare("DELETE FROM quotes WHERE id=?1 AND user_id=?2").bind(quoteId, uid).run();
+}
+
+// The full achievement catalog — every reader is scored against all of
+// these; `getAchievements` fills in progress/unlocked per reader.
+export const ACHIEVEMENTS = [
+  { id: "first-book", name: "First Page", desc: "Finish your first book", icon: "book", target: 1, stat: "reads" },
+  { id: "bookworm-10", name: "Bookworm", desc: "Finish 10 books", icon: "bookOpen", target: 10, stat: "reads" },
+  { id: "bookworm-50", name: "50 Books Club", desc: "Finish 50 books", icon: "layers", target: 50, stat: "reads" },
+  { id: "century", name: "Century Club", desc: "Finish 100 books", icon: "award", target: 100, stat: "reads" },
+  { id: "first-review", name: "First Review", desc: "Write your first review", icon: "feather", target: 1, stat: "reviews" },
+  { id: "top-reviewer", name: "Top Reviewer", desc: "Write 20 reviews", icon: "star", target: 20, stat: "reviews" },
+  { id: "rater", name: "Prolific Rater", desc: "Rate 30 books", icon: "star", target: 30, stat: "ratings" },
+  { id: "discussion-starter", name: "Discussion Starter", desc: "Start 5 discussions", icon: "users", target: 5, stat: "discussions" },
+  { id: "conversationalist", name: "Conversationalist", desc: "Post 25 discussion messages", icon: "feather", target: 25, stat: "posts" },
+  { id: "genre-explorer", name: "Genre Explorer", desc: "Read across 5 different genres", icon: "compass", target: 5, stat: "genres" },
+  { id: "quote-collector", name: "Quote Collector", desc: "Save 10 favorite quotes", icon: "feather", target: 10, stat: "quotes" },
+  { id: "social-reader", name: "Social Reader", desc: "Follow 5 fellow readers", icon: "heart", target: 5, stat: "following" },
+  { id: "well-followed", name: "Well Followed", desc: "Get 5 followers", icon: "users", target: 5, stat: "followers" },
+  { id: "week-streak", name: "Week Streak", desc: "Reach a 7-day reading streak", icon: "flame", target: 7, stat: "streak" },
+  { id: "month-streak", name: "Month Streak", desc: "Reach a 30-day reading streak", icon: "flame", target: 30, stat: "streak" },
+];
+
+export async function getAchievements(uid) {
+  const db = await getDb();
+  const [shelfAgg, discCount, postCount, quoteCount, followingCount, followerCount, genreRows, activeDays] = await Promise.all([
+    db.prepare(
+      `SELECT SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS reads,
+         SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
+         SUM(CASE WHEN review IS NOT NULL AND review != '' THEN 1 ELSE 0 END) AS reviews
+       FROM shelf WHERE user_id=?1`
+    ).bind(uid).first(),
+    db.prepare("SELECT COUNT(*) AS n FROM discussions WHERE user_id=?1").bind(uid).first(),
+    db.prepare("SELECT COUNT(*) AS n FROM discussion_posts WHERE user_id=?1").bind(uid).first(),
+    db.prepare("SELECT COUNT(*) AS n FROM quotes WHERE user_id=?1").bind(uid).first(),
+    db.prepare("SELECT COUNT(*) AS n FROM follows WHERE user_id=?1 AND target_type='reader'").bind(uid).first(),
+    db.prepare("SELECT COUNT(*) AS n FROM follows WHERE target_type='reader' AND target_id=?1").bind(uid).first(),
+    db.prepare(
+      `SELECT DISTINCT b.category FROM shelf s JOIN books b ON b.slug=s.book_slug AND b.lang='en'
+       WHERE s.user_id=?1 AND s.status='read' AND b.category IS NOT NULL`
+    ).bind(uid).all(),
+    db.prepare("SELECT DISTINCT substr(updated_at,1,10) AS d FROM shelf WHERE user_id=?1 ORDER BY d DESC LIMIT 400").bind(uid).all(),
+  ]);
+
+  // Consecutive-day streak ending today or yesterday — same logic as /api/goal.
+  let streak = 0;
+  const dates = new Set(activeDays.results.map((r) => r.d));
+  const cursor = new Date();
+  if (!dates.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
+  while (dates.has(cursor.toISOString().slice(0, 10))) { streak += 1; cursor.setDate(cursor.getDate() - 1); }
+
+  const stats = {
+    reads: shelfAgg.reads || 0,
+    ratings: shelfAgg.ratings || 0,
+    reviews: shelfAgg.reviews || 0,
+    discussions: discCount.n || 0,
+    posts: postCount.n || 0,
+    quotes: quoteCount.n || 0,
+    following: followingCount.n || 0,
+    followers: followerCount.n || 0,
+    genres: genreRows.results.length,
+    streak,
+  };
+
+  return ACHIEVEMENTS.map((a) => ({
+    ...a,
+    current: stats[a.stat] || 0,
+    progress: Math.min(stats[a.stat] || 0, a.target),
+    unlocked: (stats[a.stat] || 0) >= a.target,
+  }));
 }
 
 // Badges are book-accomplishment based (never personal info) — the whole
@@ -541,7 +717,7 @@ export async function getLeaderboard({ limit = 20, year, minBooks, genre } = {})
   const db = await getDb();
   const [base, shelfBooks] = await Promise.all([
     db.prepare(
-      `SELECT u.id, u.name, u.photo_url,
+      `SELECT u.id, u.name, u.photo_url, u.slug,
          COALESCE(sh.reads, 0) AS reads,
          COALESCE(sh.ratings, 0) AS ratings,
          COALESCE(sh.reviews, 0) AS reviews,
@@ -607,7 +783,7 @@ export async function getLeaderboard({ limit = 20, year, minBooks, genre } = {})
 export async function getPopularReaders(limit = 20) {
   const db = await getDb();
   const { results } = await db.prepare(
-    `SELECT u.id, u.name, u.photo_url, COUNT(f.user_id) AS followers
+    `SELECT u.id, u.name, u.photo_url, u.slug, COUNT(f.user_id) AS followers
      FROM users u JOIN follows f ON f.target_type = 'reader' AND f.target_id = u.id
      GROUP BY u.id ORDER BY followers DESC LIMIT ?1`
   ).bind(limit).all();

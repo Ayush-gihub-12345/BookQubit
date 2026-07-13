@@ -16,7 +16,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const bottomRef = useRef(null);
+  const scrollRef = useRef(null);
   const lastIdRef = useRef(0);
 
   const load = async () => {
@@ -44,8 +44,12 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discussionId]);
 
+  // Scroll only the message list itself — never scrollIntoView(), which can
+  // walk up to the window and shift the whole page if this container's
+  // height chain isn't perfectly constrained at every breakpoint.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
   useEffect(() => {
@@ -118,7 +122,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
               </Link>
             )}
             {thread.author_name && <span><Icon name="feather" size={11} className="inline" /> {thread.author_name}</span>}
-            <span>Started by {thread.name}</span>
+            <span>Started by <Link href={`/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-600 hover:underline">{thread.name}</Link></span>
           </p>
         </div>
         {isMember && (
@@ -141,7 +145,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
       )}
 
       {/* Messages */}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {thread.body && (
           <div className="card !border-brand-500/20 bg-brand-600/5 p-3 text-sm hover:!translate-y-0">
             <p className="text-muted mb-1 text-[11px] font-semibold uppercase tracking-wide">Discussion topic</p>
@@ -152,16 +156,21 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
           const mine = m.user_id === user?.uid;
           return (
             <div key={m.id} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-              {m.photo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.photo_url} alt="" className="h-7 w-7 shrink-0 rounded-full" />
-              ) : (
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
-                  {(m.name || "R")[0].toUpperCase()}
-                </span>
-              )}
+              <Link href={`/readers/${m.slug || m.user_id}`} className="shrink-0">
+                {m.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.photo_url} alt="" className="h-7 w-7 rounded-full" />
+                ) : (
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                    {(m.name || "R")[0].toUpperCase()}
+                  </span>
+                )}
+              </Link>
               <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-brand-600 text-white" : "bg-black/5 dark:bg-white/5"}`}>
-                {!mine && <p className="mb-0.5 text-[11px] font-semibold opacity-70">{m.name}</p>}
+                <Link href={`/readers/${m.slug || m.user_id}`}
+                  className={`mb-0.5 block text-[11px] font-semibold hover:underline ${mine ? "text-white/80" : "opacity-70"}`}>
+                  {mine ? "You" : m.name}
+                </Link>
                 <p className="whitespace-pre-line leading-relaxed">{m.body}</p>
                 <p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-muted"}`}>
                   {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -171,7 +180,6 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
           );
         })}
         {!messages.length && <p className="text-muted text-center text-sm">No messages yet — say hello.</p>}
-        <div ref={bottomRef} />
       </div>
 
       {error && <p className="px-4 pb-1 text-xs text-red-500">{error}</p>}

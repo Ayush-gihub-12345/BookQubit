@@ -10,6 +10,7 @@ import Icon from "@/components/Icon";
 import ReportIssueButton from "@/components/ReportIssueButton";
 import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
+import QuotesSection from "@/components/QuotesSection";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
@@ -280,6 +281,11 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
+            {/* Reader quotes */}
+            <div className="mt-10">
+              <QuotesSection bookSlug={book.slug} />
+            </div>
+
             {/* Community section */}
             <div id="reviews" className="mt-10 scroll-mt-24">
               <h2 className="text-xl font-bold">{_("communityTitle")}</h2>
@@ -348,7 +354,7 @@ export default async function BookPage({ params }) {
                           </span>
                         )}
                         <div className="min-w-0 flex-1">
-                          <Link href={`/readers/${r.user_id}`} className="text-sm font-semibold hover:text-brand-600">{r.name}</Link>
+                          <Link href={`/readers/${r.slug || r.user_id}`} className="text-sm font-semibold hover:text-brand-600">{r.name}</Link>
                           <p className="text-muted text-xs">{r.updated_at?.slice(0, 10)}</p>
                         </div>
                         {r.rating && <span className="text-sm text-amber-400">{"★".repeat(r.rating)}</span>}

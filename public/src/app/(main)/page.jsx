@@ -10,7 +10,7 @@ import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import HScrollRow from "@/components/HScrollRow";
 import Logo from "@/components/Logo";
-import { listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded } from "@/lib/repo";
+import { listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded, getMoodCounts } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const lang = await getLang();
   const _ = t(lang);
-  const [all, topRated, newReleases, f, authors, pubs, comics, recentlyAdded] = await Promise.all([
+  const [all, topRated, newReleases, f, authors, pubs, comics, recentlyAdded, moods] = await Promise.all([
     listBooks(lang),
     listBooks(lang, { sort: "rating", limit: 10 }),
     listBooks(lang, { sort: "new", limit: 6 }),
@@ -28,6 +28,7 @@ export default async function Home() {
     listPublications(lang),
     listComics(lang),
     getRecentlyAdded(lang, 8),
+    getMoodCounts(),
   ]);
   const heroBooks = all.filter((b) => b.featured).slice(0, 5);
   const surprise = all.length ? all[Math.floor(Math.random() * all.length)] : null;
@@ -144,6 +145,20 @@ export default async function Home() {
           ))}
         </div>
       </Section>
+
+      {/* Browse by Mood — how readers actually felt, not just genre */}
+      {moods.length >= 3 && (
+        <Section title="What Are You in the Mood For?" subtitle="Discover books by how readers actually felt reading them">
+          <div className="flex flex-wrap gap-2.5">
+            {moods.slice(0, 10).map((m) => (
+              <Link key={m.name} href={`/books?mood=${encodeURIComponent(m.name)}`}
+                className="pill !px-4 !py-2 !text-sm hover:!bg-brand-600 hover:!text-white">
+                {m.name} <span className="ml-1 opacity-60">{m.count}</span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Explore Books */}
       <Section title={_("featured")} subtitle="Dive into our curated selection of must-read titles" href="/books">

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
-import { getUserPreferences, upsertUserPreferences } from "@/lib/repo";
+import { getUserPreferences, upsertUserPreferences, upsertUser } from "@/lib/repo";
 
 // GET /api/preferences?uid=...
 export async function GET(request) {
@@ -17,10 +16,7 @@ export async function POST(request) {
   const user = await verifyUser(body.idToken);
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const db = await getDb();
-  await db.prepare(
-    "INSERT INTO users (id, name, photo_url) VALUES (?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3"
-  ).bind(user.uid, user.name, user.photo).run();
+  await upsertUser(user.uid, user.name, user.photo);
 
   await upsertUserPreferences(user.uid, { genres: body.genres, onboarded: body.onboarded });
   return NextResponse.json({ ok: true });

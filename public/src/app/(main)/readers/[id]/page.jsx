@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getUserProfile, levelFor } from "@/lib/repo";
+import { getUserProfile, levelFor, getAchievements, getQuotesByUser } from "@/lib/repo";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import { FollowButton } from "@/components/FollowButton";
@@ -20,6 +20,8 @@ export default async function ReaderProfilePage({ params }) {
   const profile = await getUserProfile(id);
   if (!profile) notFound();
   const { user, shelf } = profile;
+  const [achievements, quotes] = await Promise.all([getAchievements(user.id), getQuotesByUser(user.id, 6)]);
+  const unlockedAchievements = achievements.filter((a) => a.unlocked);
 
   const read = shelf.filter((s) => s.status === "read");
   const reading = shelf.filter((s) => s.status === "reading");
@@ -59,6 +61,38 @@ export default async function ReaderProfilePage({ params }) {
           </div>
         </div>
       </div>
+
+      {unlockedAchievements.length > 0 && (
+        <div>
+          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
+            <Icon name="award" size={18} className="text-brand-600" /> Achievements <span className="text-muted text-sm font-normal">({unlockedAchievements.length})</span>
+          </h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {unlockedAchievements.map((a) => (
+              <span key={a.id} className="pill !bg-brand-600/10 !text-brand-600" title={a.desc}>
+                <Icon name={a.icon} size={13} /> {a.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {quotes.length > 0 && (
+        <div>
+          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
+            <Icon name="feather" size={18} className="text-brand-600" /> Favorite Quotes
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {quotes.map((q) => (
+              <Link key={q.id} href={`/books/${encodeURIComponent(q.book_slug)}`}
+                className="card !border-brand-500/20 bg-brand-600/5 p-4 hover:!translate-y-0">
+                <p className="whitespace-pre-line text-sm italic leading-relaxed">"{q.text}"</p>
+                <p className="text-muted mt-2 text-xs">— {q.title || q.book_slug}{q.page ? `, p. ${q.page}` : ""}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {GROUPS.map(([icon, title, items]) =>
         items.length ? (

@@ -82,7 +82,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     debounceRef.current = setTimeout(() => apply({ q: v || undefined }), 350);
   };
 
-  const { q, category, collection, tag, format, country, rating, sort, view } = params;
+  const { q, category, collection, tag, format, country, rating, mood, sort, view } = params;
   const isList = view === "list";
 
   const activeFilters = [
@@ -93,6 +93,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     rating && { key: "rating", label: `★ ${rating}+` },
     format && { key: "format", label: format },
     country && { key: "country", label: country },
+    mood && { key: "mood", label: mood },
   ].filter(Boolean);
 
   const Toggle = ({ active, onClick, children }) => (
@@ -224,6 +225,22 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
               ))}
             </ul>
           </div>
+
+          {facets.moods?.length > 0 && (
+            <div>
+              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Mood</p>
+              <ul className="space-y-1">
+                {facets.moods.slice(0, 8).map((m) => (
+                  <li key={m.name}>
+                    <Toggle active={mood === m.name} onClick={() => apply({ mood: mood === m.name ? undefined : m.name })}>
+                      <span className="line-clamp-1">{m.name}</span>
+                      <span className="text-muted text-xs">{m.count}</span>
+                    </Toggle>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {facets.collections.length > 0 && (
             <div>

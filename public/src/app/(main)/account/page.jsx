@@ -180,6 +180,8 @@ export default function AccountPage() {
             {rank && <Link href="/leaderboard" className="pill !text-sm"><Icon name="trophy" size={13} /> Rank #{rank.position}</Link>}
           </div>
         </div>
+        <Link href="/wrapped" className="btn-ghost text-sm"><Icon name="zap" size={15} /> Your Year in Books</Link>
+        <Link href="/achievements" className="btn-ghost text-sm"><Icon name="award" size={15} /> Achievements</Link>
         <Link href="/leaderboard" className="btn-ghost text-sm"><Icon name="trophy" size={15} /> Bookworm Ranking</Link>
         <Link href="/community" className="btn-ghost text-sm"><Icon name="users" size={15} /> Community</Link>
       </div>

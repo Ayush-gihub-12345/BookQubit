@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
+import { upsertUser } from "@/lib/repo";
 
 // GET /api/follow?type=author&id=yuval-noah-harari[&uid=...]
 export async function GET(request) {
@@ -27,10 +28,8 @@ export async function POST(request) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!body.type || !body.id) return NextResponse.json({ error: "type and id required" }, { status: 400 });
 
+  await upsertUser(user.uid, user.name, user.photo);
   const db = await getDb();
-  await db.prepare(
-    "INSERT INTO users (id, name, photo_url) VALUES (?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3"
-  ).bind(user.uid, user.name, user.photo).run();
 
   if (body.follow === false) {
     await db.prepare("DELETE FROM follows WHERE user_id=?1 AND target_type=?2 AND target_id=?3")

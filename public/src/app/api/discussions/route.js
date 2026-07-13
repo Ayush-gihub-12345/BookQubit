@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { listDiscussions, createDiscussion } from "@/lib/repo";
-import { getDb } from "@/lib/db";
+import { listDiscussions, createDiscussion, upsertUser } from "@/lib/repo";
 import { verifyUser } from "@/lib/auth-server";
 
 export async function GET(request) {
@@ -22,10 +21,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "pick a book or author to start a discussion" }, { status: 400 });
   }
 
-  const db = await getDb();
-  await db.prepare(
-    "INSERT INTO users (id, name, photo_url) VALUES (?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3"
-  ).bind(user.uid, user.name, user.photo).run();
+  await upsertUser(user.uid, user.name, user.photo);
 
   const tags = Array.isArray(body.tags) ? body.tags.map((t) => String(t).trim()).filter(Boolean).slice(0, 8) : [];
   const id = await createDiscussion(user.uid, {

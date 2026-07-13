@@ -1,5 +1,5 @@
 import BooksBrowser from "@/components/BooksBrowser";
-import { queryBooks, facets } from "@/lib/repo";
+import { queryBooks, facets, getMoodCounts } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +18,14 @@ export default async function BooksPage({ searchParams }) {
   const params = {
     q: sp.q, category: sp.category, tag: sp.tag, collection: sp.collection,
     sort: sp.sort, rating: sp.rating, format: sp.format, country: sp.country,
-    view: sp.view, page: sp.page ? parseInt(sp.page) : undefined,
+    mood: sp.mood, view: sp.view, page: sp.page ? parseInt(sp.page) : undefined,
   };
 
-  const [initialData, f] = await Promise.all([
+  const [initialData, f, moods] = await Promise.all([
     queryBooks(lang, { ...params, minRating: params.rating, page: params.page || 1 }),
     facets(lang),
+    getMoodCounts(),
   ]);
 
-  return <BooksBrowser lang={lang} initialParams={params} initialData={initialData} facets={f} />;
+  return <BooksBrowser lang={lang} initialParams={params} initialData={initialData} facets={{ ...f, moods }} />;
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
+import { upsertUser } from "@/lib/repo";
 
 // GET /api/shelf?uid=...[&slug=...] — a user's shelf (joined with book info)
 export async function GET(request) {
@@ -34,12 +35,9 @@ export async function POST(request) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!body.slug) return NextResponse.json({ error: "slug required" }, { status: 400 });
 
+  await upsertUser(user.uid, user.name, user.photo);
   const db = await getDb();
   await db.batch([
-    db.prepare(
-      `INSERT INTO users (id, name, photo_url) VALUES (?1, ?2, ?3)
-       ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3`
-    ).bind(user.uid, user.name, user.photo),
     db.prepare(
       `INSERT INTO shelf (user_id, book_slug, status, rating, review, progress, moods, pace, spoiler, started_at, finished_at, updated_at)
        VALUES (?1, ?2, COALESCE(?3,'want'), ?4, ?5, COALESCE(?6,0), ?7, ?8, COALESCE(?11,0), ?9, ?10, CURRENT_TIMESTAMP)
