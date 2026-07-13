@@ -3,8 +3,10 @@
   "name": "bookqubit-import-cron",
   "main": "src/index.js",
   "compatibility_date": "2025-05-01",
-  // Same database as the main BookQubit app — this worker only ever inserts
-  // rows into `books` and updates its own `import_progress` row.
+  // Same database as the main BookQubit app — this worker reads unconsumed
+  // rows from `import_chunks` (staged there by prepare_import.py, no R2 or
+  // any other external storage needed) and expands them into real `books`
+  // rows, updating `import_progress` as it goes.
   "d1_databases": [
     {
       "binding": "DB",
@@ -12,23 +14,14 @@
       "database_id": "b7a72589-843b-4c9a-b793-27e3a1ae2b80"
     }
   ],
-  // Bucket containing the chunk-*.jsonl files produced by prepare_import.py
-  // + upload_to_r2.py. Create it once with: wrangler r2 bucket create bookqubit-import-queue
-  "r2_buckets": [
-    {
-      "binding": "IMPORT_BUCKET",
-      "bucket_name": "bookqubit-import-queue"
-    }
-  ],
-  // Every 3 hours (8 runs/day). Each run processes PER_RUN_CHUNKS chunks —
-  // tuned so 8 runs/day lands comfortably under D1's free-tier daily write
-  // quota (see PER_RUN_CHUNKS below: 5 chunks x 2000 rows x 8 runs = 80,000/day).
+  // Every 3 hours (8 runs/day). Each run consumes PER_RUN_CHUNKS chunks —
+  // tuned so 8 runs/day lands under ~50,000 rows/day (13 chunks x 500 rows
+  // x 8 runs = 52,000/day), comfortably under D1's free-tier write quota.
   "triggers": {
     "crons": ["0 */3 * * *"]
   },
   "vars": {
-    "IMPORT_PREFIX": "import-queue",
-    "PER_RUN_CHUNKS": "5",
+    "PER_RUN_CHUNKS": "13",
     "D1_BATCH_SIZE": "100"
   }
 }

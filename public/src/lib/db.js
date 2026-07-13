@@ -253,19 +253,34 @@ CREATE TABLE IF NOT EXISTS book_requests (
 CREATE INDEX IF NOT EXISTS idx_requests_status ON book_requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
 
--- Tracks the bulk-import cron's position in the R2-staged chunk queue —
+-- The bulk-import queue itself, staged entirely in D1 (no R2/external
+-- storage needed) — each row is one small batch of pre-filtered, deduped
+-- books as a JSON blob. Uploading the whole queue is a handful of row
+-- writes (one per chunk), not one per book; the cron worker expands a few
+-- unconsumed chunks into real `books` rows on each run, at a controlled pace.
+CREATE TABLE IF NOT EXISTS import_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chunk_data TEXT NOT NULL,
+  row_count INTEGER NOT NULL,
+  consumed INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_import_chunks_consumed ON import_chunks(consumed);
+
+-- Cumulative counters + last-run bookkeeping for the bulk-import cron —
 -- single row (id=1) since there's one active import stream at a time.
--- Lets the daily cron worker resume exactly where yesterday left off, and
--- lets the admin dashboard show live progress.
+-- daily_cap/imported_today/today_date let both the scheduled cron and a
+-- manual "Run now" trigger refuse to run once the day's write budget is
+-- used up, regardless of who or what asked for another run.
 CREATE TABLE IF NOT EXISTS import_progress (
   id INTEGER PRIMARY KEY CHECK (id = 1),
-  source_prefix TEXT,
-  next_chunk INTEGER DEFAULT 0,
-  total_chunks INTEGER DEFAULT 0,
   total_imported INTEGER DEFAULT 0,
   total_skipped INTEGER DEFAULT 0,
   last_run_at TEXT,
-  last_status TEXT
+  last_status TEXT,
+  daily_cap INTEGER DEFAULT 50000,
+  imported_today INTEGER DEFAULT 0,
+  today_date TEXT
 );
 `;
 
@@ -281,6 +296,9 @@ const MIGRATIONS = [
   "ALTER TABLE discussions ADD COLUMN author_slug TEXT",
   "ALTER TABLE discussions ADD COLUMN tags TEXT",
   "ALTER TABLE users ADD COLUMN slug TEXT",
+  "ALTER TABLE import_progress ADD COLUMN daily_cap INTEGER DEFAULT 50000",
+  "ALTER TABLE import_progress ADD COLUMN imported_today INTEGER DEFAULT 0",
+  "ALTER TABLE import_progress ADD COLUMN today_date TEXT",
 ];
 
 let schemaReady;

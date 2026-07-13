@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
 Prepares an Open Library bulk dump for import into BookQubit's D1 database.
+No R2 or any external storage needed — the whole queue is staged directly in
+D1 itself, as compact JSON-blob rows in the `import_chunks` table. Uploading
+the queue is then just a handful of `wrangler d1 execute` calls (one row per
+chunk of books, not one per book), which the daily cron worker expands into
+real `books` rows over time at a controlled pace.
 
 Two-pass streaming process (never loads the full dump into memory):
   1. Build an author-id -> name lookup from the (smaller) authors dump.
-  2. Stream the editions dump, filter/dedupe/map each qualifying book, and
-     write fixed-size JSONL chunk files ready for the daily cron worker to
-     insert into D1.
+  2. Stream the editions dump, filter/dedupe/map each qualifying book, group
+     them into fixed-size chunks, and write out ready-to-run .sql files
+     (each containing several `INSERT INTO import_chunks ...` statements).
 
 Rating filtering caveat (read this before relying on --min-rating):
   Open Library's bulk dump does NOT reliably include per-edition/work rating
@@ -22,14 +27,17 @@ Usage:
   python prepare_import.py \
     --authors-dump ol_dump_authors_latest.txt.gz \
     --editions-dump ol_dump_editions_latest.txt.gz \
-    --output-dir ./chunks \
-    --chunk-size 2000 \
+    --output-dir ./queue \
+    --chunk-size 500 \
+    --sql-batch-size 50 \
     --min-rating 3.5 \
     --ratings-file ratings.json \
     --lang en
 
-Then upload the resulting chunks/ directory to your R2 bucket under
-import-queue/ (see upload_to_r2.py) before deploying the cron worker.
+Then load the queue into D1 (see README.md for the loop command):
+  for f in queue/*.sql; do
+    npx wrangler d1 execute database --remote --file="$f"
+  done
 """
 
 import argparse
@@ -108,12 +116,18 @@ def map_edition(data, authors, lang):
     }
 
 
+def sql_escape(text):
+    """Standard SQL string-literal escaping (double up single quotes)."""
+    return text.replace("'", "''")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--authors-dump", required=True)
     ap.add_argument("--editions-dump", required=True)
     ap.add_argument("--output-dir", required=True)
-    ap.add_argument("--chunk-size", type=int, default=2000)
+    ap.add_argument("--chunk-size", type=int, default=500, help="Books per import_chunks row")
+    ap.add_argument("--sql-batch-size", type=int, default=50, help="Chunk-rows per output .sql file")
     ap.add_argument("--min-rating", type=float, default=None)
     ap.add_argument("--ratings-file", default=None, help="JSON map of work_key -> average rating")
     ap.add_argument("--lang", default="en")
@@ -137,22 +151,36 @@ def main():
         )
 
     seen_isbns = set()
-    chunk = []
-    chunk_index = 0
+    book_chunk = []          # current group of books becoming one import_chunks row
+    sql_statements = []      # current group of INSERT statements becoming one .sql file
+    file_index = 0
     total_kept = 0
     total_skipped_dupe = 0
     total_skipped_norating = 0
+    total_chunk_rows = 0
 
-    def flush_chunk():
-        nonlocal chunk, chunk_index
-        if not chunk:
+    def flush_sql_file():
+        nonlocal sql_statements, file_index
+        if not sql_statements:
             return
-        chunk_index += 1
-        path = out_dir / f"chunk-{chunk_index:05d}.jsonl"
+        file_index += 1
+        path = out_dir / f"queue-{file_index:05d}.sql"
         with open(path, "w", encoding="utf-8") as f:
-            for row in chunk:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        chunk = []
+            f.write("\n".join(sql_statements) + "\n")
+        sql_statements = []
+
+    def flush_book_chunk():
+        nonlocal book_chunk, total_chunk_rows
+        if not book_chunk:
+            return
+        blob = sql_escape(json.dumps(book_chunk, ensure_ascii=False))
+        sql_statements.append(
+            f"INSERT INTO import_chunks (chunk_data, row_count) VALUES ('{blob}', {len(book_chunk)});"
+        )
+        total_chunk_rows += 1
+        book_chunk = []
+        if len(sql_statements) >= args.sql_batch_size:
+            flush_sql_file()
 
     opener = gzip.open if args.editions_dump.endswith(".gz") else open
     print(f"Streaming editions from {args.editions_dump} ...", file=sys.stderr)
@@ -182,21 +210,25 @@ def main():
                     continue
 
             seen_isbns.add(row["isbn"])
-            chunk.append(row)
+            row.pop("source", None)
+            row.pop("work_key", None)  # only needed for the rating cross-check above, not for import
+            book_chunk.append(row)
             total_kept += 1
-            if len(chunk) >= args.chunk_size:
-                flush_chunk()
+            if len(book_chunk) >= args.chunk_size:
+                flush_book_chunk()
 
             if i % 200000 == 0:
                 print(f"  ...{i:,} lines scanned, {total_kept:,} kept", file=sys.stderr)
 
-    flush_chunk()
+    flush_book_chunk()
+    flush_sql_file()
 
     print("\nDone.", file=sys.stderr)
     print(f"  Kept:              {total_kept:,}", file=sys.stderr)
     print(f"  Skipped (dupe):    {total_skipped_dupe:,}", file=sys.stderr)
     print(f"  Skipped (rating):  {total_skipped_norating:,}", file=sys.stderr)
-    print(f"  Chunks written:    {chunk_index} in {out_dir}", file=sys.stderr)
+    print(f"  Chunk rows:        {total_chunk_rows:,} (~{args.chunk_size} books each)", file=sys.stderr)
+    print(f"  SQL files written: {file_index} in {out_dir}", file=sys.stderr)
 
 
 if __name__ == "__main__":

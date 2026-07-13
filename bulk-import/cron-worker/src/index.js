@@ -1,40 +1,62 @@
-// Daily (well, every-3-hours) bulk import cron. Reads the next unprocessed
-// chunk files from R2 (staged by prepare_import.py + upload_to_r2.py),
-// inserts them into D1's `books` table, and records exactly where it
-// stopped in `import_progress` so the next run picks up seamlessly —
-// resumable across restarts, redeploys, and even a fresh queue refresh.
+// Daily (well, every-3-hours) bulk import cron. The whole queue lives in D1
+// itself (`import_chunks` — no R2/external storage) as compact JSON-blob
+// rows staged by prepare_import.py. Each run consumes a few unconsumed
+// chunks, expands them into real `books` rows, and records cumulative
+// progress in `import_progress` — resumable across restarts and redeploys
+// since "which chunks are left" is just a WHERE clause, not a cursor to lose.
+//
+// Two independent safeguards protect the daily D1 write quota:
+//   1. daily_cap/imported_today/today_date on import_progress — enforced
+//      here regardless of who or what triggered the run (scheduled cron OR
+//      a manual "Run now" click), so a manual trigger can never blow past
+//      the day's budget even if clicked repeatedly.
+//   2. The /run HTTP route requires a shared secret header, known only to
+//      the main app's server (never sent to the browser) — the raw worker
+//      URL is not something "anyone" can use to trigger a run.
+//
+// maxChunks lets a caller process just one chunk per call (the admin
+// dashboard does this in a loop, so it can show live per-chunk progress
+// instead of waiting for the whole scheduled-size batch to finish silently).
 
-async function runImport(env) {
+function todayUTC() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function runImport(env, { maxChunks } = {}) {
   const db = env.DB;
-  const bucket = env.IMPORT_BUCKET;
-  const prefix = env.IMPORT_PREFIX || "import-queue";
-  const perRunChunks = Number(env.PER_RUN_CHUNKS) || 5;
+  const perRunChunks = maxChunks || Number(env.PER_RUN_CHUNKS) || 13;
   const batchSize = Number(env.D1_BATCH_SIZE) || 100;
 
   await db.prepare(
-    `INSERT INTO import_progress (id, source_prefix, next_chunk, total_chunks) VALUES (1, ?1, 0, 0)
-     ON CONFLICT(id) DO NOTHING`
-  ).bind(prefix).run();
+    "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
+  ).run();
 
-  const progress = await db.prepare("SELECT * FROM import_progress WHERE id=1").first();
+  let progress = await db.prepare("SELECT * FROM import_progress WHERE id=1").first();
 
-  // Re-read the manifest every run — if you upload a refreshed queue with
-  // more chunks later, this picks up the new total automatically.
-  const manifestObj = await bucket.get(`${prefix}/manifest.json`);
-  const totalChunks = manifestObj ? (await manifestObj.json()).totalChunks : progress.total_chunks;
+  // Roll the daily counter over at UTC midnight.
+  if (progress.today_date !== todayUTC()) {
+    await db.prepare("UPDATE import_progress SET today_date=?1, imported_today=0 WHERE id=1").bind(todayUTC()).run();
+    progress = { ...progress, today_date: todayUTC(), imported_today: 0 };
+  }
 
-  let nextChunk = progress.next_chunk;
+  if (progress.imported_today >= progress.daily_cap) {
+    return {
+      imported: 0, skipped: 0, chunksProcessed: 0, remainingChunks: null, capped: true,
+      dailyCap: progress.daily_cap, importedToday: progress.imported_today, insertedTitles: [],
+    };
+  }
+
+  const { results: chunks } = await db.prepare(
+    "SELECT id, chunk_data FROM import_chunks WHERE consumed = 0 ORDER BY id LIMIT ?1"
+  ).bind(perRunChunks).all();
+
   let imported = 0;
   let skipped = 0;
-  let processedChunks = 0;
+  const insertedTitles = [];
 
-  while (processedChunks < perRunChunks && nextChunk < totalChunks) {
-    const chunkNum = String(nextChunk + 1).padStart(5, "0");
-    const obj = await bucket.get(`${prefix}/chunk-${chunkNum}.jsonl`);
-    if (!obj) break; // missing/gap in the queue — stop safely rather than skip silently
-
-    const text = await obj.text();
-    const rows = text.split("\n").filter(Boolean).map((line) => JSON.parse(line));
+  for (const chunkRow of chunks) {
+    if (progress.imported_today + imported >= progress.daily_cap) break; // stop mid-run if the cap is hit
+    const rows = JSON.parse(chunkRow.chunk_data);
 
     for (let i = 0; i < rows.length; i += batchSize) {
       const slice = rows.slice(i, i + batchSize);
@@ -50,38 +72,47 @@ async function runImport(env) {
         )
       );
       const results = await db.batch(stmts);
-      for (const res of results) {
-        if (res.meta.changes > 0) imported += 1;
-        else skipped += 1; // already existed (ON CONFLICT DO NOTHING) — not an error
-      }
+      results.forEach((res, idx) => {
+        if (res.meta.changes > 0) {
+          imported += 1;
+          insertedTitles.push(slice[idx].title);
+        } else {
+          skipped += 1; // already existed (ON CONFLICT DO NOTHING) — not an error
+        }
+      });
     }
 
-    nextChunk += 1;
-    processedChunks += 1;
+    await db.prepare("UPDATE import_chunks SET consumed = 1 WHERE id = ?1").bind(chunkRow.id).run();
   }
 
-  await db.prepare(
-    `UPDATE import_progress SET next_chunk=?1, total_chunks=?2, total_imported=total_imported+?3,
-       total_skipped=total_skipped+?4, last_run_at=CURRENT_TIMESTAMP, last_status=?5 WHERE id=1`
-  ).bind(
-    nextChunk, totalChunks, imported, skipped,
-    totalChunks > 0 && nextChunk >= totalChunks ? "complete" : "in_progress"
-  ).run();
+  const remaining = await db.prepare("SELECT COUNT(*) AS n FROM import_chunks WHERE consumed = 0").first();
 
-  return { imported, skipped, chunksProcessed: processedChunks, nextChunk, totalChunks };
+  await db.prepare(
+    `UPDATE import_progress SET total_imported = total_imported + ?1, total_skipped = total_skipped + ?2,
+       imported_today = imported_today + ?1, last_run_at = CURRENT_TIMESTAMP, last_status = ?3 WHERE id = 1`
+  ).bind(imported, skipped, remaining.n === 0 ? "complete" : "in_progress").run();
+
+  return { imported, skipped, chunksProcessed: chunks.length, remainingChunks: remaining.n, capped: false, insertedTitles };
 }
 
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runImport(env));
   },
-  // Manual trigger for testing locally/remotely: GET /run
+  // Manual trigger, called only by the main app's server (never the
+  // browser directly) — requires the shared secret set via
+  // `wrangler secret put IMPORT_TRIGGER_SECRET`.
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/run") {
-      const result = await runImport(env);
+      const provided = request.headers.get("x-import-secret");
+      if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      const maxChunks = Number(url.searchParams.get("maxChunks")) || undefined;
+      const result = await runImport(env, { maxChunks });
       return Response.json(result);
     }
-    return new Response("bookqubit-import-cron is running. GET /run to trigger manually.");
+    return new Response("bookqubit-import-cron is running.", { status: 200 });
   },
 };

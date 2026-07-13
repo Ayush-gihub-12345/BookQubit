@@ -2,7 +2,8 @@
 
 One-time offline prep + a small always-on Cloudflare Worker that drips
 imported books into the main app's D1 database a few thousand rows at a
-time, resuming automatically where it left off.
+time, resuming automatically where it left off. **No R2 or any other
+external storage — the whole queue lives in D1 itself.**
 
 ## 1. Get the Open Library dumps
 
@@ -10,40 +11,40 @@ Download from https://openlibrary.org/developers/dumps:
 - `ol_dump_authors_latest.txt.gz`
 - `ol_dump_editions_latest.txt.gz`
 
-## 2. Prepare chunk files (run locally)
+## 2. Prepare the queue (run locally)
 
 ```bash
-pip install boto3
 python prepare_import.py \
   --authors-dump ol_dump_authors_latest.txt.gz \
   --editions-dump ol_dump_editions_latest.txt.gz \
-  --output-dir ./chunks \
-  --chunk-size 2000 \
+  --output-dir ./queue \
+  --chunk-size 500 \
+  --sql-batch-size 50 \
   --lang en
 ```
 
 This filters to books with a title, ISBN, and a resolvable author name,
-dedupes on ISBN, and writes `chunks/chunk-00001.jsonl`, `chunk-00002.jsonl`, etc.
+dedupes on ISBN, groups them into batches of `--chunk-size` books, and
+writes out `queue/queue-00001.sql`, `queue-00002.sql`, etc. — each file is a
+handful of `INSERT INTO import_chunks (...)` statements, one per batch of
+books (not one per book).
 
 Read the docstring at the top of `prepare_import.py` for the honest caveat
 on `--min-rating` — Open Library's dump doesn't reliably carry rating data,
 so that flag only does anything if you also pass `--ratings-file` with
 rating data you've sourced separately.
 
-## 3. Create an R2 bucket and upload the chunks
+## 3. Load the queue into D1
 
 ```bash
-# one-time, from anywhere with wrangler installed and logged in
-wrangler r2 bucket create bookqubit-import-queue
-
-# get R2 API credentials: Cloudflare dashboard -> R2 -> Manage API tokens
-export R2_ACCOUNT_ID=...
-export R2_ACCESS_KEY_ID=...
-export R2_SECRET_ACCESS_KEY=...
-export R2_BUCKET=bookqubit-import-queue
-
-python upload_to_r2.py --chunks-dir ./chunks --prefix import-queue
+for f in queue/*.sql; do
+  npx wrangler d1 execute database --remote --file="$f"
+done
 ```
+
+This is cheap regardless of how many books are queued — you're writing one
+row per *batch* of 500 books, not one row per book. Loading a queue of
+100,000 books (200 batches) is 200 D1 writes, done in seconds.
 
 ## 4. Deploy the cron worker (one-time)
 
@@ -53,15 +54,15 @@ npm install
 npx wrangler deploy
 ```
 
-That's it — it's now scheduled to run every 3 hours (`0 */3 * * *` in
-`wrangler.jsonc`), each run importing up to `PER_RUN_CHUNKS` chunks
-(default 5 x 2,000 rows = 10,000/run, ~80,000/day across 8 runs). Adjust
-`PER_RUN_CHUNKS` or the cron schedule in `wrangler.jsonc` to change the pace
-— keep the daily total comfortably under your D1 plan's write-row quota.
+It's scheduled to run every 3 hours (`0 */3 * * *` in `wrangler.jsonc`),
+each run consuming up to `PER_RUN_CHUNKS` unconsumed rows from
+`import_chunks` (default 13 x 500 books x 8 runs/day ≈ 52,000 books/day —
+adjust `PER_RUN_CHUNKS` or the cron schedule to change the pace, keeping the
+daily total comfortably under your D1 plan's write-row quota).
 
-Progress is visible on the main app's `/admin` dashboard (reads the shared
-`import_progress` D1 row this worker updates) — no need to check the worker
-directly.
+Progress is visible on the main app's `/admin` dashboard (imported count,
+skipped duplicates, chunks processed, last run, next scheduled run) — no
+need to check the worker directly.
 
 ## 5. Test it without waiting for the schedule
 
@@ -76,6 +77,5 @@ Or after deploying: `curl https://bookqubit-import-cron.<your-subdomain>.workers
 
 ## Refreshing the queue later
 
-Re-run steps 2-3 with a new dump to top up the queue — the worker re-reads
-`import-queue/manifest.json` every run, so a larger `totalChunks` is picked
-up automatically without redeploying anything.
+Re-run steps 2-3 with a new dump to top up the queue — new `import_chunks`
+rows just get picked up in due course, no redeploy needed.

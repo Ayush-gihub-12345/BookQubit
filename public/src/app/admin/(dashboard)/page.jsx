@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/Icon";
+import { useToast } from "@/components/Toast";
+
+// Safety cap on how many chunks a single "Run Now" click will walk through
+// automatically (at 500 books/chunk, 30 chunks = up to 15,000 books) — the
+// daily cap enforced server-side is the real limit; this just keeps one
+// click from running forever in the browser.
+const MAX_CLICK_CHUNKS = 30;
 
 const CARDS = [
   ["books", "book", "Books"],
@@ -20,14 +27,88 @@ const MODERATION = [
   ["requests", "Book Requests", "bookmark"],
 ];
 
+// Cron schedule is fixed in bulk-import/cron-worker/wrangler.jsonc ("0 */3 * * *")
+// — every 3 hours, on the hour, UTC. Computed here rather than fetched, since
+// Cloudflare doesn't expose a "next invocation" API; this just walks forward
+// from now to the next UTC hour that's a multiple of 3.
+function nextCronRun() {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0, 0));
+  while (next.getUTCHours() % 3 !== 0 || next <= now) {
+    next.setUTCHours(next.getUTCHours() + 1);
+  }
+  return next;
+}
+
 export default function AdminDashboard() {
+  const toast = useToast();
   const [stats, setStats] = useState(null);
   const [importStatus, setImportStatus] = useState(null);
+  const [importChunks, setImportChunks] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [importLog, setImportLog] = useState([]); // most-recent-first, one entry per chunk
+  const [expandedLog, setExpandedLog] = useState(null);
+  const stopRequested = useRef(false);
+
+  const loadImportStatus = () =>
+    fetch("/api/admin/import-status").then((r) => r.json()).then((d) => {
+      setImportStatus(d.progress);
+      setImportChunks(d.chunks);
+    });
 
   useEffect(() => {
     fetch("/api/admin/stats").then((r) => r.json()).then(setStats);
-    fetch("/api/admin/import-status").then((r) => r.json()).then((d) => setImportStatus(d.progress));
+    loadImportStatus();
   }, []);
+
+  // Processes one chunk per call and loops automatically, so the dashboard
+  // can show live per-chunk progress instead of one silent multi-thousand-
+  // book batch. Stops on: empty queue, daily cap hit, the safety iteration
+  // cap, or the user clicking Stop.
+  const runImportNow = async () => {
+    setRunning(true);
+    stopRequested.current = false;
+    let sessionImported = 0;
+    let iterations = 0;
+
+    try {
+      while (iterations < MAX_CLICK_CHUNKS && !stopRequested.current) {
+        iterations += 1;
+        const r = await fetch("/api/admin/import-run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ maxChunks: 1 }),
+        });
+        const d = await r.json();
+        if (!r.ok) { toast(d.error || "Import run failed", "error"); break; }
+
+        if (d.capped) {
+          toast("Daily write cap reached — try again tomorrow.", "info");
+          break;
+        }
+        if (d.chunksProcessed === 0) {
+          if (iterations === 1) toast("Nothing to import — the queue is empty.", "info");
+          break;
+        }
+
+        sessionImported += d.imported;
+        setImportLog((prev) => [
+          { id: `${Date.now()}-${iterations}`, imported: d.imported, skipped: d.skipped, titles: d.insertedTitles, time: new Date() },
+          ...prev,
+        ].slice(0, 50)); // bounded so the DOM doesn't grow unboundedly across a long session
+        setImportChunks((prev) => prev && { ...prev, done: prev.done + 1 });
+
+        if (d.remainingChunks === 0) break;
+      }
+
+      if (sessionImported > 0) toast(`Imported ${sessionImported.toLocaleString()} books this run.`);
+      await loadImportStatus();
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const stopImport = () => { stopRequested.current = true; };
 
   if (!stats) return <p className="text-muted text-sm">Loading dashboard…</p>;
 
@@ -189,19 +270,43 @@ export default function AdminDashboard() {
       </div>
 
       {/* Bulk import (Open Library cron worker) */}
-      {importStatus && (
+      {importStatus && importChunks && (() => {
+        const queueEmpty = importChunks.total > 0 && importChunks.done >= importChunks.total;
+        const capReached = importStatus.imported_today >= importStatus.daily_cap;
+        const runDisabled = running || queueEmpty || capReached;
+        return (
         <div className="mt-6 rounded-2xl border border-white/10 bg-[#131c31] p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="flex items-center gap-2 text-sm font-bold text-white">
               <Icon name="trendingUp" size={15} className="text-brand-400" /> Bulk Import (Open Library)
             </p>
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-              importStatus.last_status === "complete" ? "bg-emerald-500/15 text-emerald-400" : "bg-brand-600/15 text-brand-400"
-            }`}>
-              {importStatus.last_status === "complete" ? "Complete" : "In progress"}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                queueEmpty ? "bg-emerald-500/15 text-emerald-400" : "bg-brand-600/15 text-brand-400"
+              }`}>
+                {queueEmpty ? "Queue empty" : "In progress"}
+              </span>
+              {running ? (
+                <button onClick={stopImport} className="btn-ghost !px-3 !py-1.5 text-xs !border-red-500/40 !text-red-400">
+                  <Icon name="x" size={13} /> Stop
+                </button>
+              ) : (
+                <button
+                  onClick={runImportNow}
+                  disabled={runDisabled}
+                  title={capReached ? "Daily write cap reached — resets at UTC midnight" : queueEmpty ? "Nothing queued to import" : "Run import passes now"}
+                  className="btn-primary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icon name="zap" size={13} /> Run Now
+                </button>
+              )}
+            </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <p className="text-muted mt-2 text-[11px]">
+            Daily write cap: {(importStatus.imported_today || 0).toLocaleString()} / {importStatus.daily_cap.toLocaleString()} used today
+            {capReached && <span className="text-amber-400"> — resets at UTC midnight</span>}
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <div>
               <p className="text-lg font-bold text-white">{importStatus.total_imported.toLocaleString()}</p>
               <p className="text-muted text-[11px]">Imported</p>
@@ -211,21 +316,70 @@ export default function AdminDashboard() {
               <p className="text-muted text-[11px]">Skipped (duplicates)</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">{importStatus.next_chunk} / {importStatus.total_chunks}</p>
+              <p className="text-lg font-bold text-white">{importChunks.done} / {importChunks.total}</p>
               <p className="text-muted text-[11px]">Chunks processed</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">{importStatus.last_run_at ? new Date(importStatus.last_run_at).toLocaleString() : "—"}</p>
+              <p className="text-sm font-bold text-white">{importStatus.last_run_at ? new Date(importStatus.last_run_at).toLocaleString() : "—"}</p>
               <p className="text-muted text-[11px]">Last run</p>
             </div>
+            <div>
+              <p className="text-sm font-bold text-emerald-400">
+                {queueEmpty
+                  ? "Queue empty"
+                  : nextCronRun().toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </p>
+              <p className="text-muted text-[11px]">Next scheduled run</p>
+            </div>
           </div>
-          {importStatus.total_chunks > 0 && (
+          {importChunks.total > 0 && (
             <div className="bg-line mt-4 h-1.5 w-full overflow-hidden rounded-full">
-              <div className="h-full bg-brand-500" style={{ width: `${Math.min(100, (importStatus.next_chunk / importStatus.total_chunks) * 100)}%` }} />
+              <div className="h-full bg-brand-500" style={{ width: `${Math.min(100, (importChunks.done / importChunks.total) * 100)}%` }} />
+            </div>
+          )}
+
+          {(running || importLog.length > 0) && (
+            <div className="border-line mt-4 border-t pt-4">
+              <p className="text-muted mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider">
+                {running && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
+                Live import activity
+              </p>
+              <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+                {running && importLog.length === 0 && (
+                  <p className="text-muted text-xs">Starting…</p>
+                )}
+                {importLog.map((entry) => (
+                  <div key={entry.id} className="rounded-lg border border-white/10 bg-[#0d1526] p-2.5">
+                    <button
+                      onClick={() => setExpandedLog(expandedLog === entry.id ? null : entry.id)}
+                      className="flex w-full items-center justify-between gap-2 text-left"
+                    >
+                      <span className="text-xs text-slate-300">
+                        <span className="font-semibold text-emerald-400">+{entry.imported}</span> imported
+                        {entry.skipped > 0 && <span className="text-muted"> · {entry.skipped} duplicate{entry.skipped === 1 ? "" : "s"}</span>}
+                      </span>
+                      <span className="text-muted flex shrink-0 items-center gap-1.5 text-[10px]">
+                        {entry.time.toLocaleTimeString()}
+                        <Icon name="chevronDown" size={11} className={expandedLog === entry.id ? "rotate-180" : ""} />
+                      </span>
+                    </button>
+                    {expandedLog === entry.id && entry.titles.length > 0 && (
+                      <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto border-t border-white/10 pt-2">
+                        {entry.titles.map((title, i) => (
+                          <li key={i} className="text-muted truncate text-[11px]">
+                            <Icon name="check" size={10} className="mr-1 inline text-emerald-500" /> {title}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
