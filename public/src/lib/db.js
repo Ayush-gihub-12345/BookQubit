@@ -1,107 +1,21 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+// Two D1 databases: `catalog` holds the large, mostly-static reference data
+// (books/authors/publications/comics + the bulk-import pipeline tables), and
+// `database` holds everything else (users, social, moderation). They're
+// split so the catalog's growth toward D1's free per-database storage cap
+// never competes with user data's own cap — see getCatalogDb() below.
+//
+// Neither schema uses real SQL FOREIGN KEY constraints, so tables in one DB
+// that reference rows in the other (e.g. shelf.book_slug, quotes.book_slug)
+// are just plain TEXT columns — there's nothing to break across databases.
+// Anywhere that needs a book's title/cover alongside one of these rows has
+// to do it as two queries (fetch the referencing rows, then batch-fetch the
+// matching catalog rows by slug) instead of a SQL JOIN.
+
 // Schema lives in code: applied automatically on first DB access after every
 // deploy (CREATE TABLE IF NOT EXISTS is a no-op when tables already exist).
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS books (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT NOT NULL,
-  lang TEXT NOT NULL DEFAULT 'en',
-  title TEXT NOT NULL,
-  author TEXT,
-  publisher TEXT,
-  price TEXT,
-  isbn TEXT,
-  published TEXT,
-  page_count INTEGER,
-  format TEXT,
-  description TEXT,
-  summary TEXT,
-  category TEXT,
-  collection TEXT,
-  genres TEXT,
-  subjects TEXT,
-  tags TEXT,
-  key_points TEXT,
-  rating REAL,
-  cover_url TEXT,
-  country TEXT,
-  amazon_asin TEXT,
-  amazon_url TEXT,
-  audiobook_url TEXT,
-  featured INTEGER DEFAULT 0,
-  bestseller INTEGER DEFAULT 0,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(slug, lang)
-);
-CREATE INDEX IF NOT EXISTS idx_books_lang ON books(lang);
-CREATE INDEX IF NOT EXISTS idx_books_cat ON books(lang, category);
-CREATE INDEX IF NOT EXISTS idx_books_rating ON books(lang, rating DESC);
-CREATE INDEX IF NOT EXISTS idx_books_collection ON books(lang, collection);
-CREATE INDEX IF NOT EXISTS idx_books_country ON books(lang, country);
-CREATE INDEX IF NOT EXISTS idx_books_created ON books(lang, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_books_featured ON books(lang, featured);
-CREATE INDEX IF NOT EXISTS idx_books_author ON books(lang, author);
-
-CREATE TABLE IF NOT EXISTS authors (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT NOT NULL,
-  lang TEXT NOT NULL DEFAULT 'en',
-  name TEXT NOT NULL,
-  birth_year INTEGER,
-  country TEXT,
-  bio TEXT,
-  famous_work TEXT,
-  genres TEXT,
-  image_url TEXT,
-  wikipedia_url TEXT,
-  website_url TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(slug, lang)
-);
-CREATE INDEX IF NOT EXISTS idx_authors_lang ON authors(lang);
-
-CREATE TABLE IF NOT EXISTS publications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT NOT NULL,
-  lang TEXT NOT NULL DEFAULT 'en',
-  name TEXT NOT NULL,
-  description TEXT,
-  about TEXT,
-  logo_url TEXT,
-  founded TEXT,
-  headquarters TEXT,
-  website TEXT,
-  type TEXT,
-  notable_authors TEXT,
-  imprints TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(slug, lang)
-);
-CREATE INDEX IF NOT EXISTS idx_pubs_lang ON publications(lang);
-
-CREATE TABLE IF NOT EXISTS comics (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug TEXT NOT NULL,
-  lang TEXT NOT NULL DEFAULT 'en',
-  title TEXT NOT NULL,
-  category TEXT,
-  publisher TEXT,
-  publication_date TEXT,
-  cover_price TEXT,
-  format TEXT,
-  characters TEXT,
-  creators TEXT,
-  description TEXT,
-  cover_url TEXT,
-  value_today TEXT,
-  fun_fact TEXT,
-  rating REAL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(slug, lang)
-);
-CREATE INDEX IF NOT EXISTS idx_comics_lang ON comics(lang);
-
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT,
@@ -252,6 +166,110 @@ CREATE TABLE IF NOT EXISTS book_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_requests_status ON book_requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
+`;
+
+// The large, mostly-static reference catalog — kept in its own D1 database
+// (binding CATALOG_DB) so its growth toward D1's per-database storage cap
+// never eats into user/social data's own cap. See getCatalogDb() below.
+const CATALOG_SCHEMA = `
+CREATE TABLE IF NOT EXISTS books (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT 'en',
+  title TEXT NOT NULL,
+  author TEXT,
+  publisher TEXT,
+  price TEXT,
+  isbn TEXT,
+  published TEXT,
+  page_count INTEGER,
+  format TEXT,
+  description TEXT,
+  summary TEXT,
+  category TEXT,
+  collection TEXT,
+  genres TEXT,
+  subjects TEXT,
+  tags TEXT,
+  key_points TEXT,
+  rating REAL,
+  cover_url TEXT,
+  country TEXT,
+  amazon_asin TEXT,
+  amazon_url TEXT,
+  audiobook_url TEXT,
+  featured INTEGER DEFAULT 0,
+  bestseller INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(slug, lang)
+);
+CREATE INDEX IF NOT EXISTS idx_books_lang ON books(lang);
+CREATE INDEX IF NOT EXISTS idx_books_cat ON books(lang, category);
+CREATE INDEX IF NOT EXISTS idx_books_rating ON books(lang, rating DESC);
+CREATE INDEX IF NOT EXISTS idx_books_collection ON books(lang, collection);
+CREATE INDEX IF NOT EXISTS idx_books_country ON books(lang, country);
+CREATE INDEX IF NOT EXISTS idx_books_created ON books(lang, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_books_featured ON books(lang, featured);
+CREATE INDEX IF NOT EXISTS idx_books_author ON books(lang, author);
+
+CREATE TABLE IF NOT EXISTS authors (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT 'en',
+  name TEXT NOT NULL,
+  birth_year INTEGER,
+  country TEXT,
+  bio TEXT,
+  famous_work TEXT,
+  genres TEXT,
+  image_url TEXT,
+  wikipedia_url TEXT,
+  website_url TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(slug, lang)
+);
+CREATE INDEX IF NOT EXISTS idx_authors_lang ON authors(lang);
+
+CREATE TABLE IF NOT EXISTS publications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT 'en',
+  name TEXT NOT NULL,
+  description TEXT,
+  about TEXT,
+  logo_url TEXT,
+  founded TEXT,
+  headquarters TEXT,
+  website TEXT,
+  type TEXT,
+  notable_authors TEXT,
+  imprints TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(slug, lang)
+);
+CREATE INDEX IF NOT EXISTS idx_pubs_lang ON publications(lang);
+
+CREATE TABLE IF NOT EXISTS comics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT 'en',
+  title TEXT NOT NULL,
+  category TEXT,
+  publisher TEXT,
+  publication_date TEXT,
+  cover_price TEXT,
+  format TEXT,
+  characters TEXT,
+  creators TEXT,
+  description TEXT,
+  cover_url TEXT,
+  value_today TEXT,
+  fun_fact TEXT,
+  rating REAL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(slug, lang)
+);
+CREATE INDEX IF NOT EXISTS idx_comics_lang ON comics(lang);
 
 -- The bulk-import queue itself, staged entirely in D1 (no R2/external
 -- storage needed) — each row is one small batch of pre-filtered, deduped
@@ -292,16 +310,20 @@ const MIGRATIONS = [
   "ALTER TABLE shelf ADD COLUMN moods TEXT",
   "ALTER TABLE shelf ADD COLUMN pace TEXT",
   "ALTER TABLE shelf ADD COLUMN spoiler INTEGER DEFAULT 0",
-  "ALTER TABLE authors ADD COLUMN verified INTEGER DEFAULT 0",
   "ALTER TABLE discussions ADD COLUMN author_slug TEXT",
   "ALTER TABLE discussions ADD COLUMN tags TEXT",
   "ALTER TABLE users ADD COLUMN slug TEXT",
+];
+
+const CATALOG_MIGRATIONS = [
+  "ALTER TABLE authors ADD COLUMN verified INTEGER DEFAULT 0",
   "ALTER TABLE import_progress ADD COLUMN daily_cap INTEGER DEFAULT 50000",
   "ALTER TABLE import_progress ADD COLUMN imported_today INTEGER DEFAULT 0",
   "ALTER TABLE import_progress ADD COLUMN today_date TEXT",
 ];
 
 let schemaReady;
+let catalogSchemaReady;
 
 export async function getDb() {
   const { env } = await getCloudflareContext({ async: true });
@@ -324,6 +346,32 @@ export async function getDb() {
   }
   await schemaReady;
   return env.DB;
+}
+
+// The catalog database — books/authors/publications/comics + the bulk-import
+// pipeline tables. Split from getDb() so this data's growth toward D1's
+// per-database storage cap is tracked and billed separately from user data.
+export async function getCatalogDb() {
+  const { env } = await getCloudflareContext({ async: true });
+  if (!env?.CATALOG_DB) {
+    throw new Error(
+      "D1 binding 'CATALOG_DB' is missing. Add it: Cloudflare dashboard → your Worker → Settings → Bindings → D1 Database, name it exactly CATALOG_DB."
+    );
+  }
+  if (!catalogSchemaReady) {
+    const statements = CATALOG_SCHEMA.split(";").map((s) => s.trim()).filter(Boolean);
+    catalogSchemaReady = env.CATALOG_DB
+      .batch(statements.map((s) => env.CATALOG_DB.prepare(s)))
+      .then(() =>
+        Promise.all(CATALOG_MIGRATIONS.map((m) => env.CATALOG_DB.prepare(m).run().catch(() => {})))
+      )
+      .catch((err) => {
+        catalogSchemaReady = undefined; // allow retry on next request
+        throw err;
+      });
+  }
+  await catalogSchemaReady;
+  return env.CATALOG_DB;
 }
 
 // Read-through KV cache. Degrades gracefully to a direct D1 query if the

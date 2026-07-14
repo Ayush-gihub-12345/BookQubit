@@ -3,15 +3,18 @@
   "name": "bookqubit-import-cron",
   "main": "src/index.js",
   "compatibility_date": "2025-05-01",
-  // Same database as the main BookQubit app — this worker reads unconsumed
-  // rows from `import_chunks` (staged there by prepare_import.py, no R2 or
-  // any other external storage needed) and expands them into real `books`
-  // rows, updating `import_progress` as it goes.
+  // The catalog database (same one the main BookQubit app's CATALOG_DB
+  // binding points at) — this worker reads unconsumed rows from
+  // `import_chunks` (staged there by prepare_import.py, no R2 or any other
+  // external storage needed) and expands them into real `books` rows,
+  // updating `import_progress` as it goes. Kept in the catalog DB (not the
+  // main "database") since import_chunks/import_progress are purely about
+  // growing the book catalog, not user/social data.
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "database",
-      "database_id": "b7a72589-843b-4c9a-b793-27e3a1ae2b80"
+      "database_name": "catalog",
+      "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
     }
   ],
   // Every 3 hours (8 runs/day). Each run consumes PER_RUN_CHUNKS chunks —

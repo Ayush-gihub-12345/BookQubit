@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getCatalogDb } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { ENTITIES, isKnownEntity } from "@/lib/admin-entities";
 
@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
   const denied = await guard(entity);
   if (denied) return denied;
   const config = ENTITIES[entity];
-  const db = await getDb();
+  const db = await getCatalogDb();
   const row = await db.prepare(`SELECT * FROM ${config.table} WHERE id = ?1`).bind(id).first();
   if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json({ row });
@@ -35,7 +35,7 @@ export async function PATCH(request, { params }) {
     return body[c] ?? null;
   });
 
-  const db = await getDb();
+  const db = await getCatalogDb();
   await db.prepare(`UPDATE ${config.table} SET ${sets} WHERE id = ?${cols.length + 1}`)
     .bind(...values, id).run();
   return NextResponse.json({ ok: true });
@@ -46,7 +46,7 @@ export async function DELETE(request, { params }) {
   const denied = await guard(entity);
   if (denied) return denied;
   const config = ENTITIES[entity];
-  const db = await getDb();
+  const db = await getCatalogDb();
   await db.prepare(`DELETE FROM ${config.table} WHERE id = ?1`).bind(id).run();
   return NextResponse.json({ ok: true });
 }

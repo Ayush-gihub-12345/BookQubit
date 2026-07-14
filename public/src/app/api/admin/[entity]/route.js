@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getCatalogDb } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { ENTITIES, isKnownEntity } from "@/lib/admin-entities";
 
@@ -30,7 +30,7 @@ export async function GET(request, { params }) {
   if (lang) { where.push("lang = ?"); binds.push(lang); }
   const wsql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  const db = await getDb();
+  const db = await getCatalogDb();
   const [count, rows] = await Promise.all([
     db.prepare(`SELECT COUNT(*) AS n FROM ${config.table} ${wsql}`).bind(...binds).first(),
     db.prepare(`SELECT * FROM ${config.table} ${wsql} ORDER BY id DESC LIMIT ? OFFSET ?`)
@@ -59,7 +59,7 @@ export async function POST(request, { params }) {
     return body[c] ?? f.default ?? null;
   });
 
-  const db = await getDb();
+  const db = await getCatalogDb();
   const placeholders = cols.map((_, i) => `?${i + 1}`).join(", ");
   const res = await db.prepare(`INSERT INTO ${config.table} (${cols.join(", ")}) VALUES (${placeholders})`)
     .bind(...values).run();

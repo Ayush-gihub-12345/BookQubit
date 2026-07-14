@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getBooksBySlug } from "@/lib/repo";
 
 export async function GET(request) {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -12,14 +13,15 @@ export async function GET(request) {
   const [count, rows] = await Promise.all([
     db.prepare("SELECT COUNT(*) AS n FROM shelf WHERE review IS NOT NULL AND review != ''").first(),
     db.prepare(
-      `SELECT s.user_id, s.book_slug, s.rating, s.review, s.spoiler, s.updated_at, u.name, b.title
+      `SELECT s.user_id, s.book_slug, s.rating, s.review, s.spoiler, s.updated_at, u.name
        FROM shelf s JOIN users u ON u.id = s.user_id
-       LEFT JOIN books b ON b.slug = s.book_slug AND b.lang='en'
        WHERE s.review IS NOT NULL AND s.review != ''
        ORDER BY s.updated_at DESC LIMIT ?1 OFFSET ?2`
     ).bind(perPage, (page - 1) * perPage).all(),
   ]);
-  return NextResponse.json({ rows: rows.results, total: count.n, page, pages: Math.max(1, Math.ceil(count.n / perPage)) });
+  const books = await getBooksBySlug(rows.results.map((r) => r.book_slug), "en", "slug, title");
+  const withTitles = rows.results.map((r) => ({ ...r, title: books.get(r.book_slug)?.title || null }));
+  return NextResponse.json({ rows: withTitles, total: count.n, page, pages: Math.max(1, Math.ceil(count.n / perPage)) });
 }
 
 // DELETE — { userId, bookSlug } removes a review (clears the text, keeps the shelf entry)

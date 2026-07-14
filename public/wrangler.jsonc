@@ -13,6 +13,11 @@
       "binding": "DB",
       "database_name": "database",
       "database_id": "b7a72589-843b-4c9a-b793-27e3a1ae2b80"
+    },
+    {
+      "binding": "CATALOG_DB",
+      "database_name": "catalog",
+      "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
     }
   ],
   "kv_namespaces": [

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
-import { upsertUser } from "@/lib/repo";
+import { upsertUser, getBooksBySlug } from "@/lib/repo";
 
 // GET /api/shelf?uid=...[&slug=...] — a user's shelf (joined with book info)
 export async function GET(request) {
@@ -19,13 +19,15 @@ export async function GET(request) {
   }
 
   const { results } = await db
-    .prepare(
-      `SELECT s.*, b.title, b.author, b.cover_url, b.rating AS book_rating, b.page_count, b.category
-       FROM shelf s LEFT JOIN books b ON b.slug = s.book_slug AND b.lang='en'
-       WHERE s.user_id=?1 ORDER BY s.updated_at DESC`
-    )
+    .prepare(`SELECT * FROM shelf WHERE user_id=?1 ORDER BY updated_at DESC`)
     .bind(uid).all();
-  return NextResponse.json({ shelf: results });
+
+  const bookInfo = await getBooksBySlug(results.map((r) => r.book_slug), "en", "slug, title, author, cover_url, rating, page_count, category");
+  const shelf = results.map((r) => {
+    const b = bookInfo.get(r.book_slug);
+    return { ...r, title: b?.title, author: b?.author, cover_url: b?.cover_url, book_rating: b?.rating, page_count: b?.page_count, category: b?.category };
+  });
+  return NextResponse.json({ shelf });
 }
 
 // POST /api/shelf — upsert { idToken, slug, status?, rating?, review?, progress? }
