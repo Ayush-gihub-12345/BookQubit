@@ -274,39 +274,83 @@ export default function AdminDashboard() {
         const queueEmpty = importChunks.total > 0 && importChunks.done >= importChunks.total;
         const capReached = importStatus.imported_today >= importStatus.daily_cap;
         const runDisabled = running || queueEmpty || capReached;
+        const pct = importChunks.total > 0 ? Math.min(100, (importChunks.done / importChunks.total) * 100) : 0;
+        const capPct = importStatus.daily_cap > 0 ? Math.min(100, (importStatus.imported_today / importStatus.daily_cap) * 100) : 0;
+
+        // Rough ETA: infer avg books/chunk from what's actually been processed
+        // so far, then project it across the chunks still queued.
+        const totalProcessed = importStatus.total_imported + importStatus.total_skipped;
+        const avgPerChunk = importChunks.done > 0 ? totalProcessed / importChunks.done : null;
+        const remainingChunks = Math.max(0, importChunks.total - importChunks.done);
+        const estRemainingBooks = avgPerChunk ? Math.round(avgPerChunk * remainingChunks) : null;
+        const estDaysLeft = estRemainingBooks && importStatus.daily_cap
+          ? Math.max(1, Math.ceil(estRemainingBooks / importStatus.daily_cap))
+          : null;
+
+        const ringColor = queueEmpty ? "text-emerald-400" : capReached ? "text-amber-400" : "text-brand-400";
+        const RADIUS = 20;
+        const CIRC = 2 * Math.PI * RADIUS;
+
         return (
         <div className="mt-6 rounded-2xl border border-white/10 bg-[#131c31] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-sm font-bold text-white">
-              <Icon name="trendingUp" size={15} className="text-brand-400" /> Bulk Import (Open Library)
-            </p>
-            <div className="flex items-center gap-2">
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                queueEmpty ? "bg-emerald-500/15 text-emerald-400" : "bg-brand-600/15 text-brand-400"
-              }`}>
-                {queueEmpty ? "Queue empty" : "In progress"}
-              </span>
-              {running ? (
-                <button onClick={stopImport} className="btn-ghost !px-3 !py-1.5 text-xs !border-red-500/40 !text-red-400">
-                  <Icon name="x" size={13} /> Stop
-                </button>
-              ) : (
-                <button
-                  onClick={runImportNow}
-                  disabled={runDisabled}
-                  title={capReached ? "Daily write cap reached — resets at UTC midnight" : queueEmpty ? "Nothing queued to import" : "Run import passes now"}
-                  className="btn-primary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Icon name="zap" size={13} /> Run Now
-                </button>
-              )}
+            <div className="flex items-center gap-3">
+              <div className="relative h-[52px] w-[52px] shrink-0">
+                <svg width="52" height="52" viewBox="0 0 52 52" className="-rotate-90">
+                  <circle cx="26" cy="26" r={RADIUS} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                  <circle
+                    cx="26" cy="26" r={RADIUS} fill="none" strokeWidth="5" strokeLinecap="round"
+                    stroke="currentColor" className={ringColor}
+                    strokeDasharray={CIRC}
+                    strokeDashoffset={CIRC - (pct / 100) * CIRC}
+                    style={{ transition: "stroke-dashoffset 0.4s ease" }}
+                  />
+                </svg>
+                <span className="absolute inset-0 grid place-items-center text-[11px] font-bold text-white">
+                  {importChunks.total > 0 ? `${Math.round(pct)}%` : "—"}
+                </span>
+              </div>
+              <div>
+                <p className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Icon name="trendingUp" size={15} className="text-brand-400" /> Bulk Import (Open Library)
+                </p>
+                <span className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  queueEmpty ? "bg-emerald-500/15 text-emerald-400"
+                  : capReached ? "bg-amber-500/15 text-amber-400"
+                  : "bg-brand-600/15 text-brand-400"
+                }`}>
+                  {queueEmpty ? "Queue empty" : capReached ? "Daily cap reached" : running ? "Running now…" : "In progress"}
+                </span>
+              </div>
             </div>
+            {running ? (
+              <button onClick={stopImport} className="btn-ghost !px-3 !py-1.5 text-xs !border-red-500/40 !text-red-400">
+                <Icon name="x" size={13} /> Stop
+              </button>
+            ) : (
+              <button
+                onClick={runImportNow}
+                disabled={runDisabled}
+                title={capReached ? "Daily write cap reached — resets at UTC midnight" : queueEmpty ? "Nothing queued to import" : "Run import passes now"}
+                className="btn-primary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Icon name="zap" size={13} /> Run Now
+              </button>
+            )}
           </div>
-          <p className="text-muted mt-2 text-[11px]">
-            Daily write cap: {(importStatus.imported_today || 0).toLocaleString()} / {importStatus.daily_cap.toLocaleString()} used today
-            {capReached && <span className="text-amber-400"> — resets at UTC midnight</span>}
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+
+          <div className="mt-4 flex items-center justify-between text-[11px]">
+            <p className="text-muted">
+              Daily write cap: {(importStatus.imported_today || 0).toLocaleString()} / {importStatus.daily_cap.toLocaleString()} used today
+              {capReached && <span className="text-amber-400"> — resets at UTC midnight</span>}
+            </p>
+            <p className="text-muted">{Math.round(capPct)}%</p>
+          </div>
+          <div className="bg-line mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
+            <div className={`h-full ${capReached ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${capPct}%` }} />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6">
             <div>
               <p className="text-lg font-bold text-white">{importStatus.total_imported.toLocaleString()}</p>
               <p className="text-muted text-[11px]">Imported</p>
@@ -318,6 +362,10 @@ export default function AdminDashboard() {
             <div>
               <p className="text-lg font-bold text-white">{importChunks.done} / {importChunks.total}</p>
               <p className="text-muted text-[11px]">Chunks processed</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">{estDaysLeft ? `~${estDaysLeft}d` : "—"}</p>
+              <p className="text-muted text-[11px]">Est. time left</p>
             </div>
             <div>
               <p className="text-sm font-bold text-white">{importStatus.last_run_at ? new Date(importStatus.last_run_at).toLocaleString() : "—"}</p>
@@ -334,7 +382,7 @@ export default function AdminDashboard() {
           </div>
           {importChunks.total > 0 && (
             <div className="bg-line mt-4 h-1.5 w-full overflow-hidden rounded-full">
-              <div className="h-full bg-brand-500" style={{ width: `${Math.min(100, (importChunks.done / importChunks.total) * 100)}%` }} />
+              <div className="h-full bg-brand-500" style={{ width: `${pct}%`, transition: "width 0.4s ease" }} />
             </div>
           )}
 
