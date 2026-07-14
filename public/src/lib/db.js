@@ -179,7 +179,6 @@ CREATE TABLE IF NOT EXISTS books (
   title TEXT NOT NULL,
   author TEXT,
   publisher TEXT,
-  price TEXT,
   isbn TEXT,
   published TEXT,
   page_count INTEGER,
@@ -197,7 +196,6 @@ CREATE TABLE IF NOT EXISTS books (
   country TEXT,
   amazon_asin TEXT,
   amazon_url TEXT,
-  audiobook_url TEXT,
   featured INTEGER DEFAULT 0,
   bestseller INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -301,6 +299,16 @@ CREATE TABLE IF NOT EXISTS import_progress (
   daily_cap INTEGER DEFAULT 50000,
   imported_today INTEGER DEFAULT 0,
   today_date TEXT
+);
+
+-- Rotation cursor for the cron worker's live Open Library search-API fetch
+-- (no local download/prep needed) — remembers which subject query and page
+-- offset to resume from next run, cycling through a fixed subject list
+-- forever so coverage keeps growing instead of re-fetching the same page.
+CREATE TABLE IF NOT EXISTS ol_fetch_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  query_index INTEGER DEFAULT 0,
+  offset_val INTEGER DEFAULT 0
 );
 `;
 

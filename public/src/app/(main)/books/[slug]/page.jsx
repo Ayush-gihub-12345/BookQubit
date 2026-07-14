@@ -141,11 +141,6 @@ export default async function BookPage({ params }) {
                   <Icon name="cart" size={15} /> {_("buy")}
                 </a>
               )}
-              {book.audiobook_url && (
-                <a href={book.audiobook_url} target="_blank" rel="noopener noreferrer" className="btn-ghost w-full">
-                  <Icon name="headphones" size={15} /> {_("listen")}
-                </a>
-              )}
               <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
             </div>
 

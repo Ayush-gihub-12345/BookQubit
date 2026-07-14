@@ -5,11 +5,11 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
-// Safety cap on how many chunks a single "Run Now" click will walk through
-// automatically (at 500 books/chunk, 30 chunks = up to 15,000 books) — the
-// daily cap enforced server-side is the real limit; this just keeps one
-// click from running forever in the browser.
-const MAX_CLICK_CHUNKS = 30;
+// Safety cap on how many iterations a single "Run Now" click will walk
+// through (at ~10 books/iteration, 50 = up to ~500 books) — the daily cap
+// enforced server-side is the real limit; this just keeps one click from
+// running forever in the browser.
+const MAX_CLICK_CHUNKS = 50;
 
 const CARDS = [
   ["books", "book", "Books"],
@@ -86,8 +86,11 @@ export default function AdminDashboard() {
           toast("Daily write cap reached — try again tomorrow.", "info");
           break;
         }
-        if (d.chunksProcessed === 0) {
-          if (iterations === 1) toast("Nothing to import — the queue is empty.", "info");
+        // Nothing at all happened this call (rare — e.g. a network hiccup
+        // reaching Open Library, since its live fetch has no real "end").
+        const nothingHappened = d.imported === 0 && d.authorsImported === 0 && d.publishersImported === 0 && d.chunksProcessed === 0;
+        if (nothingHappened) {
+          if (iterations === 1) toast("Nothing imported this pass — try again shortly.", "info");
           break;
         }
 
@@ -96,13 +99,11 @@ export default function AdminDashboard() {
           {
             id: `${Date.now()}-${iterations}`, imported: d.imported, skipped: d.skipped,
             authorsImported: d.authorsImported || 0, publishersImported: d.publishersImported || 0,
-            titles: d.insertedTitles, time: new Date(),
+            source: d.source, titles: d.insertedTitles, time: new Date(),
           },
           ...prev,
         ].slice(0, 50)); // bounded so the DOM doesn't grow unboundedly across a long session
-        setImportChunks((prev) => prev && { ...prev, done: prev.done + 1 });
-
-        if (d.remainingChunks === 0) break;
+        if (d.chunksProcessed > 0) setImportChunks((prev) => prev && { ...prev, done: prev.done + 1 });
       }
 
       if (sessionImported > 0) toast(`Imported ${sessionImported.toLocaleString()} books this run.`);
@@ -277,7 +278,10 @@ export default function AdminDashboard() {
       {importStatus && importChunks && (() => {
         const queueEmpty = importChunks.total > 0 && importChunks.done >= importChunks.total;
         const capReached = importStatus.imported_today >= importStatus.daily_cap;
-        const runDisabled = running || queueEmpty || capReached;
+        // Note: a queue being empty does NOT mean there's nothing to do — the
+        // live Open Library fetch runs regardless of whether a local queue
+        // was ever loaded, so it's not a reason to disable "Run Now".
+        const runDisabled = running || capReached;
         const pct = importChunks.total > 0 ? Math.min(100, (importChunks.done / importChunks.total) * 100) : 0;
         const capPct = importStatus.daily_cap > 0 ? Math.min(100, (importStatus.imported_today / importStatus.daily_cap) * 100) : 0;
 
@@ -319,11 +323,9 @@ export default function AdminDashboard() {
                   <Icon name="trendingUp" size={15} className="text-brand-400" /> Bulk Import (Open Library)
                 </p>
                 <span className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                  queueEmpty ? "bg-emerald-500/15 text-emerald-400"
-                  : capReached ? "bg-amber-500/15 text-amber-400"
-                  : "bg-brand-600/15 text-brand-400"
+                  capReached ? "bg-amber-500/15 text-amber-400" : "bg-brand-600/15 text-brand-400"
                 }`}>
-                  {queueEmpty ? "Queue empty" : capReached ? "Daily cap reached" : running ? "Running now…" : "In progress"}
+                  {capReached ? "Daily cap reached" : running ? "Running now…" : "In progress"}
                 </span>
               </div>
             </div>
@@ -335,7 +337,7 @@ export default function AdminDashboard() {
               <button
                 onClick={runImportNow}
                 disabled={runDisabled}
-                title={capReached ? "Daily write cap reached — resets at UTC midnight" : queueEmpty ? "Nothing queued to import" : "Run import passes now"}
+                title={capReached ? "Daily write cap reached — resets at UTC midnight" : "Run import passes now"}
                 className="btn-primary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Icon name="zap" size={13} /> Run Now
@@ -385,9 +387,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <p className="text-sm font-bold text-emerald-400">
-                {queueEmpty
-                  ? "Queue empty"
-                  : nextCronRun().toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                {nextCronRun().toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
               </p>
               <p className="text-muted text-[11px]">Next scheduled run</p>
             </div>
@@ -419,6 +419,7 @@ export default function AdminDashboard() {
                         {entry.authorsImported > 0 && <span className="text-muted"> · +{entry.authorsImported} authors</span>}
                         {entry.publishersImported > 0 && <span className="text-muted"> · +{entry.publishersImported} publishers</span>}
                         {entry.skipped > 0 && <span className="text-muted"> · {entry.skipped} duplicate{entry.skipped === 1 ? "" : "s"}</span>}
+                        {entry.source && <span className="text-muted"> · {entry.source}</span>}
                       </span>
                       <span className="text-muted flex shrink-0 items-center gap-1.5 text-[10px]">
                         {entry.time.toLocaleTimeString()}

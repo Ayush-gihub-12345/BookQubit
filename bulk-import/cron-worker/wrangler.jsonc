@@ -17,14 +17,31 @@
       "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
     }
   ],
-  // Every 3 hours (8 runs/day). Each run consumes PER_RUN_CHUNKS chunks —
-  // tuned so 8 runs/day lands under ~50,000 rows/day (13 chunks x 500 rows
-  // x 8 runs = 52,000/day), comfortably under D1's free-tier write quota.
+  // Workers AI — generates key_points (3 short takeaways) once per book at
+  // insert time, from the real fetched synopsis. Free tier: 10,000 neurons/
+  // day; this uses roughly 2 neurons/book, nowhere close to that budget.
+  "ai": {
+    "binding": "AI"
+  },
+  // Every 3 hours (8 runs/day). PER_RUN_CHUNKS/D1_BATCH_SIZE govern the
+  // optional pre-staged queue (only relevant if you've loaded one via
+  // prepare_import.py); OL_* govern the live Open Library fetch, which is
+  // the primary path and needs no queue at all. Every imported book gets a
+  // real fetched synopsis (one extra fetch() call each), which is why
+  // OL_MAX_ENRICH_PER_RUN caps how many books get processed per run — stays
+  // well under Cloudflare's 50-subrequest-per-invocation free-plan limit.
+  // Set to 10 for now (testing) — at 10/run x 8 runs/day that's ~80 fully-
+  // enriched books/day; raise it once you're happy with quality/cost.
   "triggers": {
     "crons": ["0 */3 * * *"]
   },
   "vars": {
     "PER_RUN_CHUNKS": "13",
-    "D1_BATCH_SIZE": "100"
+    "D1_BATCH_SIZE": "100",
+    "OL_PAGES_PER_RUN": "3",
+    "OL_PAGE_SIZE": "100",
+    "OL_MIN_RATING": "4",
+    "OL_MIN_RATINGS_COUNT": "1",
+    "OL_MAX_ENRICH_PER_RUN": "10"
   }
 }
