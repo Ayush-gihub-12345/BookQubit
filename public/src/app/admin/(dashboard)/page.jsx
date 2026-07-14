@@ -93,7 +93,11 @@ export default function AdminDashboard() {
 
         sessionImported += d.imported;
         setImportLog((prev) => [
-          { id: `${Date.now()}-${iterations}`, imported: d.imported, skipped: d.skipped, titles: d.insertedTitles, time: new Date() },
+          {
+            id: `${Date.now()}-${iterations}`, imported: d.imported, skipped: d.skipped,
+            authorsImported: d.authorsImported || 0, publishersImported: d.publishersImported || 0,
+            titles: d.insertedTitles, time: new Date(),
+          },
           ...prev,
         ].slice(0, 50)); // bounded so the DOM doesn't grow unboundedly across a long session
         setImportChunks((prev) => prev && { ...prev, done: prev.done + 1 });
@@ -350,14 +354,22 @@ export default function AdminDashboard() {
             <div className={`h-full ${capReached ? "bg-amber-400" : "bg-emerald-500"}`} style={{ width: `${capPct}%` }} />
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
             <div>
               <p className="text-lg font-bold text-white">{importStatus.total_imported.toLocaleString()}</p>
-              <p className="text-muted text-[11px]">Imported</p>
+              <p className="text-muted text-[11px]">Books imported</p>
             </div>
             <div>
               <p className="text-lg font-bold text-white">{importStatus.total_skipped.toLocaleString()}</p>
               <p className="text-muted text-[11px]">Skipped (duplicates)</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">{(importStatus.total_authors_imported || 0).toLocaleString()}</p>
+              <p className="text-muted text-[11px]">Author pages added</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">{(importStatus.total_publishers_imported || 0).toLocaleString()}</p>
+              <p className="text-muted text-[11px]">Publisher pages added</p>
             </div>
             <div>
               <p className="text-lg font-bold text-white">{importChunks.done} / {importChunks.total}</p>
@@ -403,7 +415,9 @@ export default function AdminDashboard() {
                       className="flex w-full items-center justify-between gap-2 text-left"
                     >
                       <span className="text-xs text-slate-300">
-                        <span className="font-semibold text-emerald-400">+{entry.imported}</span> imported
+                        <span className="font-semibold text-emerald-400">+{entry.imported}</span> books
+                        {entry.authorsImported > 0 && <span className="text-muted"> · +{entry.authorsImported} authors</span>}
+                        {entry.publishersImported > 0 && <span className="text-muted"> · +{entry.publishersImported} publishers</span>}
                         {entry.skipped > 0 && <span className="text-muted"> · {entry.skipped} duplicate{entry.skipped === 1 ? "" : "s"}</span>}
                       </span>
                       <span className="text-muted flex shrink-0 items-center gap-1.5 text-[10px]">

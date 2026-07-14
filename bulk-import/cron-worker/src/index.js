@@ -1,9 +1,13 @@
 // Daily (well, every-3-hours) bulk import cron. The whole queue lives in D1
 // itself (`import_chunks` — no R2/external storage) as compact JSON-blob
-// rows staged by prepare_import.py. Each run consumes a few unconsumed
-// chunks, expands them into real `books` rows, and records cumulative
-// progress in `import_progress` — resumable across restarts and redeploys
-// since "which chunks are left" is just a WHERE clause, not a cursor to lose.
+// rows staged by prepare_import.py. Each row carries { books, authors,
+// publications } — every book comes with author/publisher stub profiles
+// (name + slug, plus whatever bio Open Library's author dump actually has),
+// so every author/publisher gets at least a bare page, not just plain text
+// on the book. Each run consumes a few unconsumed chunks, expands them into
+// real rows, and records cumulative progress in `import_progress` —
+// resumable across restarts and redeploys since "which chunks are left" is
+// just a WHERE clause, not a cursor to lose.
 //
 // Two independent safeguards protect the daily D1 write quota:
 //   1. daily_cap/imported_today/today_date on import_progress — enforced
@@ -41,7 +45,8 @@ async function runImport(env, { maxChunks } = {}) {
 
   if (progress.imported_today >= progress.daily_cap) {
     return {
-      imported: 0, skipped: 0, chunksProcessed: 0, remainingChunks: null, capped: true,
+      imported: 0, skipped: 0, authorsImported: 0, publishersImported: 0,
+      chunksProcessed: 0, remainingChunks: null, capped: true,
       dailyCap: progress.daily_cap, importedToday: progress.imported_today, insertedTitles: [],
     };
   }
@@ -52,47 +57,77 @@ async function runImport(env, { maxChunks } = {}) {
 
   let imported = 0;
   let skipped = 0;
+  let authorsImported = 0;
+  let publishersImported = 0;
   const insertedTitles = [];
 
-  for (const chunkRow of chunks) {
-    if (progress.imported_today + imported >= progress.daily_cap) break; // stop mid-run if the cap is hit
-    const rows = JSON.parse(chunkRow.chunk_data);
-
+  // Runs one batch of INSERT ... ON CONFLICT DO NOTHING statements against
+  // `db`, returning how many actually inserted a new row (vs. already existed).
+  async function upsertBatch(table, columns, rows, toValues) {
+    let insertedCount = 0;
     for (let i = 0; i < rows.length; i += batchSize) {
       const slice = rows.slice(i, i + batchSize);
+      const placeholders = columns.map((_, idx) => `?${idx + 1}`).join(", ");
       const stmts = slice.map((r) =>
         db.prepare(
-          `INSERT INTO books (slug, lang, title, author, publisher, isbn, published, page_count, format, category, subjects, cover_url)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
-           ON CONFLICT(slug, lang) DO NOTHING`
-        ).bind(
-          r.slug, r.lang || "en", r.title, r.author || null, r.publisher || null, r.isbn || null,
-          r.published || null, r.page_count || null, r.format || null, r.category || null,
-          JSON.stringify(r.subjects || []), r.cover_url || null
-        )
+          `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${placeholders}) ON CONFLICT(slug, lang) DO NOTHING`
+        ).bind(...toValues(r))
       );
       const results = await db.batch(stmts);
       results.forEach((res, idx) => {
-        if (res.meta.changes > 0) {
-          imported += 1;
-          insertedTitles.push(slice[idx].title);
-        } else {
-          skipped += 1; // already existed (ON CONFLICT DO NOTHING) — not an error
-        }
+        if (res.meta.changes > 0) insertedCount += 1;
+        else if (table === "books") skipped += 1; // already existed — not an error
+        if (table === "books" && res.meta.changes > 0) insertedTitles.push(slice[idx].title);
       });
     }
+    return insertedCount;
+  }
+
+  for (const chunkRow of chunks) {
+    // Total D1 rows written this run (books + author/publisher stubs) is
+    // what actually counts against the daily write-row quota, not just books.
+    if (progress.imported_today + imported + authorsImported + publishersImported >= progress.daily_cap) break;
+    const payload = JSON.parse(chunkRow.chunk_data);
+
+    imported += await upsertBatch(
+      "books",
+      ["slug", "lang", "title", "author", "publisher", "isbn", "published", "page_count", "format", "category", "subjects", "cover_url"],
+      payload.books || [],
+      (r) => [
+        r.slug, r.lang || "en", r.title, r.author || null, r.publisher || null, r.isbn || null,
+        r.published || null, r.page_count || null, r.format || null, r.category || null,
+        JSON.stringify(r.subjects || []), r.cover_url || null,
+      ]
+    );
+    authorsImported += await upsertBatch(
+      "authors",
+      ["slug", "lang", "name", "birth_year", "bio", "wikipedia_url"],
+      payload.authors || [],
+      (r) => [r.slug, r.lang || "en", r.name, r.birth_year || null, r.bio || null, r.wikipedia_url || null]
+    );
+    publishersImported += await upsertBatch(
+      "publications",
+      ["slug", "lang", "name"],
+      payload.publications || [],
+      (r) => [r.slug, r.lang || "en", r.name]
+    );
 
     await db.prepare("UPDATE import_chunks SET consumed = 1 WHERE id = ?1").bind(chunkRow.id).run();
   }
 
   const remaining = await db.prepare("SELECT COUNT(*) AS n FROM import_chunks WHERE consumed = 0").first();
+  const totalWrittenThisRun = imported + authorsImported + publishersImported;
 
   await db.prepare(
     `UPDATE import_progress SET total_imported = total_imported + ?1, total_skipped = total_skipped + ?2,
-       imported_today = imported_today + ?1, last_run_at = CURRENT_TIMESTAMP, last_status = ?3 WHERE id = 1`
-  ).bind(imported, skipped, remaining.n === 0 ? "complete" : "in_progress").run();
+       total_authors_imported = total_authors_imported + ?3, total_publishers_imported = total_publishers_imported + ?4,
+       imported_today = imported_today + ?5, last_run_at = CURRENT_TIMESTAMP, last_status = ?6 WHERE id = 1`
+  ).bind(imported, skipped, authorsImported, publishersImported, totalWrittenThisRun, remaining.n === 0 ? "complete" : "in_progress").run();
 
-  return { imported, skipped, chunksProcessed: chunks.length, remainingChunks: remaining.n, capped: false, insertedTitles };
+  return {
+    imported, skipped, authorsImported, publishersImported,
+    chunksProcessed: chunks.length, remainingChunks: remaining.n, capped: false, insertedTitles,
+  };
 }
 
 export default {

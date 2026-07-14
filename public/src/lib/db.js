@@ -294,6 +294,8 @@ CREATE TABLE IF NOT EXISTS import_progress (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   total_imported INTEGER DEFAULT 0,
   total_skipped INTEGER DEFAULT 0,
+  total_authors_imported INTEGER DEFAULT 0,
+  total_publishers_imported INTEGER DEFAULT 0,
   last_run_at TEXT,
   last_status TEXT,
   daily_cap INTEGER DEFAULT 50000,
@@ -320,6 +322,8 @@ const CATALOG_MIGRATIONS = [
   "ALTER TABLE import_progress ADD COLUMN daily_cap INTEGER DEFAULT 50000",
   "ALTER TABLE import_progress ADD COLUMN imported_today INTEGER DEFAULT 0",
   "ALTER TABLE import_progress ADD COLUMN today_date TEXT",
+  "ALTER TABLE import_progress ADD COLUMN total_authors_imported INTEGER DEFAULT 0",
+  "ALTER TABLE import_progress ADD COLUMN total_publishers_imported INTEGER DEFAULT 0",
 ];
 
 let schemaReady;

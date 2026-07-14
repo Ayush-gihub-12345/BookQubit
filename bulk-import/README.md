@@ -1,9 +1,10 @@
 # Bulk book import (Open Library -> D1)
 
 One-time offline prep + a small always-on Cloudflare Worker that drips
-imported books into the main app's D1 database a few thousand rows at a
-time, resuming automatically where it left off. **No R2 or any other
-external storage — the whole queue lives in D1 itself.**
+imported books (plus author and publisher stub pages) into the main app's
+`catalog` D1 database a few thousand rows at a time, resuming automatically
+where it left off. **No R2 or any other external storage — the whole queue
+lives in D1 itself.**
 
 ## 1. Get the Open Library dumps
 
@@ -27,7 +28,10 @@ This filters to books with a title, ISBN, and a resolvable author name,
 dedupes on ISBN, groups them into batches of `--chunk-size` books, and
 writes out `queue/queue-00001.sql`, `queue-00002.sql`, etc. — each file is a
 handful of `INSERT INTO import_chunks (...)` statements, one per batch of
-books (not one per book).
+books (not one per book). Each batch also carries author/publisher stubs
+(name + slug, plus whatever birth year/bio/wikipedia link Open Library's
+author dump has) for anyone newly seen in that batch — so every author and
+publisher gets at least a bare profile page, not just plain text on the book.
 
 Read the docstring at the top of `prepare_import.py` for the honest caveat
 on `--min-rating` — Open Library's dump doesn't reliably carry rating data,
@@ -38,9 +42,12 @@ rating data you've sourced separately.
 
 ```bash
 for f in queue/*.sql; do
-  npx wrangler d1 execute database --remote --file="$f"
+  npx wrangler d1 execute catalog --remote --file="$f"
 done
 ```
+
+Note the database name here is `catalog`, not `database` — books/authors/
+publishers/comics live in their own D1 database, split from user/social data.
 
 This is cheap regardless of how many books are queued — you're writing one
 row per *batch* of 500 books, not one row per book. Loading a queue of
@@ -60,9 +67,9 @@ each run consuming up to `PER_RUN_CHUNKS` unconsumed rows from
 adjust `PER_RUN_CHUNKS` or the cron schedule to change the pace, keeping the
 daily total comfortably under your D1 plan's write-row quota).
 
-Progress is visible on the main app's `/admin` dashboard (imported count,
-skipped duplicates, chunks processed, last run, next scheduled run) — no
-need to check the worker directly.
+Progress is visible on the main app's `/admin` dashboard (books imported,
+author/publisher pages added, skipped duplicates, chunks processed, last
+run, next scheduled run) — no need to check the worker directly.
 
 ## 5. Test it without waiting for the schedule
 

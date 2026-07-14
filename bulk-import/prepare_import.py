@@ -5,13 +5,23 @@ No R2 or any external storage needed — the whole queue is staged directly in
 D1 itself, as compact JSON-blob rows in the `import_chunks` table. Uploading
 the queue is then just a handful of `wrangler d1 execute` calls (one row per
 chunk of books, not one per book), which the daily cron worker expands into
-real `books` rows over time at a controlled pace.
+real `books`/`authors`/`publications` rows over time at a controlled pace.
+
+Each chunk now carries three lists — books, author stubs, and publisher
+stubs — so a single import pass gives every author/publisher at least a
+bare profile page (name + slug), not just plain text on the book. Author
+stubs pull whatever birth year/bio/wikipedia link Open Library's authors
+dump actually has (often nothing) — publisher "profiles" are name-only,
+since Open Library has no separate publisher entity to draw a bio from.
 
 Two-pass streaming process (never loads the full dump into memory):
-  1. Build an author-id -> name lookup from the (smaller) authors dump.
+  1. Build an author-id -> {name, birth_year, bio, wikipedia_url} lookup
+     from the (smaller) authors dump.
   2. Stream the editions dump, filter/dedupe/map each qualifying book, group
-     them into fixed-size chunks, and write out ready-to-run .sql files
-     (each containing several `INSERT INTO import_chunks ...` statements).
+     them into fixed-size chunks (each chunk also carries whichever new
+     authors/publishers were first seen since the last chunk), and write out
+     ready-to-run .sql files (each containing several
+     `INSERT INTO import_chunks ...` statements).
 
 Rating filtering caveat (read this before relying on --min-rating):
   Open Library's bulk dump does NOT reliably include per-edition/work rating
@@ -36,7 +46,7 @@ Usage:
 
 Then load the queue into D1 (see README.md for the loop command):
   for f in queue/*.sql; do
-    npx wrangler d1 execute database --remote --file="$f"
+    npx wrangler d1 execute catalog --remote --file="$f"
   done
 """
 
@@ -48,16 +58,38 @@ import sys
 from pathlib import Path
 
 
-def slugify(title, isbn):
-    base = re.sub(r"[^a-z0-9]+", "-", (title or "").lower()).strip("-")[:60]
-    suffix = (isbn or "")[-6:]
-    return f"{base}-{suffix}" if suffix else base
+def slugify(name, suffix_source="", max_len=60):
+    base = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")[:max_len]
+    # suffix_source is often a raw ISBN or an Open Library key like
+    # "/authors/OL1A" — strip non-alphanumerics before taking the tail so a
+    # slash/colon in the source never leaks into the slug.
+    clean_suffix = re.sub(r"[^a-zA-Z0-9]", "", suffix_source or "")
+    suffix = clean_suffix[-6:]
+    return f"{base}-{suffix}".lower() if suffix else base
+
+
+def extract_text(field):
+    """Open Library text fields are sometimes a plain string, sometimes
+    {"type": "/type/text", "value": "..."} — normalize to a plain string."""
+    if isinstance(field, dict):
+        return field.get("value")
+    return field
+
+
+def extract_birth_year(birth_date):
+    """birth_date is free text ("7 December 1902", "circa 1900", "1902-12-07")
+    — pull out the first plausible 4-digit year, or None if there isn't one."""
+    if not birth_date:
+        return None
+    m = re.search(r"\b(1[5-9]\d{2}|20[0-2]\d)\b", str(birth_date))
+    return int(m.group(1)) if m else None
 
 
 def build_author_map(authors_dump_path):
-    """First pass: author key -> name. The authors dump is much smaller than
-    editions, so this is safe to hold fully in memory (a few hundred MB at
-    most even for the complete Open Library author list)."""
+    """First pass: author key -> {name, slug, birth_year, bio, wikipedia_url}.
+    The authors dump is much smaller than editions, so this is safe to hold
+    fully in memory (a few hundred MB at most even for the complete
+    Open Library author list)."""
     authors = {}
     opener = gzip.open if authors_dump_path.endswith(".gz") else open
     with opener(authors_dump_path, "rt", encoding="utf-8") as f:
@@ -71,8 +103,15 @@ def build_author_map(authors_dump_path):
                 continue
             key = data.get("key")
             name = data.get("name")
-            if key and name:
-                authors[key] = name
+            if not key or not name:
+                continue
+            authors[key] = {
+                "name": name,
+                "slug": slugify(name, key),
+                "birth_year": extract_birth_year(data.get("birth_date")),
+                "bio": extract_text(data.get("bio")),
+                "wikipedia_url": data.get("wikipedia"),
+            }
     return authors
 
 
@@ -91,10 +130,11 @@ def map_edition(data, authors, lang):
         return None
 
     author_keys = [a.get("key") for a in data.get("authors", []) if a.get("key")]
-    author_names = [authors[k] for k in author_keys if k in authors]
-    if not author_names:
+    resolved_authors = [authors[k] for k in author_keys if k in authors]
+    if not resolved_authors:
         return None  # skip books we can't attribute to a real author name
 
+    publisher = (data.get("publishers") or [None])[0]
     cover_url = f"https://covers.openlibrary.org/b/isbn/{isbn}-L.jpg"
     subjects = data.get("subjects", [])[:8]
 
@@ -102,8 +142,8 @@ def map_edition(data, authors, lang):
         "slug": slugify(title, isbn),
         "lang": lang,
         "title": title,
-        "author": ", ".join(author_names[:3]),
-        "publisher": (data.get("publishers") or [None])[0],
+        "author": ", ".join(a["name"] for a in resolved_authors[:3]),
+        "publisher": publisher,
         "isbn": isbn,
         "published": data.get("publish_date"),
         "page_count": data.get("number_of_pages"),
@@ -111,8 +151,11 @@ def map_edition(data, authors, lang):
         "category": subjects[0] if subjects else None,
         "subjects": subjects,
         "cover_url": cover_url,
-        "source": "open_library",
         "work_key": (data.get("works") or [{}])[0].get("key"),
+        # Carried through only to emit author/publisher stubs below —
+        # stripped from the book record itself before it's queued.
+        "_author_keys": author_keys,
+        "_publisher_name": publisher,
     }
 
 
@@ -151,13 +194,20 @@ def main():
         )
 
     seen_isbns = set()
+    seen_author_keys = set()
+    seen_publishers = set()  # normalized (lowercased/stripped) name -> already queued
+
     book_chunk = []          # current group of books becoming one import_chunks row
+    pending_authors = []     # newly-seen author stubs since the last flush
+    pending_publications = []  # newly-seen publisher stubs since the last flush
     sql_statements = []      # current group of INSERT statements becoming one .sql file
     file_index = 0
     total_kept = 0
     total_skipped_dupe = 0
     total_skipped_norating = 0
     total_chunk_rows = 0
+    total_authors_queued = 0
+    total_publishers_queued = 0
 
     def flush_sql_file():
         nonlocal sql_statements, file_index
@@ -170,15 +220,23 @@ def main():
         sql_statements = []
 
     def flush_book_chunk():
-        nonlocal book_chunk, total_chunk_rows
+        nonlocal book_chunk, pending_authors, pending_publications, total_chunk_rows
         if not book_chunk:
             return
-        blob = sql_escape(json.dumps(book_chunk, ensure_ascii=False))
+        payload = {
+            "books": book_chunk,
+            "authors": pending_authors,
+            "publications": pending_publications,
+        }
+        blob = sql_escape(json.dumps(payload, ensure_ascii=False))
+        row_count = len(book_chunk) + len(pending_authors) + len(pending_publications)
         sql_statements.append(
-            f"INSERT INTO import_chunks (chunk_data, row_count) VALUES ('{blob}', {len(book_chunk)});"
+            f"INSERT INTO import_chunks (chunk_data, row_count) VALUES ('{blob}', {row_count});"
         )
         total_chunk_rows += 1
         book_chunk = []
+        pending_authors = []
+        pending_publications = []
         if len(sql_statements) >= args.sql_batch_size:
             flush_sql_file()
 
@@ -210,8 +268,33 @@ def main():
                     continue
 
             seen_isbns.add(row["isbn"])
-            row.pop("source", None)
+
+            # Emit author stubs for any author on this book we haven't queued yet.
+            for key in row["_author_keys"]:
+                if key in seen_author_keys or key not in authors:
+                    continue
+                seen_author_keys.add(key)
+                a = authors[key]
+                pending_authors.append({
+                    "slug": a["slug"], "lang": args.lang, "name": a["name"],
+                    "birth_year": a["birth_year"], "bio": a["bio"], "wikipedia_url": a["wikipedia_url"],
+                })
+                total_authors_queued += 1
+
+            # Emit a name-only publisher stub the first time each publisher appears.
+            publisher_name = row["_publisher_name"]
+            if publisher_name:
+                norm = publisher_name.strip().lower()
+                if norm not in seen_publishers:
+                    seen_publishers.add(norm)
+                    pending_publications.append({
+                        "slug": slugify(publisher_name), "lang": args.lang, "name": publisher_name.strip(),
+                    })
+                    total_publishers_queued += 1
+
             row.pop("work_key", None)  # only needed for the rating cross-check above, not for import
+            row.pop("_author_keys", None)
+            row.pop("_publisher_name", None)
             book_chunk.append(row)
             total_kept += 1
             if len(book_chunk) >= args.chunk_size:
@@ -224,11 +307,13 @@ def main():
     flush_sql_file()
 
     print("\nDone.", file=sys.stderr)
-    print(f"  Kept:              {total_kept:,}", file=sys.stderr)
-    print(f"  Skipped (dupe):    {total_skipped_dupe:,}", file=sys.stderr)
-    print(f"  Skipped (rating):  {total_skipped_norating:,}", file=sys.stderr)
-    print(f"  Chunk rows:        {total_chunk_rows:,} (~{args.chunk_size} books each)", file=sys.stderr)
-    print(f"  SQL files written: {file_index} in {out_dir}", file=sys.stderr)
+    print(f"  Books kept:          {total_kept:,}", file=sys.stderr)
+    print(f"  Skipped (dupe):      {total_skipped_dupe:,}", file=sys.stderr)
+    print(f"  Skipped (rating):    {total_skipped_norating:,}", file=sys.stderr)
+    print(f"  Author stubs:        {total_authors_queued:,}", file=sys.stderr)
+    print(f"  Publisher stubs:     {total_publishers_queued:,}", file=sys.stderr)
+    print(f"  Chunk rows:          {total_chunk_rows:,} (~{args.chunk_size} books each)", file=sys.stderr)
+    print(f"  SQL files written:   {file_index} in {out_dir}", file=sys.stderr)
 
 
 if __name__ == "__main__":
