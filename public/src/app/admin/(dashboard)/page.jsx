@@ -5,13 +5,15 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
-// How many chunks a single "Run Now" click asks the worker to run
-// (at ~10 books/chunk, 100 = up to ~1,000 books). The worker itself chains
-// through all of these server-side (see cron-worker/src/index.js's burst
-// handling) — the browser only needs to make one request to kick it off,
-// and the import keeps running in Cloudflare's infrastructure even if this
-// tab is closed. The daily write cap enforced server-side is the real ceiling.
-const BURST_CHUNKS = 100;
+// How many chunks a single "Run Now" click asks the worker to run (at
+// ~5 books/chunk now — each book costs more fetches since collection/
+// format/country enrichment was added — 200 = up to ~1,000 books). The
+// worker itself chains through all of these server-side (see
+// cron-worker/src/index.js's burst handling) — the browser only needs to
+// make one request to kick it off, and the import keeps running in
+// Cloudflare's infrastructure even if this tab is closed. The daily write
+// cap enforced server-side is the real ceiling.
+const BURST_CHUNKS = 200;
 // How often to poll import-status while a burst is running, to show totals
 // climbing live. Stops automatically once totals haven't moved for a while.
 const POLL_INTERVAL_MS = 6000;

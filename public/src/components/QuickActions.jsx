@@ -7,9 +7,14 @@ import { readWishlist } from "./WishlistButton";
 import Icon from "./Icon";
 
 const pill = "inline-flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition";
-const pillOutline = `${pill} border-brand-500 text-brand-600 hover:bg-brand-50 dark:hover:bg-white/5`;
-const pillFilled = `${pill} border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:brightness-110`;
-const pillActive = `${pill} border-brand-600 bg-brand-600 text-white`;
+const pillFilled = `${pill} w-full justify-center border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:brightness-110`;
+
+// Grid variant: tighter horizontal padding + centered, wrap-friendly text so
+// longer labels ("Add to My Library") stay readable at half-width on small
+// phones instead of overflowing or forcing the row to scroll.
+const gridPill = "flex w-full items-center justify-center gap-2 rounded-full border-2 px-3 py-2.5 text-center text-sm font-semibold leading-tight transition";
+const gridPillOutline = `${gridPill} border-brand-500 text-brand-600 hover:bg-brand-50 dark:hover:bg-white/5`;
+const gridPillActive = `${gridPill} border-brand-600 bg-brand-600 text-white`;
 
 // Fast-access action bar (Get Book / Summary / Like / Wishlist / Share, then
 // My Library / Mark Read). ShelfControls elsewhere on the page still owns the
@@ -123,34 +128,35 @@ export default function QuickActions({ book }) {
 
   return (
     <div className="mt-8 flex flex-col gap-2.5">
-      <div className="flex flex-wrap gap-2.5">
-        {book.buyUrl && (
-          <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className={pillFilled}>
-            <Icon name="cart" size={15} /> Get Book
-          </a>
-        )}
-        <a href="#summary" className={pillOutline}>
+      {book.buyUrl && (
+        <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className={pillFilled}>
+          <Icon name="cart" size={15} /> Get Book
+        </a>
+      )}
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <a href="#summary" className={gridPillOutline}>
           <Icon name="bookOpen" size={15} /> Summary
         </a>
-        <button onClick={toggleLike} className={liked ? pillActive : pillOutline}>
+        <button onClick={toggleLike} className={liked ? gridPillActive : gridPillOutline}>
           <Icon name="heart" size={15} filled={liked} /> Like{likeCount ? ` · ${likeCount}` : ""}
         </button>
-        <button onClick={toggleWishlist} className={wishlisted ? pillActive : pillOutline}>
+        <button onClick={toggleWishlist} className={wishlisted ? gridPillActive : gridPillOutline}>
           <Icon name="bookmark" size={15} filled={wishlisted} /> {wishlisted ? "Wishlisted" : "Wishlist"}
         </button>
-        <button onClick={share} className={pillOutline}>
+        <button onClick={share} className={gridPillOutline}>
           <Icon name={shared ? "check" : "share"} size={15} /> {shared ? "Link copied" : "Share"}
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2.5">
-        <button disabled={busy} onClick={() => setShelfStatus("want")} className={status === "want" ? pillActive : pillOutline}>
+      <div className="grid grid-cols-2 gap-2.5">
+        <button disabled={busy} onClick={() => setShelfStatus("want")} className={status === "want" ? gridPillActive : gridPillOutline}>
           <Icon name="bookmark" size={15} filled={status === "want"} /> {status === "want" ? "In My Library" : "Add to My Library"}
         </button>
-        <button disabled={busy} onClick={() => setShelfStatus("reading")} className={status === "reading" ? pillActive : pillOutline}>
+        <button disabled={busy} onClick={() => setShelfStatus("reading")} className={status === "reading" ? gridPillActive : gridPillOutline}>
           <Icon name="clock" size={15} filled={status === "reading"} /> {status === "reading" ? "Currently Reading" : "Track Book"}
         </button>
-        <button disabled={busy} onClick={() => setShelfStatus("read")} className={status === "read" ? pillActive : pillOutline}>
+        <button disabled={busy} onClick={() => setShelfStatus("read")} className={`${status === "read" ? gridPillActive : gridPillOutline} col-span-2`}>
           <Icon name="check" size={15} /> {status === "read" ? "Marked Read" : "Mark Read"}
         </button>
       </div>

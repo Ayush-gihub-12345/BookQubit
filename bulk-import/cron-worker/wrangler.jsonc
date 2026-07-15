@@ -56,13 +56,22 @@
     // (want-to-read/reading/already-read combined). 200 keeps only genuinely
     // popular, widely-read titles instead of any book that clears the rating bar.
     "OL_MIN_READERS": "200",
-    "OL_MAX_ENRICH_PER_RUN": "10",
+    // Each book now costs several more fetches than before (series-name
+    // resolution, edition format, author Wikipedia nationality lookup,
+    // publisher Wikidata founded/headquarters) to fill in collection/
+    // format/country everywhere — dropped from 10 to 6 books/chunk to stay
+    // safely under Cloudflare's 50-subrequest-per-invocation cap. The admin
+    // dashboard's BURST_CHUNKS and SCHEDULED_BURST_CHUNKS below are scaled
+    // up to compensate, so ~1,000 books/run is still the real target — it
+    // just takes more (smaller, safer) chunks to get there.
+    "OL_MAX_ENRICH_PER_RUN": "5",
     // How many of each run's book slots go to CURATED_TITLES (Atomic Habits,
     // The Psychology of Money, Sapiens, etc. — real bestsellers OL's own
     // reader-log data underrepresents) before falling back to subject rotation.
-    "OL_CURATED_PER_RUN": "4",
-    // Chunks per automatic (cron-triggered) burst — same math as the admin
-    // dashboard's BURST_CHUNKS: ~10 books/chunk, 100 = ~1,000 books/run.
-    "SCHEDULED_BURST_CHUNKS": "100"
+    "OL_CURATED_PER_RUN": "2",
+    // Chunks per automatic (cron-triggered) burst — at ~5 books/chunk now,
+    // 200 chunks ≈ 1,000 books/run (was 100 chunks @ ~10 books/chunk before
+    // the extra per-book enrichment fetches).
+    "SCHEDULED_BURST_CHUNKS": "200"
   }
 }

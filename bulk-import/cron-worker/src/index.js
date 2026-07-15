@@ -162,6 +162,11 @@ async function fetchAuthorDetails(authorKey) {
 // and a canonical page URL to use as a website fallback. Returns null
 // cleanly (a small/obscure imprint just won't have a Wikipedia page —
 // nothing to fabricate) rather than ever guessing.
+// `data.description` here is the REST API's short one-liner (e.g. "British
+// author (born 1965)") — distinct from `data.extract` (the full paragraph
+// used as `about`). The short form is what makes nationality extraction
+// reliable; `wikibase_item` is the linked Wikidata QID, used for publisher
+// founded/headquarters lookups without needing a separate search.
 async function fetchWikipediaSummary(name) {
   if (!name) return null;
   try {
@@ -171,23 +176,130 @@ async function fetchWikipediaSummary(name) {
     if (!data.extract) return null;
     return {
       about: data.extract,
+      shortDescription: data.description || null,
       logoUrl: data.thumbnail?.source || null,
       pageUrl: data.content_urls?.desktop?.page || null,
+      wikidataId: data.wikibase_item || null,
     };
   } catch {
     return null;
   }
 }
 
-async function fetchWorkDescription(workKey) {
+// Maps common nationality demonyms (as they appear in Wikipedia's short
+// "British author (born 1965)"-style description) to a country name — used
+// for both author.country and, by extension, book.country (the primary
+// author's country, since a book itself has no country field of its own on
+// Open Library). Not exhaustive; unmatched text just leaves country null
+// rather than guessing.
+const NATIONALITY_TO_COUNTRY = {
+  american: "United States", british: "United Kingdom", english: "United Kingdom",
+  scottish: "United Kingdom", welsh: "United Kingdom", "northern irish": "United Kingdom",
+  canadian: "Canada", australian: "Australia", "new zealand": "New Zealand",
+  indian: "India", irish: "Ireland", french: "France", german: "Germany",
+  japanese: "Japan", russian: "Russia", italian: "Italy", spanish: "Spain",
+  nigerian: "Nigeria", "south african": "South Africa", chinese: "China",
+  korean: "South Korea", mexican: "Mexico", brazilian: "Brazil", swedish: "Sweden",
+  norwegian: "Norway", danish: "Denmark", dutch: "Netherlands", polish: "Poland",
+  turkish: "Turkey", egyptian: "Egypt", pakistani: "Pakistan", israeli: "Israel",
+  bangladeshi: "Bangladesh", kenyan: "Kenya", ghanaian: "Ghana", colombian: "Colombia",
+  argentine: "Argentina", chilean: "Chile", portuguese: "Portugal", greek: "Greece",
+  austrian: "Austria", swiss: "Switzerland", belgian: "Belgium", finnish: "Finland",
+  ukrainian: "Ukraine", czech: "Czech Republic", hungarian: "Hungary",
+  vietnamese: "Vietnam", filipino: "Philippines", indonesian: "Indonesia",
+  thai: "Thailand", malaysian: "Malaysia", singaporean: "Singapore",
+};
+function inferCountryFromDescription(shortDescription) {
+  if (!shortDescription) return null;
+  const lower = shortDescription.toLowerCase();
+  for (const [demonym, country] of Object.entries(NATIONALITY_TO_COUNTRY)) {
+    if (lower.includes(demonym)) return country;
+  }
+  return null;
+}
+
+// Wikidata P571 (inception) + P159 (headquarters location) for a publisher
+// — two more calls (entity + label resolution), only made for publishers
+// whose Wikipedia page links to a Wikidata item (most well-known ones do).
+async function fetchWikidataFoundedAndHQ(wikidataId) {
+  if (!wikidataId) return null;
+  try {
+    const res = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${wikidataId}.json`, { headers: UA });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const claims = data.entities?.[wikidataId]?.claims;
+    if (!claims) return null;
+
+    let founded = null;
+    const inceptionTime = claims.P571?.[0]?.mainsnak?.datavalue?.value?.time;
+    if (inceptionTime) {
+      const yearMatch = inceptionTime.match(/^\+?(-?\d{1,4})-/);
+      if (yearMatch) founded = yearMatch[1];
+    }
+
+    let headquarters = null;
+    const hqId = claims.P159?.[0]?.mainsnak?.datavalue?.value?.id;
+    if (hqId) {
+      const labelRes = await fetch(
+        `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${hqId}&props=labels&languages=en&format=json`,
+        { headers: UA }
+      );
+      if (labelRes.ok) {
+        const labelData = await labelRes.json();
+        headquarters = labelData.entities?.[hqId]?.labels?.en?.value || null;
+      }
+    }
+    return { founded, headquarters };
+  } catch {
+    return null;
+  }
+}
+
+// Open Library's work object also carries `series` (a key like
+// "/series/OL326110L", not a name) when the book is part of one — resolved
+// via one more fetch to the series endpoint itself, which does have `name`.
+async function fetchSeriesName(seriesKey) {
+  if (!seriesKey) return null;
+  try {
+    const res = await fetch(`https://openlibrary.org${seriesKey}.json`, { headers: UA });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.name || null;
+  } catch {
+    return null;
+  }
+}
+
+// The physical/media format (Hardcover, Paperback, eBook...) lives on the
+// EDITION record, not the work — one more fetch keyed by the book's own ISBN.
+async function fetchEditionFormat(isbn) {
+  if (!isbn) return null;
+  try {
+    const res = await fetch(`https://openlibrary.org/isbn/${isbn}.json`, { headers: UA });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.physical_format || null;
+  } catch {
+    return null;
+  }
+}
+
+// Description text stays the primary source for the AI-polished summary;
+// `seriesKey` (if present) is resolved separately via fetchSeriesName for
+// `collection` — a real, non-hallucinated alternative to the AI-generated
+// series name that was previously abandoned for hallucinating badly.
+async function fetchWorkDetails(workKey) {
   if (!workKey) return null;
   try {
     const res = await fetch(`https://openlibrary.org${workKey}.json`, { headers: UA });
     if (!res.ok) return null;
     const data = await res.json();
     const desc = data.description;
-    if (!desc) return null;
-    return typeof desc === "string" ? desc : desc.value || null;
+    const description = desc ? (typeof desc === "string" ? desc : desc.value || null) : null;
+    if (!description) return null;
+    const seriesEntry = Array.isArray(data.series) ? data.series[0] : null;
+    const seriesKey = seriesEntry?.series?.key || null;
+    return { description, seriesKey };
   } catch {
     return null;
   }
@@ -274,13 +386,11 @@ function isCleanSubject(s) {
 // flaky AI call just keeps key_points blank rather than getting junk data.
 //
 // Deliberately NOT asking the model to also guess `collection` (series
-// name) here — tested it live and this small model hallucinates badly:
-// across repeated identical calls it repeated the book's own title back as
-// the "series name" 3 times out of 4, and once leaked its own JSON schema
-// field names ("collection", "keyPoints") into the key_points array as if
-// they were content. key_points is low-stakes interpretive summarization;
-// collection is a factual claim a small model isn't reliable enough to
-// make. Leave `collection` for manual/editorial curation instead.
+// name) — tested it live and this small model hallucinates badly: across
+// repeated identical calls it repeated the book's own title back as the
+// "series name" 3 times out of 4. `collection` now comes from Open
+// Library's own `series` field instead (see fetchWorkDetails/
+// fetchSeriesName) — a real fact, not a model guess.
 async function generateEnrichment(ai, title, author, summary) {
   if (!ai || !summary) return { keyPoints: null };
   try {
@@ -334,18 +444,24 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
 
   // A real synopsis is one more fetch() per book — skip (don't import with
   // a blank) rather than count against the day's budget with thin data.
-  const rawDescription = await fetchWorkDescription(doc.key);
-  if (!rawDescription) return false;
-  const cleaned = cleanRawText(rawDescription);
+  const workDetails = await fetchWorkDetails(doc.key);
+  if (!workDetails) return false;
+  const cleaned = cleanRawText(workDetails.description);
   // OL search docs occasionally repeat the same author name in author_name
   // (e.g. "Daniel Kahneman, Daniel Kahneman") — dedupe before joining.
   const authorLine = [...new Set(authorNames.map((n) => n.trim()))].slice(0, 3).join(", ");
   const polished = await polishSummary(ai, title, authorLine, cleaned);
   const { short, full } = splitDescription(polished || cleaned);
   const { keyPoints } = await generateEnrichment(ai, title, authorLine, full);
+  // Both real facts sourced independently of the AI: collection from OL's
+  // own series link (resolved to a name), format from the edition record.
+  const [collection, format] = await Promise.all([
+    fetchSeriesName(workDetails.seriesKey),
+    fetchEditionFormat(isbn),
+  ]);
 
   const subjects = (doc.subject || []).filter(isCleanSubject).slice(0, 12);
-  books.push({
+  const bookStub = {
     slug: slugify(title, isbn),
     lang: "en",
     title,
@@ -362,10 +478,14 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
     description: short,
     summary: full,
     rating: doc.ratings_average || null,
+    collection: collection || null,
+    format: format || null,
+    country: null, // filled in below once the primary author's country is known
     cover_url: doc.cover_i
       ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
       : `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
-  });
+  };
+  books.push(bookStub);
 
   const authorKeys = doc.author_key || [];
   for (let idx = 0; idx < authorNames.length; idx++) {
@@ -374,7 +494,16 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
     const dedupeKey = olKey || name.trim().toLowerCase();
     if (seenAuthorNames.has(dedupeKey)) continue;
     seenAuthorNames.add(dedupeKey);
-    const details = await fetchAuthorDetails(olKey);
+    // Two independent sources per author: OL's own author record (bio,
+    // birth year, photo, links) and Wikipedia's short description, whose
+    // nationality phrasing ("British author") is what fills `country` —
+    // OL's author record has no nationality field of its own.
+    const [details, wiki] = await Promise.all([
+      fetchAuthorDetails(olKey),
+      fetchWikipediaSummary(name.trim()),
+    ]);
+    const country = inferCountryFromDescription(wiki?.shortDescription);
+    if (idx === 0 && country) bookStub.country = country; // book.country = primary author's country, the closest OL analogue to "country of origin"
     authors.push({
       slug: slugify(name, olKey),
       lang: "en",
@@ -386,6 +515,7 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
       website_url: details?.websiteUrl || null,
       genres: subjects.length ? subjects.slice(0, 4) : null,
       famous_work: title,
+      country,
     });
   }
   const publisherName = (doc.publisher || [])[0];
@@ -394,6 +524,9 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
     if (!seenPublisherNames.has(key)) {
       seenPublisherNames.add(key);
       const wiki = await fetchWikipediaSummary(publisherName.trim());
+      // Founded/headquarters need the Wikidata item linked from the
+      // Wikipedia page — only fetched when that link actually exists.
+      const wikidata = await fetchWikidataFoundedAndHQ(wiki?.wikidataId);
       publications.push({
         slug: slugify(publisherName),
         lang: "en",
@@ -402,6 +535,8 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
         description: wiki?.about ? wiki.about.split(/(?<=[.!?])\s/)[0] : null,
         logo_url: wiki?.logoUrl || null,
         website: wiki?.pageUrl || null,
+        founded: wikidata?.founded || null,
+        headquarters: wikidata?.headquarters || null,
       });
     }
   }
@@ -581,6 +716,7 @@ async function runImport(env, { maxChunks } = {}) {
   const bookColumns = [
     "slug", "lang", "title", "author", "publisher", "isbn", "published", "page_count", "format",
     "category", "subjects", "genres", "tags", "key_points", "description", "summary", "cover_url", "rating",
+    "collection", "country",
   ];
   const toBookValues = (r) => [
     r.slug, r.lang || "en", r.title, r.author || null, r.publisher || null, r.isbn || null,
@@ -588,20 +724,23 @@ async function runImport(env, { maxChunks } = {}) {
     JSON.stringify(r.subjects || []), JSON.stringify(r.genres || []), JSON.stringify(r.tags || []),
     r.key_points ? JSON.stringify(r.key_points) : null,
     r.description || null, r.summary || null, r.cover_url || null, r.rating || null,
+    r.collection || null, r.country || null,
   ];
-  const authorColumns = ["slug", "lang", "name", "birth_year", "bio", "image_url", "wikipedia_url", "website_url", "genres", "famous_work"];
+  const bookUpdateCols = ["format", "collection", "country"];
+  const authorColumns = ["slug", "lang", "name", "birth_year", "bio", "image_url", "wikipedia_url", "website_url", "genres", "famous_work", "country"];
   const toAuthorValues = (r) => [
     r.slug, r.lang || "en", r.name, r.birth_year || null, r.bio || null,
     r.image_url || null, r.wikipedia_url || null, r.website_url || null,
-    r.genres ? JSON.stringify(r.genres) : null, r.famous_work || null,
+    r.genres ? JSON.stringify(r.genres) : null, r.famous_work || null, r.country || null,
   ];
-  const authorUpdateCols = ["birth_year", "bio", "image_url", "wikipedia_url", "website_url", "genres", "famous_work"];
-  const pubColumns = ["slug", "lang", "name", "type", "description", "about", "logo_url", "website"];
+  const authorUpdateCols = ["birth_year", "bio", "image_url", "wikipedia_url", "website_url", "genres", "famous_work", "country"];
+  const pubColumns = ["slug", "lang", "name", "type", "description", "about", "logo_url", "website", "founded", "headquarters"];
   const toPubValues = (r) => [
     r.slug, r.lang || "en", r.name, r.type || "Publisher",
     r.description || null, r.about || null, r.logo_url || null, r.website || null,
+    r.founded || null, r.headquarters || null,
   ];
-  const pubUpdateCols = ["type", "description", "about", "logo_url", "website"];
+  const pubUpdateCols = ["type", "description", "about", "logo_url", "website", "founded", "headquarters"];
 
   // 1. Any pre-staged queue rows (from a locally-run prepare_import.py, if
   // you've ever loaded one) — optional, not required for this to work.
@@ -649,11 +788,13 @@ async function runImport(env, { maxChunks } = {}) {
     publishersImported += await upsertBatch("publications", pubColumns, ol.publications, toPubValues, pubUpdateCols);
   }
 
-  // 3. Backfill existing authors that have NULL bios — search OL for their
-  // author key by name, then fetch details. Capped at 2/run (2 fetches each
-  // = 4 subrequests) to stay within Cloudflare's limit alongside the curated pass.
+  // 3. Backfill existing authors missing bio OR country — search OL for
+  // their author key, fetch details, and separately fetch Wikipedia's short
+  // description for nationality. Capped at 1/run (up to 3 fetches: OL
+  // author search + author details + Wikipedia) to stay within budget
+  // alongside the curated pass and everything else this run does.
   const { results: sparseAuthors } = await db.prepare(
-    "SELECT id, name FROM authors WHERE bio IS NULL LIMIT 2"
+    "SELECT id, name FROM authors WHERE bio IS NULL OR country IS NULL LIMIT 1"
   ).all();
   for (const row of sparseAuthors) {
     try {
@@ -665,46 +806,99 @@ async function runImport(env, { maxChunks } = {}) {
       const searchData = await searchRes.json();
       const authorKey = searchData.docs?.[0]?.key;
       if (!authorKey) continue;
-      const details = await fetchAuthorDetails(authorKey);
-      if (!details) continue;
+      const [details, wiki] = await Promise.all([
+        fetchAuthorDetails(authorKey),
+        fetchWikipediaSummary(row.name),
+      ]);
+      if (!details && !wiki) continue;
+      const country = inferCountryFromDescription(wiki?.shortDescription);
       await db.prepare(
         `UPDATE authors SET
           birth_year = COALESCE(?1, birth_year),
           bio = COALESCE(?2, bio),
           image_url = COALESCE(?3, image_url),
           wikipedia_url = COALESCE(?4, wikipedia_url),
-          website_url = COALESCE(?5, website_url)
-        WHERE id = ?6`
+          website_url = COALESCE(?5, website_url),
+          country = COALESCE(?6, country)
+        WHERE id = ?7`
       ).bind(
-        details.birthYear || null, details.bio || null,
-        details.imageUrl || null, details.wikipedia || null,
-        details.websiteUrl || null, row.id
+        details?.birthYear || null, details?.bio || null,
+        details?.imageUrl || null, details?.wikipedia || null,
+        details?.websiteUrl || null, country || null, row.id
       ).run();
       authorsImported += 1;
     } catch { /* skip this author, try next run */ }
   }
 
-  // 4. Backfill existing publishers that have NULL descriptions — one
-  // Wikipedia summary fetch each. Capped at 2/run to stay within budget.
+  // 4. Backfill existing publishers missing description OR founded/headquarters
+  // (a publisher can have one filled in from an earlier run without the other,
+  // e.g. if Wikidata lacked a linked item then but a later resolution helps).
+  // Capped at 1/run — each can cost up to 3 fetches (Wikipedia + Wikidata
+  // entity + label resolution) — to stay within budget alongside everything else.
   const { results: sparsePublishers } = await db.prepare(
-    "SELECT id, name FROM publications WHERE description IS NULL LIMIT 2"
+    "SELECT id, name FROM publications WHERE description IS NULL OR founded IS NULL LIMIT 1"
   ).all();
   for (const row of sparsePublishers) {
     try {
       const wiki = await fetchWikipediaSummary(row.name);
       if (!wiki) continue;
+      const wikidata = await fetchWikidataFoundedAndHQ(wiki.wikidataId);
       await db.prepare(
         `UPDATE publications SET
           description = COALESCE(?1, description),
           about = COALESCE(?2, about),
           logo_url = COALESCE(?3, logo_url),
-          website = COALESCE(?4, website)
-        WHERE id = ?5`
+          website = COALESCE(?4, website),
+          founded = COALESCE(?5, founded),
+          headquarters = COALESCE(?6, headquarters)
+        WHERE id = ?7`
       ).bind(
-        wiki.about.split(/(?<=[.!?])\s/)[0], wiki.about, wiki.logoUrl, wiki.pageUrl, row.id
+        wiki.about.split(/(?<=[.!?])\s/)[0], wiki.about, wiki.logoUrl, wiki.pageUrl,
+        wikidata?.founded || null, wikidata?.headquarters || null, row.id
       ).run();
       publishersImported += 1;
     } catch { /* skip this publisher, try next run */ }
+  }
+
+  // 5. Backfill existing books missing collection/format/country — reuses
+  // the isbn already on the row (no new title search needed). Capped at
+  // 1/run: each book here needs its own work+series+edition lookups, same
+  // cost profile as a newly-imported book.
+  const { results: sparseBooks } = await db.prepare(
+    "SELECT id, isbn, author FROM books WHERE isbn IS NOT NULL AND (collection IS NULL OR format IS NULL OR country IS NULL) LIMIT 1"
+  ).all();
+  for (const row of sparseBooks) {
+    try {
+      const searchRes = await fetch(
+        `https://openlibrary.org/search.json?q=${encodeURIComponent(`isbn:${row.isbn}`)}&limit=1&fields=key`,
+        { headers: UA }
+      );
+      if (!searchRes.ok) continue;
+      const searchData = await searchRes.json();
+      const workKey = searchData.docs?.[0]?.key;
+      if (!workKey) continue;
+      const workDetails = await fetchWorkDetails(workKey);
+      const [collection, format] = await Promise.all([
+        fetchSeriesName(workDetails?.seriesKey),
+        fetchEditionFormat(row.isbn),
+      ]);
+      let country = null;
+      const primaryAuthor = (row.author || "").split(",")[0]?.trim();
+      if (primaryAuthor) {
+        const wiki = await fetchWikipediaSummary(primaryAuthor);
+        country = inferCountryFromDescription(wiki?.shortDescription);
+      }
+      if (!collection && !format && !country) continue;
+      await db.prepare(
+        `UPDATE books SET
+          collection = COALESCE(?1, collection),
+          format = COALESCE(?2, format),
+          country = COALESCE(?3, country)
+        WHERE id = ?4`
+      ).bind(collection || null, format || null, country || null, row.id).run();
+      // Not counted toward `imported` — this enriches an already-counted
+      // existing row, it isn't a new book.
+    } catch { /* skip this book, try next run */ }
   }
 
   const remaining = await db.prepare("SELECT COUNT(*) AS n FROM import_chunks WHERE consumed = 0").first();
