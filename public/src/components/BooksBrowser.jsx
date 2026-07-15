@@ -7,7 +7,7 @@ import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
 
-const PER_PAGE = 60;
+const PER_PAGE = 20;
 
 const SORTS = [
   ["", "Relevance"],
@@ -302,7 +302,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             <div className="mt-10 flex flex-col items-center gap-2">
               <button onClick={loadMore} disabled={loadingMore} className="btn-primary !px-8">
                 {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}
-                {loadingMore ? "Loading…" : `Load ${Math.min(PER_PAGE, total - books.length)} more books`}
+                {loadingMore ? "Loading…" : "Load More"}
               </button>
               <p className="text-muted text-xs">{books.length} of {total.toLocaleString()} loaded</p>
             </div>
