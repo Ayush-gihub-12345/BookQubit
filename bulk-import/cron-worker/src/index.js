@@ -473,6 +473,7 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
       break; // network hiccup — stop for this run, cursor is unchanged so next run retries the same page
     }
     const docs = data.docs || [];
+    let qualifyingOnPage = 0;
 
     for (const doc of docs) {
       if (books.length >= maxBooks) break;
@@ -481,13 +482,16 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
       // this on any shelf: want-to-read + reading + already-read) is what
       // actually distinguishes "widely read" from "technically rated".
       if ((doc.ratings_average || 0) < minRating || (doc.readinglog_count || 0) < minReaders) continue;
+      qualifyingOnPage += 1;
       await enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames });
     }
 
-    // Fewer results than asked for means we're at (or near) the end of this
-    // subject's results — move on to the next one rather than re-querying
-    // ever-larger offsets that return nothing.
-    if (docs.length < pageSize) {
+    // Results are sorted by readers descending (sort=readinglog), so once a
+    // page has zero qualifying candidates, EVERY later page in this subject
+    // will also be below the threshold — paging further would just waste
+    // subrequests forever without ever finding another popular book. Move
+    // to the next subject immediately rather than waiting for a short page.
+    if (docs.length < pageSize || qualifyingOnPage === 0) {
       queryIndex += 1;
       offset = 0;
     } else {
@@ -747,6 +751,13 @@ export default {
       const isChainHop = request.headers.get("x-import-chain") === "1";
       const maxChunks = Number(url.searchParams.get("maxChunks")) || undefined;
       const burst = Number(url.searchParams.get("burst")) || 0;
+      // How many hops in a row have yielded nothing — a single empty hop is
+      // normal (e.g. the current subject/offset is past its popular titles
+      // and the cursor just needs to roll to the next of 26 subjects), not
+      // a reason to kill the whole burst. Only a long unbroken run of empty
+      // hops (network trouble, OL outage) should actually stop it.
+      const emptyStreak = Number(url.searchParams.get("empty")) || 0;
+      const MAX_EMPTY_STREAK = 30;
 
       await env.DB.prepare(
         "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
@@ -764,17 +775,18 @@ export default {
       const result = await runImport(env, { maxChunks: maxChunks || (burst ? 1 : undefined) });
 
       const somethingHappened = result.imported > 0 || result.authorsImported > 0 || result.publishersImported > 0 || result.chunksProcessed > 0;
-      const shouldContinue = burst > 1 && !result.capped && somethingHappened;
+      const newEmptyStreak = somethingHappened ? 0 : emptyStreak + 1;
+      const shouldContinue = burst > 1 && !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
       if (shouldContinue) {
         ctx.waitUntil(
-          env.SELF.fetch("https://self/run?burst=" + (burst - 1), {
+          env.SELF.fetch(`https://self/run?burst=${burst - 1}&empty=${newEmptyStreak}`, {
             method: "POST",
             headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET, "x-import-chain": "1" },
           }).catch(() => {})
         );
       }
 
-      return Response.json({ ...result, burstRemaining: shouldContinue ? burst - 1 : 0 });
+      return Response.json({ ...result, burstRemaining: shouldContinue ? burst - 1 : 0, emptyStreak: newEmptyStreak });
     }
     // Lets the admin dashboard halt an in-progress burst chain — the chain
     // checks this flag before each hop and stops itself rather than the

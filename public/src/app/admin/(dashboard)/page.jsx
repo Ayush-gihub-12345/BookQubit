@@ -15,7 +15,11 @@ const BURST_CHUNKS = 100;
 // How often to poll import-status while a burst is running, to show totals
 // climbing live. Stops automatically once totals haven't moved for a while.
 const POLL_INTERVAL_MS = 6000;
-const POLL_IDLE_STOPS = 3; // consecutive no-change polls before we assume it's done
+// The worker tolerates up to 30 empty hops in a row (cycling past subjects
+// whose popular titles are exhausted) before actually stopping, and those
+// hops are cheap/fast — give polling enough slack to not look "done" while
+// that's still happening in the background.
+const POLL_IDLE_STOPS = 8;
 
 const CARDS = [
   ["books", "book", "Books"],
@@ -135,17 +139,27 @@ export default function AdminDashboard() {
         setRunning(false);
         return;
       }
+      // A single empty first hop (e.g. the OL subject cursor just needs to
+      // roll to the next of 26 subjects) does NOT mean the burst is done —
+      // the worker's own chain keeps going regardless (see cron-worker's
+      // emptyStreak tolerance) and only truly stops after many empty hops
+      // in a row. Only treat this as "done" if the server itself reports
+      // no more hops queued.
       const nothingHappened = d.imported === 0 && d.authorsImported === 0 && d.publishersImported === 0 && d.chunksProcessed === 0;
-      if (nothingHappened) {
+      if (nothingHappened && !d.burstRemaining) {
         toast("Nothing imported this pass — try again shortly.", "info");
         setRunning(false);
         return;
       }
-      setImportLog((prev) => [
-        { id: `${Date.now()}-0`, imported: d.imported, skipped: d.skipped, authorsImported: d.authorsImported || 0, publishersImported: d.publishersImported || 0, source: d.source, titles: d.insertedTitles, time: new Date() },
-        ...prev,
-      ].slice(0, 50));
-      toast("Import started — running in the background, safe to leave this page.");
+      if (nothingHappened) {
+        toast("First page had nothing new — still running in the background, safe to leave this page.");
+      } else {
+        setImportLog((prev) => [
+          { id: `${Date.now()}-0`, imported: d.imported, skipped: d.skipped, authorsImported: d.authorsImported || 0, publishersImported: d.publishersImported || 0, source: d.source, titles: d.insertedTitles, time: new Date() },
+          ...prev,
+        ].slice(0, 50));
+        toast("Import started — running in the background, safe to leave this page.");
+      }
 
       const progress = await loadImportStatus();
       pollProgress({
