@@ -238,7 +238,7 @@ export default function AdminDashboard() {
             {stats.topRated.map((b, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="text-muted truncate">{b.title} <span className="text-white/40">· {b.author}</span></span>
-                <span className="shrink-0 text-amber-400">★ {b.rating}</span>
+                <span className="shrink-0 text-amber-400">★ {Number(b.rating).toFixed(1)}</span>
               </div>
             ))}
             {!stats.topRated.length && <p className="text-muted text-sm">No data yet.</p>}
