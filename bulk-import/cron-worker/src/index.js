@@ -37,6 +37,60 @@ const SUBJECTS = [
   "cooking", "art", "religion", "politics", "economics", "education", "sports",
 ];
 
+// Open Library's own readinglog_count (readers who've shelved a book) skews
+// hard toward classic/library-catalog fiction (Harry Potter, 1984, Pride and
+// Prejudice) — it's real reader data, but it under-represents real-world
+// bestsellers in business/self-help/nonfiction that people buy and read
+// outside library systems (Atomic Habits, The Psychology of Money, Sapiens).
+// This hand-picked list of widely recognized, high-demand titles is fetched
+// by exact title+author lookup — no popularity gate needed since these are
+// already known-good — and runs through the identical enrichment pipeline
+// (real synopsis, AI key_points, author/publisher detail lookups) as every
+// other book. Processed once each (a persisted cursor tracks progress) before
+// falling back to subject rotation, so these land in the catalog early.
+const CURATED_TITLES = [
+  { title: "The Psychology of Money", author: "Morgan Housel" },
+  { title: "Atomic Habits", author: "James Clear" },
+  { title: "Sapiens", author: "Yuval Noah Harari" },
+  { title: "Thinking, Fast and Slow", author: "Daniel Kahneman" },
+  { title: "Rich Dad Poor Dad", author: "Robert Kiyosaki" },
+  { title: "The Subtle Art of Not Giving a F*ck", author: "Mark Manson" },
+  { title: "Deep Work", author: "Cal Newport" },
+  { title: "The 7 Habits of Highly Effective People", author: "Stephen Covey" },
+  { title: "How to Win Friends and Influence People", author: "Dale Carnegie" },
+  { title: "The Power of Habit", author: "Charles Duhigg" },
+  { title: "Man's Search for Meaning", author: "Viktor Frankl" },
+  { title: "The Alchemist", author: "Paulo Coelho" },
+  { title: "Ikigai", author: "Hector Garcia" },
+  { title: "Educated", author: "Tara Westover" },
+  { title: "Becoming", author: "Michelle Obama" },
+  { title: "Can't Hurt Me", author: "David Goggins" },
+  { title: "The Four Agreements", author: "Don Miguel Ruiz" },
+  { title: "Outliers", author: "Malcolm Gladwell" },
+  { title: "Grit", author: "Angela Duckworth" },
+  { title: "Mindset", author: "Carol Dweck" },
+  { title: "The Lean Startup", author: "Eric Ries" },
+  { title: "Zero to One", author: "Peter Thiel" },
+  { title: "Start with Why", author: "Simon Sinek" },
+  { title: "Think and Grow Rich", author: "Napoleon Hill" },
+  { title: "The Millionaire Next Door", author: "Thomas Stanley" },
+  { title: "The Intelligent Investor", author: "Benjamin Graham" },
+  { title: "A Brief History of Time", author: "Stephen Hawking" },
+  { title: "Homo Deus", author: "Yuval Noah Harari" },
+  { title: "12 Rules for Life", author: "Jordan Peterson" },
+  { title: "Emotional Intelligence", author: "Daniel Goleman" },
+  { title: "The Book Thief", author: "Markus Zusak" },
+  { title: "To Kill a Mockingbird", author: "Harper Lee" },
+  { title: "The Catcher in the Rye", author: "J.D. Salinger" },
+  { title: "Animal Farm", author: "George Orwell" },
+  { title: "The Great Gatsby", author: "F. Scott Fitzgerald" },
+  { title: "The Kite Runner", author: "Khaled Hosseini" },
+  { title: "Life of Pi", author: "Yann Martel" },
+  { title: "The Hobbit", author: "J.R.R. Tolkien" },
+  { title: "Charlie and the Chocolate Factory", author: "Roald Dahl" },
+  { title: "The Da Vinci Code", author: "Dan Brown" },
+];
+
 function todayUTC() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -60,6 +114,18 @@ async function fetchOpenLibraryPage(subject, offset, limit) {
   const res = await fetch(url, { headers: UA });
   if (!res.ok) throw new Error(`Open Library search failed: ${res.status}`);
   return res.json();
+}
+
+// Exact title+author lookup for CURATED_TITLES — general relevance search
+// (not sorted by readers) since we already know these are worth having;
+// just need OL's best-matching edition with an ISBN attached.
+async function fetchCuratedMatch(title, author) {
+  const fields = "key,title,author_name,author_key,isbn,cover_i,first_publish_year,number_of_pages_median,ratings_average,publisher,subject";
+  const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(`${title} ${author}`)}&limit=5&fields=${fields}`;
+  const res = await fetch(url, { headers: UA });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data.docs || []).find((d) => (d.isbn || []).length && d.title && (d.author_name || []).length) || null;
 }
 
 async function fetchAuthorDetails(authorKey) {
@@ -88,6 +154,31 @@ async function fetchAuthorDetails(authorKey) {
   }
 }
 
+// Open Library has no publisher-details API at all, so publishers were
+// landing with just name+slug — everything else null. Wikipedia's public
+// REST summary endpoint (no key required) is a genuine, real data source
+// for the well-known publishers this catalog actually sees (Penguin,
+// HarperCollins, etc.) — returns a proper prose description, a logo/photo,
+// and a canonical page URL to use as a website fallback. Returns null
+// cleanly (a small/obscure imprint just won't have a Wikipedia page —
+// nothing to fabricate) rather than ever guessing.
+async function fetchWikipediaSummary(name) {
+  if (!name) return null;
+  try {
+    const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`, { headers: UA });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.extract) return null;
+    return {
+      about: data.extract,
+      logoUrl: data.thumbnail?.source || null,
+      pageUrl: data.content_urls?.desktop?.page || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchWorkDescription(workKey) {
   if (!workKey) return null;
   try {
@@ -97,6 +188,62 @@ async function fetchWorkDescription(workKey) {
     const desc = data.description;
     if (!desc) return null;
     return typeof desc === "string" ? desc : desc.value || null;
+  } catch {
+    return null;
+  }
+}
+
+// Open Library's raw descriptions are scraped from many sources and often
+// carry mangled UTF-8 (smart quotes/em-dashes decoded as "â€™"/"â€"" etc.),
+// stray replacement characters, and — as seen on real books like The
+// Psychology of Money — spammy markdown links to unrelated third-party
+// "pdf download" sites baked right into the text. Strip all of that before
+// it ever reaches the AI rewrite or the database.
+function cleanRawText(raw) {
+  return raw
+    .replace(/â€™|â€˜/g, "'")
+    .replace(/â€œ|â€\x9d|â€�/g, '"')
+    .replace(/â€"|â€"/g, "—")
+    .replace(/Â/g, "")
+    .replace(/�/g, "")
+    .replace(/\[[^\]]*\]\(https?:\/\/[^)]+\)/g, "") // markdown links
+    .replace(/https?:\/\/\S+/g, "") // bare URLs
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+// Rewrites a cleaned synopsis into proper, engaging book-jacket prose via
+// Workers AI — the raw OL text is often a single run-on paragraph or reads
+// like a database dump, not something you'd want to show a reader. Told
+// explicitly to keep the same facts/plot points, not invent anything, so
+// this is a copyediting pass, not a content-generation one (the model's
+// hallucination risk from the `collection` field doesn't apply the same way
+// here — nothing is being asked that isn't already in the source text).
+// Falls back to null (caller uses the cleaned-but-unpolished text instead)
+// on any failure or suspiciously short/empty output, never a summary worse
+// than what came from Open Library.
+async function polishSummary(ai, title, author, raw) {
+  if (!ai || !raw) return null;
+  try {
+    const response = await ai.run("@cf/meta/llama-3.2-1b-instruct", {
+      messages: [
+        {
+          role: "user",
+          content:
+            `Rewrite this book synopsis as clean, engaging prose for a book discovery website. ` +
+            `Two short paragraphs, no markdown, no links, no preamble like "Here's a rewrite" — just the synopsis text itself. ` +
+            `Keep every fact and plot point as given; don't invent anything new.\n\n` +
+            `Book: "${title}" by ${author}.\nOriginal: ${raw.slice(0, 900)}`,
+        },
+      ],
+      max_tokens: 350,
+    });
+    let text = (response?.response || "").trim();
+    if (!text) return null;
+    // Strip a leading meta-preamble the model sometimes adds despite being told not to,
+    // plus any markdown emphasis (*italic*/**bold**) it slips into otherwise-plain prose.
+    text = text.replace(/^(here'?s?\b[^:]{0,60}:)\s*/i, "").replace(/\*+/g, "").trim();
+    return text.length >= 40 ? text : null;
   } catch {
     return null;
   }
@@ -174,6 +321,126 @@ async function generateEnrichment(ai, title, author, summary) {
   }
 }
 
+// Shared per-book enrichment: given an OL search-result doc, fetches its
+// real synopsis + AI key_points, and appends the book/author/publisher
+// stubs into the passed-in arrays. Used by both the subject-rotation path
+// and the curated-title path so every book — famous or not — goes through
+// identical enrichment. Returns true if a book stub was actually added.
+async function enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames }) {
+  const isbn = (doc.isbn || [])[0];
+  const title = doc.title;
+  const authorNames = doc.author_name || [];
+  if (!isbn || !title || !authorNames.length) return false;
+
+  // A real synopsis is one more fetch() per book — skip (don't import with
+  // a blank) rather than count against the day's budget with thin data.
+  const rawDescription = await fetchWorkDescription(doc.key);
+  if (!rawDescription) return false;
+  const cleaned = cleanRawText(rawDescription);
+  // OL search docs occasionally repeat the same author name in author_name
+  // (e.g. "Daniel Kahneman, Daniel Kahneman") — dedupe before joining.
+  const authorLine = [...new Set(authorNames.map((n) => n.trim()))].slice(0, 3).join(", ");
+  const polished = await polishSummary(ai, title, authorLine, cleaned);
+  const { short, full } = splitDescription(polished || cleaned);
+  const { keyPoints } = await generateEnrichment(ai, title, authorLine, full);
+
+  const subjects = (doc.subject || []).filter(isCleanSubject).slice(0, 12);
+  books.push({
+    slug: slugify(title, isbn),
+    lang: "en",
+    title,
+    author: authorLine,
+    publisher: (doc.publisher || [])[0] || null,
+    isbn,
+    published: doc.first_publish_year ? String(doc.first_publish_year) : null,
+    page_count: doc.number_of_pages_median || null,
+    key_points: keyPoints,
+    category: subjects[0] || null,
+    subjects: subjects.slice(0, 8),
+    genres: subjects.slice(0, 2),
+    tags: subjects.slice(2, 6),
+    description: short,
+    summary: full,
+    rating: doc.ratings_average || null,
+    cover_url: doc.cover_i
+      ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+      : `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+  });
+
+  const authorKeys = doc.author_key || [];
+  for (let idx = 0; idx < authorNames.length; idx++) {
+    const name = authorNames[idx];
+    const olKey = authorKeys[idx];
+    const dedupeKey = olKey || name.trim().toLowerCase();
+    if (seenAuthorNames.has(dedupeKey)) continue;
+    seenAuthorNames.add(dedupeKey);
+    const details = await fetchAuthorDetails(olKey);
+    authors.push({
+      slug: slugify(name, olKey),
+      lang: "en",
+      name: name.trim(),
+      birth_year: details?.birthYear || null,
+      bio: details?.bio || null,
+      image_url: details?.imageUrl || null,
+      wikipedia_url: details?.wikipedia || null,
+      website_url: details?.websiteUrl || null,
+      genres: subjects.length ? subjects.slice(0, 4) : null,
+      famous_work: title,
+    });
+  }
+  const publisherName = (doc.publisher || [])[0];
+  if (publisherName) {
+    const key = publisherName.trim().toLowerCase();
+    if (!seenPublisherNames.has(key)) {
+      seenPublisherNames.add(key);
+      const wiki = await fetchWikipediaSummary(publisherName.trim());
+      publications.push({
+        slug: slugify(publisherName),
+        lang: "en",
+        name: publisherName.trim(),
+        about: wiki?.about || null,
+        description: wiki?.about ? wiki.about.split(/(?<=[.!?])\s/)[0] : null,
+        logo_url: wiki?.logoUrl || null,
+        website: wiki?.pageUrl || null,
+      });
+    }
+  }
+  return true;
+}
+
+// Walks CURATED_TITLES from a persisted cursor, resolving each to a real OL
+// edition and running it through the same enrichment as everything else.
+// The cursor advances past a title whether or not it resolved (a title OL
+// genuinely can't match well isn't worth re-querying every run) — once past
+// the end of the list it just stops being a no-op source forever, so this
+// costs nothing on future runs once exhausted.
+async function fetchCuratedBooks(db, ai, { maxBooks }) {
+  const state = await db.prepare("SELECT curated_index FROM ol_fetch_state WHERE id=1").first();
+  let idx = state?.curated_index || 0;
+
+  const books = [];
+  const authors = [];
+  const publications = [];
+  const seenAuthorNames = new Set();
+  const seenPublisherNames = new Set();
+
+  while (idx < CURATED_TITLES.length && books.length < maxBooks) {
+    const { title, author } = CURATED_TITLES[idx];
+    idx += 1;
+    let doc;
+    try {
+      doc = await fetchCuratedMatch(title, author);
+    } catch {
+      continue;
+    }
+    if (!doc) continue;
+    await enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames });
+  }
+
+  await db.prepare("UPDATE ol_fetch_state SET curated_index=?1 WHERE id=1").bind(idx).run();
+  return { books, authors, publications };
+}
+
 // Pulls up to `pages` pages from Open Library's live search API, filtering
 // for rating and basic completeness, and returns book/author/publisher
 // stubs ready to upsert — advancing (and persisting) the rotation cursor as
@@ -208,79 +475,13 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
     const docs = data.docs || [];
 
     for (const doc of docs) {
-      const isbn = (doc.isbn || [])[0];
-      const title = doc.title;
-      const authorNames = doc.author_name || [];
-      if (!isbn || !title || !authorNames.length) continue;
+      if (books.length >= maxBooks) break;
       // Popularity gate: a high average rating alone lets through obscure
       // books with one perfect vote — readinglog_count (readers who've put
       // this on any shelf: want-to-read + reading + already-read) is what
       // actually distinguishes "widely read" from "technically rated".
       if ((doc.ratings_average || 0) < minRating || (doc.readinglog_count || 0) < minReaders) continue;
-      if (books.length >= maxBooks) break;
-
-      // A real synopsis is one more fetch() per book — skip (don't import
-      // with a blank) rather than count against the day's budget with thin
-      // data, since a description-less row is exactly what we're avoiding.
-      const rawDescription = await fetchWorkDescription(doc.key);
-      if (!rawDescription) continue;
-      const { short, full } = splitDescription(rawDescription);
-      const authorLine = authorNames.slice(0, 3).join(", ");
-      const { keyPoints } = await generateEnrichment(ai, title, authorLine, full);
-
-      const subjects = (doc.subject || []).filter(isCleanSubject).slice(0, 12);
-      books.push({
-        slug: slugify(title, isbn),
-        lang: "en",
-        title,
-        author: authorLine,
-        publisher: (doc.publisher || [])[0] || null,
-        isbn,
-        published: doc.first_publish_year ? String(doc.first_publish_year) : null,
-        page_count: doc.number_of_pages_median || null,
-        key_points: keyPoints,
-        category: subjects[0] || null,
-        subjects: subjects.slice(0, 8),
-        genres: subjects.slice(0, 2),
-        tags: subjects.slice(2, 6),
-        description: short,
-        summary: full,
-        rating: doc.ratings_average || null,
-        cover_url: doc.cover_i
-          ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
-          : `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
-      });
-
-      const authorKeys = doc.author_key || [];
-      for (let idx = 0; idx < authorNames.length; idx++) {
-        const name = authorNames[idx];
-        const olKey = authorKeys[idx];
-        const dedupeKey = olKey || name.trim().toLowerCase();
-        if (seenAuthorNames.has(dedupeKey)) continue;
-        seenAuthorNames.add(dedupeKey);
-        const details = await fetchAuthorDetails(olKey);
-        const subjects = (doc.subject || []).filter(isCleanSubject).slice(0, 4);
-        authors.push({
-          slug: slugify(name, olKey),
-          lang: "en",
-          name: name.trim(),
-          birth_year: details?.birthYear || null,
-          bio: details?.bio || null,
-          image_url: details?.imageUrl || null,
-          wikipedia_url: details?.wikipedia || null,
-          website_url: details?.websiteUrl || null,
-          genres: subjects.length ? subjects : null,
-          famous_work: title,
-        });
-      }
-      const publisherName = (doc.publisher || [])[0];
-      if (publisherName) {
-        const key = publisherName.trim().toLowerCase();
-        if (!seenPublisherNames.has(key)) {
-          seenPublisherNames.add(key);
-          publications.push({ slug: slugify(publisherName), lang: "en", name: publisherName.trim() });
-        }
-      }
+      await enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames });
     }
 
     // Fewer results than asked for means we're at (or near) the end of this
@@ -315,6 +516,10 @@ async function runImport(env, { maxChunks } = {}) {
   // each) — capped well under Cloudflare's 50-subrequest-per-invocation free
   // plan limit (search pages + this cap must stay under that, with margin).
   const olMaxEnrich = Number(env.OL_MAX_ENRICH_PER_RUN) || 30;
+  // How many of this run's book budget go to CURATED_TITLES before falling
+  // back to subject rotation — keeps the recognizable "must-have" titles
+  // landing early without ballooning subrequest use on top of everything else.
+  const olCuratedPerRun = Number(env.OL_CURATED_PER_RUN) || 5;
 
   await db.prepare(
     "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
@@ -387,9 +592,12 @@ async function runImport(env, { maxChunks } = {}) {
     r.genres ? JSON.stringify(r.genres) : null, r.famous_work || null,
   ];
   const authorUpdateCols = ["birth_year", "bio", "image_url", "wikipedia_url", "website_url", "genres", "famous_work"];
-  const pubColumns = ["slug", "lang", "name", "type"];
-  const toPubValues = (r) => [r.slug, r.lang || "en", r.name, r.type || "Publisher"];
-  const pubUpdateCols = ["type"];
+  const pubColumns = ["slug", "lang", "name", "type", "description", "about", "logo_url", "website"];
+  const toPubValues = (r) => [
+    r.slug, r.lang || "en", r.name, r.type || "Publisher",
+    r.description || null, r.about || null, r.logo_url || null, r.website || null,
+  ];
+  const pubUpdateCols = ["type", "description", "about", "logo_url", "website"];
 
   // 1. Any pre-staged queue rows (from a locally-run prepare_import.py, if
   // you've ever loaded one) — optional, not required for this to work.
@@ -406,25 +614,42 @@ async function runImport(env, { maxChunks } = {}) {
     await db.prepare("UPDATE import_chunks SET consumed = 1 WHERE id = ?1").bind(chunkRow.id).run();
   }
 
-  // 2. Live fetch straight from Open Library — the primary, always-on path.
+  // 2a. Curated, hand-picked bestsellers/must-haves first (Atomic Habits,
+  // The Psychology of Money, Sapiens, etc.) — real popularity these titles
+  // undeniably have, that Open Library's own reader-log data underrepresents.
   let source = null;
+  const curatedBudget = Math.min(
+    progress.daily_cap - (progress.imported_today + imported + authorsImported + publishersImported),
+    Math.min(olMaxEnrich, olCuratedPerRun)
+  );
+  if (curatedBudget > 0) {
+    const curated = await fetchCuratedBooks(db, env.AI, { maxBooks: curatedBudget });
+    if (curated.books.length) source = "curated";
+    imported += await upsertBatch("books", bookColumns, curated.books, toBookValues);
+    authorsImported += await upsertBatch("authors", authorColumns, curated.authors, toAuthorValues, authorUpdateCols);
+    publishersImported += await upsertBatch("publications", pubColumns, curated.publications, toPubValues, pubUpdateCols);
+  }
+
+  // 2b. Live fetch straight from Open Library — fills the rest of this
+  // run's budget once the curated list is exhausted (or budget remains).
   const budgetRemaining = progress.daily_cap - (progress.imported_today + imported + authorsImported + publishersImported);
-  if (budgetRemaining > 0) {
+  const olBudget = Math.min(budgetRemaining, Math.max(0, olMaxEnrich - imported));
+  if (olBudget > 0) {
     const ol = await fetchFromOpenLibrary(db, env.AI, {
       pages: olPages, pageSize: olPageSize, minRating: olMinRating, minReaders: olMinReaders,
-      maxBooks: Math.min(budgetRemaining, olMaxEnrich),
+      maxBooks: olBudget,
     });
-    source = ol.subject;
+    if (ol.books.length) source = ol.subject;
     imported += await upsertBatch("books", bookColumns, ol.books, toBookValues);
     authorsImported += await upsertBatch("authors", authorColumns, ol.authors, toAuthorValues, authorUpdateCols);
     publishersImported += await upsertBatch("publications", pubColumns, ol.publications, toPubValues, pubUpdateCols);
   }
 
   // 3. Backfill existing authors that have NULL bios — search OL for their
-  // author key by name, then fetch details. Capped at 3/run (2 fetches each
-  // = 6 subrequests) to stay within Cloudflare's limit.
+  // author key by name, then fetch details. Capped at 2/run (2 fetches each
+  // = 4 subrequests) to stay within Cloudflare's limit alongside the curated pass.
   const { results: sparseAuthors } = await db.prepare(
-    "SELECT id, name FROM authors WHERE bio IS NULL LIMIT 3"
+    "SELECT id, name FROM authors WHERE bio IS NULL LIMIT 2"
   ).all();
   for (const row of sparseAuthors) {
     try {
@@ -453,6 +678,29 @@ async function runImport(env, { maxChunks } = {}) {
       ).run();
       authorsImported += 1;
     } catch { /* skip this author, try next run */ }
+  }
+
+  // 4. Backfill existing publishers that have NULL descriptions — one
+  // Wikipedia summary fetch each. Capped at 2/run to stay within budget.
+  const { results: sparsePublishers } = await db.prepare(
+    "SELECT id, name FROM publications WHERE description IS NULL LIMIT 2"
+  ).all();
+  for (const row of sparsePublishers) {
+    try {
+      const wiki = await fetchWikipediaSummary(row.name);
+      if (!wiki) continue;
+      await db.prepare(
+        `UPDATE publications SET
+          description = COALESCE(?1, description),
+          about = COALESCE(?2, about),
+          logo_url = COALESCE(?3, logo_url),
+          website = COALESCE(?4, website)
+        WHERE id = ?5`
+      ).bind(
+        wiki.about.split(/(?<=[.!?])\s/)[0], wiki.about, wiki.logoUrl, wiki.pageUrl, row.id
+      ).run();
+      publishersImported += 1;
+    } catch { /* skip this publisher, try next run */ }
   }
 
   const remaining = await db.prepare("SELECT COUNT(*) AS n FROM import_chunks WHERE consumed = 0").first();

@@ -333,6 +333,7 @@ const CATALOG_MIGRATIONS = [
   "ALTER TABLE import_progress ADD COLUMN total_authors_imported INTEGER DEFAULT 0",
   "ALTER TABLE import_progress ADD COLUMN total_publishers_imported INTEGER DEFAULT 0",
   "ALTER TABLE import_progress ADD COLUMN stop_requested INTEGER DEFAULT 0",
+  "ALTER TABLE ol_fetch_state ADD COLUMN curated_index INTEGER DEFAULT 0",
 ];
 
 let schemaReady;

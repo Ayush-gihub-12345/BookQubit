@@ -54,6 +54,10 @@
     // (want-to-read/reading/already-read combined). 200 keeps only genuinely
     // popular, widely-read titles instead of any book that clears the rating bar.
     "OL_MIN_READERS": "200",
-    "OL_MAX_ENRICH_PER_RUN": "10"
+    "OL_MAX_ENRICH_PER_RUN": "10",
+    // How many of each run's book slots go to CURATED_TITLES (Atomic Habits,
+    // The Psychology of Money, Sapiens, etc. — real bestsellers OL's own
+    // reader-log data underrepresents) before falling back to subject rotation.
+    "OL_CURATED_PER_RUN": "4"
   }
 }
