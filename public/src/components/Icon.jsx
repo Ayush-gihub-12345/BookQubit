@@ -37,6 +37,8 @@ const PATHS = {
   eyeOff: "M17.94 17.94A10 10 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9 9 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22",
   arrowRight: "M5 12h14m-7-7 7 7-7 7",
   award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm-3.5-1.5L7 22l5-3 5 3-1.5-8.5",
+  play: "M6 3v18l15-9z",
+  pause: "M6 4h4v16H6zm8 0h4v16h-4z",
 };
 
 export default function Icon({ name, size = 16, className = "", strokeWidth = 2, filled = false }) {

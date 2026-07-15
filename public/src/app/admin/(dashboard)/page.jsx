@@ -37,14 +37,17 @@ const MODERATION = [
   ["requests", "Book Requests", "bookmark"],
 ];
 
-// Cron schedule is fixed in bulk-import/cron-worker/wrangler.jsonc ("0 */3 * * *")
-// — every 3 hours, on the hour, UTC. Computed here rather than fetched, since
-// Cloudflare doesn't expose a "next invocation" API; this just walks forward
-// from now to the next UTC hour that's a multiple of 3.
+// Big automatic sweep is fixed in bulk-import/cron-worker/wrangler.jsonc
+// ("0 */6 * * *") — every 6 hours, on the hour, UTC (there's also a
+// separate "*/5 * * * *" cron driving the auto-pilot toggle below, but that
+// one just no-ops when off, so it isn't worth surfacing a "next run" for).
+// Computed here rather than fetched, since Cloudflare doesn't expose a
+// "next invocation" API; this just walks forward to the next UTC hour
+// that's a multiple of 6.
 function nextCronRun() {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0, 0));
-  while (next.getUTCHours() % 3 !== 0 || next <= now) {
+  while (next.getUTCHours() % 6 !== 0 || next <= now) {
     next.setUTCHours(next.getUTCHours() + 1);
   }
   return next;
@@ -58,8 +61,10 @@ export default function AdminDashboard() {
   const [running, setRunning] = useState(false);
   const [importLog, setImportLog] = useState([]); // most-recent-first, one entry per poll/chunk
   const [expandedLog, setExpandedLog] = useState(null);
+  const [autoToggling, setAutoToggling] = useState(false);
   const pollTimer = useRef(null);
   const idlePolls = useRef(0);
+  const autoPollTimer = useRef(null);
 
   const loadImportStatus = () =>
     fetch("/api/admin/import-status").then((r) => r.json()).then((d) => {
@@ -71,8 +76,45 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetch("/api/admin/stats").then((r) => r.json()).then(setStats);
     loadImportStatus();
-    return () => clearTimeout(pollTimer.current);
+    return () => {
+      clearTimeout(pollTimer.current);
+      clearInterval(autoPollTimer.current);
+    };
   }, []);
+
+  // While auto-pilot is on, the worker's own */5 * * * * cron does its
+  // thing independently of this tab — this just refreshes the displayed
+  // totals periodically so they visibly climb without needing "Run Now".
+  useEffect(() => {
+    clearInterval(autoPollTimer.current);
+    if (importStatus?.auto_run_enabled) {
+      autoPollTimer.current = setInterval(() => loadImportStatus(), 30000);
+    }
+    return () => clearInterval(autoPollTimer.current);
+  }, [importStatus?.auto_run_enabled]);
+
+  const toggleAutoPilot = async () => {
+    const next = !importStatus?.auto_run_enabled;
+    setAutoToggling(true);
+    try {
+      const r = await fetch("/api/admin/import-auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        toast([d.error, d.detail].filter(Boolean).join(" — ") || "Failed to toggle auto-pilot", "error");
+        return;
+      }
+      setImportStatus((prev) => prev && { ...prev, auto_run_enabled: d.autoRunEnabled ? 1 : 0 });
+      toast(next ? "Auto-pilot on — ~10 books every 5 minutes." : "Auto-pilot stopped.");
+    } catch {
+      toast("Failed to reach the import worker.", "error");
+    } finally {
+      setAutoToggling(false);
+    }
+  };
 
   // The actual import now runs server-side (the worker chains itself via a
   // self service-binding + ctx.waitUntil — see cron-worker/src/index.js),
@@ -403,21 +445,44 @@ export default function AdminDashboard() {
                 </span>
               </div>
             </div>
-            {running ? (
-              <button onClick={stopImport} className="btn-ghost !px-3 !py-1.5 text-xs !border-red-500/40 !text-red-400">
-                <Icon name="x" size={13} /> Stop
-              </button>
-            ) : (
+            <div className="flex items-center gap-2">
               <button
-                onClick={runImportNow}
-                disabled={runDisabled}
-                title={capReached ? "Daily write cap reached — resets at UTC midnight" : "Run import passes now"}
-                className="btn-primary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={toggleAutoPilot}
+                disabled={autoToggling}
+                title={
+                  importStatus.auto_run_enabled
+                    ? "Auto-pilot is on — ~10 books every 5 minutes. Click to stop."
+                    : "Turn on auto-pilot — automatically imports ~10 books every 5 minutes, until stopped."
+                }
+                className={`btn-ghost !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
+                  importStatus.auto_run_enabled ? "!border-emerald-500/50 !text-emerald-400" : ""
+                }`}
               >
-                <Icon name="zap" size={13} /> Run Now
+                <Icon name={importStatus.auto_run_enabled ? "pause" : "play"} size={13} />
+                {importStatus.auto_run_enabled ? "Auto-pilot: On" : "Auto-pilot: Off"}
               </button>
-            )}
+              {running ? (
+                <button onClick={stopImport} className="btn-ghost !px-3 !py-1.5 text-xs !border-red-500/40 !text-red-400">
+                  <Icon name="x" size={13} /> Stop
+                </button>
+              ) : (
+                <button
+                  onClick={runImportNow}
+                  disabled={runDisabled}
+                  title={capReached ? "Daily write cap reached — resets at UTC midnight" : "Run import passes now"}
+                  className="btn-primary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Icon name="zap" size={13} /> Run Now
+                </button>
+              )}
+            </div>
           </div>
+          {importStatus.auto_run_enabled && (
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              Auto-pilot running — importing ~10 books every 5 minutes in the background.
+            </p>
+          )}
 
           <div className="mt-4 flex items-center justify-between text-[11px]">
             <p className="text-muted">

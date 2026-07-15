@@ -723,14 +723,30 @@ async function runImport(env, { maxChunks } = {}) {
 }
 
 export default {
-  // Automatic runs go through the same self-chaining burst as the admin's
-  // manual "Run Now" (see the /run handler below) instead of a single
-  // runImport() call — a lone invocation can only safely process ~10 books
-  // before hitting Cloudflare's 50-subrequest cap, so getting ~1,000 books
-  // per scheduled fire needs the same hop-by-hop chain. No x-import-chain
-  // header here since this is a fresh trigger (like an admin click), so it
-  // clears any stale Stop request from a previous run.
+  // Two independent cron triggers fire this, distinguished by event.cron:
+  //   "0 */6 * * *"  — the big automatic sweep, same self-chaining burst as
+  //                    the admin's manual "Run Now" (~1,000 books).
+  //   "*/5 * * * *"  — the admin-toggleable "auto-pilot": a single small
+  //                    ~10-book pass, but ONLY when auto_run_enabled is set
+  //                    (via the /auto route below) — otherwise a fast no-op.
+  //                    Not chained/bursted on purpose: it's meant to tick
+  //                    steadily every 5 minutes for as long as it's left on,
+  //                    not race ahead of itself.
   async scheduled(event, env, ctx) {
+    if (event.cron === "*/5 * * * *") {
+      ctx.waitUntil(
+        (async () => {
+          const flag = await env.DB.prepare("SELECT auto_run_enabled FROM import_progress WHERE id=1").first();
+          if (flag?.auto_run_enabled) await runImport(env);
+        })()
+      );
+      return;
+    }
+    // A lone invocation can only safely process ~10 books before hitting
+    // Cloudflare's 50-subrequest cap, so getting ~1,000 books per fire
+    // needs the same hop-by-hop chain the manual burst button uses. No
+    // x-import-chain header here since this is a fresh trigger (like an
+    // admin click), so it clears any stale Stop request from a previous run.
     ctx.waitUntil(
       env.SELF.fetch(`https://self/run?burst=${Number(env.SCHEDULED_BURST_CHUNKS) || 100}`, {
         method: "POST",
@@ -810,6 +826,23 @@ export default {
       }
       await env.DB.prepare("UPDATE import_progress SET stop_requested = 1 WHERE id = 1").run();
       return Response.json({ stopped: true });
+    }
+    // Toggles the "auto-pilot" mode the admin dashboard's Start/Stop switch
+    // controls: while on, the */5 * * * * cron does one small ~10-book pass
+    // every 5 minutes; while off, that same cron tick is a fast no-op. This
+    // just flips the flag — the actual work happens on the next 5-minute tick.
+    if (url.pathname === "/auto") {
+      const provided = request.headers.get("x-import-secret");
+      if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      const body = await request.json().catch(() => ({}));
+      const enabled = body.enabled ? 1 : 0;
+      await env.DB.prepare(
+        "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
+      ).run();
+      await env.DB.prepare("UPDATE import_progress SET auto_run_enabled = ?1 WHERE id = 1").bind(enabled).run();
+      return Response.json({ autoRunEnabled: !!enabled });
     }
     return new Response("bookqubit-import-cron is running.", { status: 200 });
   },

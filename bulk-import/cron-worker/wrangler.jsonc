@@ -40,8 +40,11 @@
   // D1_BATCH_SIZE govern the optional pre-staged queue (only relevant if
   // you've loaded one via prepare_import.py); OL_* govern the live Open
   // Library fetch, which is the primary path and needs no queue at all.
+  // Second cron ("*/5 * * * *") drives the admin dashboard's toggleable
+  // auto-pilot — every 5 minutes it checks import_progress.auto_run_enabled
+  // and, if on, does one ~10-book pass; if off, it's a near-instant no-op.
   "triggers": {
-    "crons": ["0 */6 * * *"]
+    "crons": ["0 */6 * * *", "*/5 * * * *"]
   },
   "vars": {
     "PER_RUN_CHUNKS": "13",
