@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
 import Rating from "@/components/Rating";
 import Section from "@/components/Section";
-import WishlistButton from "@/components/WishlistButton";
 import ShelfControls from "@/components/ShelfControls";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
@@ -135,14 +134,8 @@ export default async function BookPage({ params }) {
             <div className="card aspect-[2/3] overflow-hidden !shadow-xl hover:!translate-y-0">
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
-            <div className="mt-5 space-y-3">
-              {book.buyUrl && (
-                <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary w-full">
-                  <Icon name="cart" size={15} /> {_("buy")}
-                </a>
-              )}
-              <WishlistButton book={book} labels={{ save: _("save"), saved: _("saved") }} />
-            </div>
+
+            <QuickActions book={book} />
 
             {related.length > 0 && (
               <div className="mt-5 border-t border-line pt-4">
@@ -247,8 +240,6 @@ export default async function BookPage({ params }) {
                 <Translated as="p" className="mt-3 whitespace-pre-line leading-relaxed opacity-90" text={book.summary} />
               </div>
             )}
-
-            <QuickActions book={book} />
 
             {meta.length > 0 && (
               <div className="mt-8">
