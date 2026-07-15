@@ -23,6 +23,7 @@ export async function POST(request) {
   const body = await request.json().catch(() => ({}));
   const url = new URL("https://bookqubit-import-cron/run");
   if (body.maxChunks) url.searchParams.set("maxChunks", String(body.maxChunks));
+  if (body.burst) url.searchParams.set("burst", String(body.burst));
 
   const res = await env.IMPORT_CRON.fetch(url, {
     method: "POST",

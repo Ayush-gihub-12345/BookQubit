@@ -5,11 +5,17 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { useToast } from "@/components/Toast";
 
-// Safety cap on how many iterations a single "Run Now" click will walk
-// through (at ~10 books/iteration, 50 = up to ~500 books) — the daily cap
-// enforced server-side is the real limit; this just keeps one click from
-// running forever in the browser.
-const MAX_CLICK_CHUNKS = 50;
+// How many chunks a single "Run Now" click asks the worker to run
+// (at ~10 books/chunk, 50 = up to ~500 books). The worker itself chains
+// through all of these server-side (see cron-worker/src/index.js's burst
+// handling) — the browser only needs to make one request to kick it off,
+// and the import keeps running in Cloudflare's infrastructure even if this
+// tab is closed. The daily write cap enforced server-side is the real ceiling.
+const BURST_CHUNKS = 50;
+// How often to poll import-status while a burst is running, to show totals
+// climbing live. Stops automatically once totals haven't moved for a while.
+const POLL_INTERVAL_MS = 6000;
+const POLL_IDLE_STOPS = 3; // consecutive no-change polls before we assume it's done
 
 const CARDS = [
   ["books", "book", "Books"],
@@ -46,74 +52,122 @@ export default function AdminDashboard() {
   const [importStatus, setImportStatus] = useState(null);
   const [importChunks, setImportChunks] = useState(null);
   const [running, setRunning] = useState(false);
-  const [importLog, setImportLog] = useState([]); // most-recent-first, one entry per chunk
+  const [importLog, setImportLog] = useState([]); // most-recent-first, one entry per poll/chunk
   const [expandedLog, setExpandedLog] = useState(null);
-  const stopRequested = useRef(false);
+  const pollTimer = useRef(null);
+  const idlePolls = useRef(0);
 
   const loadImportStatus = () =>
     fetch("/api/admin/import-status").then((r) => r.json()).then((d) => {
       setImportStatus(d.progress);
       setImportChunks(d.chunks);
+      return d.progress;
     });
 
   useEffect(() => {
     fetch("/api/admin/stats").then((r) => r.json()).then(setStats);
     loadImportStatus();
+    return () => clearTimeout(pollTimer.current);
   }, []);
 
-  // Processes one chunk per call and loops automatically, so the dashboard
-  // can show live per-chunk progress instead of one silent multi-thousand-
-  // book batch. Stops on: empty queue, daily cap hit, the safety iteration
-  // cap, or the user clicking Stop.
-  const runImportNow = async () => {
-    setRunning(true);
-    stopRequested.current = false;
-    let sessionImported = 0;
-    let iterations = 0;
+  // The actual import now runs server-side (the worker chains itself via a
+  // self service-binding + ctx.waitUntil — see cron-worker/src/index.js),
+  // so it survives this tab closing. This just polls import_progress's
+  // running totals to show live progress, and stops polling once totals
+  // haven't moved for a few checks in a row (burst finished, cap hit, or
+  // someone hit Stop).
+  const pollProgress = (prevTotals) => {
+    pollTimer.current = setTimeout(async () => {
+      const progress = await loadImportStatus().catch(() => null);
+      if (!progress) { pollProgress(prevTotals); return; }
 
-    try {
-      while (iterations < MAX_CLICK_CHUNKS && !stopRequested.current) {
-        iterations += 1;
-        const r = await fetch("/api/admin/import-run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ maxChunks: 1 }),
-        });
-        const d = await r.json();
-        if (!r.ok) { toast([d.error, d.detail].filter(Boolean).join(" — ") || "Import run failed", "error"); break; }
+      const totals = {
+        imported: progress.total_imported, authors: progress.total_authors_imported || 0,
+        publishers: progress.total_publishers_imported || 0,
+      };
+      const delta = {
+        imported: totals.imported - prevTotals.imported,
+        authors: totals.authors - prevTotals.authors,
+        publishers: totals.publishers - prevTotals.publishers,
+      };
+      const moved = delta.imported > 0 || delta.authors > 0 || delta.publishers > 0;
 
-        if (d.capped) {
-          toast("Daily write cap reached — try again tomorrow.", "info");
-          break;
-        }
-        // Nothing at all happened this call (rare — e.g. a network hiccup
-        // reaching Open Library, since its live fetch has no real "end").
-        const nothingHappened = d.imported === 0 && d.authorsImported === 0 && d.publishersImported === 0 && d.chunksProcessed === 0;
-        if (nothingHappened) {
-          if (iterations === 1) toast("Nothing imported this pass — try again shortly.", "info");
-          break;
-        }
-
-        sessionImported += d.imported;
+      if (moved) {
+        idlePolls.current = 0;
         setImportLog((prev) => [
-          {
-            id: `${Date.now()}-${iterations}`, imported: d.imported, skipped: d.skipped,
-            authorsImported: d.authorsImported || 0, publishersImported: d.publishersImported || 0,
-            source: d.source, titles: d.insertedTitles, time: new Date(),
-          },
+          { id: `${Date.now()}`, imported: delta.imported, skipped: 0, authorsImported: delta.authors, publishersImported: delta.publishers, source: null, titles: [], time: new Date() },
           ...prev,
-        ].slice(0, 50)); // bounded so the DOM doesn't grow unboundedly across a long session
-        if (d.chunksProcessed > 0) setImportChunks((prev) => prev && { ...prev, done: prev.done + 1 });
+        ].slice(0, 50));
+      } else {
+        idlePolls.current += 1;
       }
 
-      if (sessionImported > 0) toast(`Imported ${sessionImported.toLocaleString()} books this run.`);
-      await loadImportStatus();
-    } finally {
+      const capReached = progress.imported_today >= progress.daily_cap;
+      if (capReached || idlePolls.current >= POLL_IDLE_STOPS) {
+        setRunning(false);
+        if (capReached) toast("Daily write cap reached — try again tomorrow.", "info");
+        return;
+      }
+      pollProgress(totals);
+    }, POLL_INTERVAL_MS);
+  };
+
+  // Kicks off a server-side burst (the worker chains through BURST_CHUNKS
+  // on its own) and starts polling for progress — one request is enough;
+  // closing this tab afterward does not stop the import.
+  const runImportNow = async () => {
+    setRunning(true);
+    idlePolls.current = 0;
+    try {
+      const r = await fetch("/api/admin/import-run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ burst: BURST_CHUNKS }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        toast([d.error, d.detail].filter(Boolean).join(" — ") || "Import run failed", "error");
+        setRunning(false);
+        return;
+      }
+      if (d.capped) {
+        toast("Daily write cap reached — try again tomorrow.", "info");
+        setRunning(false);
+        return;
+      }
+      const nothingHappened = d.imported === 0 && d.authorsImported === 0 && d.publishersImported === 0 && d.chunksProcessed === 0;
+      if (nothingHappened) {
+        toast("Nothing imported this pass — try again shortly.", "info");
+        setRunning(false);
+        return;
+      }
+      setImportLog((prev) => [
+        { id: `${Date.now()}-0`, imported: d.imported, skipped: d.skipped, authorsImported: d.authorsImported || 0, publishersImported: d.publishersImported || 0, source: d.source, titles: d.insertedTitles, time: new Date() },
+        ...prev,
+      ].slice(0, 50));
+      toast("Import started — running in the background, safe to leave this page.");
+
+      const progress = await loadImportStatus();
+      pollProgress({
+        imported: progress.total_imported, authors: progress.total_authors_imported || 0,
+        publishers: progress.total_publishers_imported || 0,
+      });
+    } catch {
+      toast("Import run failed to start.", "error");
       setRunning(false);
     }
   };
 
-  const stopImport = () => { stopRequested.current = true; };
+  const stopImport = async () => {
+    clearTimeout(pollTimer.current);
+    setRunning(false);
+    try {
+      await fetch("/api/admin/import-stop", { method: "POST" });
+      toast("Stop requested — the current chunk will finish, then the import halts.", "info");
+    } catch {
+      toast("Failed to send stop request.", "error");
+    }
+  };
 
   if (!stats) return <p className="text-muted text-sm">Loading dashboard…</p>;
 

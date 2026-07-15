@@ -23,6 +23,15 @@
   "ai": {
     "binding": "AI"
   },
+  // Self-referencing service binding — lets a "burst" /run call chain into
+  // its own next chunk via env.SELF.fetch() inside ctx.waitUntil(), so a
+  // multi-chunk burst keeps running in Cloudflare's infrastructure even
+  // after the admin's browser tab that started it closes. Each hop is a
+  // fresh invocation with its own subrequest budget, unlike looping inside
+  // a single invocation.
+  "services": [
+    { "binding": "SELF", "service": "bookqubit-import-cron" }
+  ],
   // Every 3 hours (8 runs/day). PER_RUN_CHUNKS/D1_BATCH_SIZE govern the
   // optional pre-staged queue (only relevant if you've loaded one via
   // prepare_import.py); OL_* govern the live Open Library fetch, which is
@@ -41,7 +50,10 @@
     "OL_PAGES_PER_RUN": "3",
     "OL_PAGE_SIZE": "100",
     "OL_MIN_RATING": "4",
-    "OL_MIN_RATINGS_COUNT": "1",
+    // readinglog_count floor — how many readers have this book on any shelf
+    // (want-to-read/reading/already-read combined). 200 keeps only genuinely
+    // popular, widely-read titles instead of any book that clears the rating bar.
+    "OL_MIN_READERS": "200",
     "OL_MAX_ENRICH_PER_RUN": "10"
   }
 }

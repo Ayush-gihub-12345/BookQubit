@@ -49,9 +49,14 @@ function slugify(name, suffixSource = "") {
 
 const UA = { "User-Agent": "BookQubit/1.0 (+https://bookqubit.com; bulk catalog import)" };
 
+// sort=readinglog orders results by readinglog_count (how many readers have
+// this book on any shelf — want-to-read + reading + already-read combined),
+// Open Library's actual "most read/most popular" signal. Sorting by rating
+// alone (the old approach) surfaced obscure books with a perfect score from
+// a single vote; this instead front-loads books real readers have engaged with.
 async function fetchOpenLibraryPage(subject, offset, limit) {
-  const fields = "key,title,author_name,author_key,isbn,cover_i,first_publish_year,number_of_pages_median,ratings_average,ratings_count,publisher,subject";
-  const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(`subject:${subject}`)}&offset=${offset}&limit=${limit}&fields=${fields}`;
+  const fields = "key,title,author_name,author_key,isbn,cover_i,first_publish_year,number_of_pages_median,ratings_average,ratings_count,readinglog_count,publisher,subject";
+  const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(`subject:${subject}`)}&offset=${offset}&limit=${limit}&fields=${fields}&sort=readinglog`;
   const res = await fetch(url, { headers: UA });
   if (!res.ok) throw new Error(`Open Library search failed: ${res.status}`);
   return res.json();
@@ -173,7 +178,7 @@ async function generateEnrichment(ai, title, author, summary) {
 // for rating and basic completeness, and returns book/author/publisher
 // stubs ready to upsert — advancing (and persisting) the rotation cursor as
 // it goes so the next run continues from here instead of restarting.
-async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRatingsCount, maxBooks }) {
+async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minReaders, maxBooks }) {
   let state = await db.prepare("SELECT * FROM ol_fetch_state WHERE id=1").first();
   if (!state) {
     await db.prepare("INSERT INTO ol_fetch_state (id, query_index, offset_val) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING").run();
@@ -207,7 +212,11 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRat
       const title = doc.title;
       const authorNames = doc.author_name || [];
       if (!isbn || !title || !authorNames.length) continue;
-      if ((doc.ratings_average || 0) < minRating || (doc.ratings_count || 0) < minRatingsCount) continue;
+      // Popularity gate: a high average rating alone lets through obscure
+      // books with one perfect vote — readinglog_count (readers who've put
+      // this on any shelf: want-to-read + reading + already-read) is what
+      // actually distinguishes "widely read" from "technically rated".
+      if ((doc.ratings_average || 0) < minRating || (doc.readinglog_count || 0) < minReaders) continue;
       if (books.length >= maxBooks) break;
 
       // A real synopsis is one more fetch() per book — skip (don't import
@@ -298,7 +307,10 @@ async function runImport(env, { maxChunks } = {}) {
   const olPages = maxChunks ? 1 : (Number(env.OL_PAGES_PER_RUN) || 3);
   const olPageSize = Number(env.OL_PAGE_SIZE) || 100;
   const olMinRating = Number(env.OL_MIN_RATING) || 4.0;
-  const olMinRatingsCount = Number(env.OL_MIN_RATINGS_COUNT) || 1;
+  // readinglog_count = readers who've put this on any shelf (want-to-read +
+  // reading + already-read) — the actual "popular / most readers" signal,
+  // not just a rating floor a barely-read book could clear with one vote.
+  const olMinReaders = Number(env.OL_MIN_READERS) || 200;
   // Every imported book gets a real fetched synopsis (one extra fetch() call
   // each) — capped well under Cloudflare's 50-subrequest-per-invocation free
   // plan limit (search pages + this cap must stay under that, with margin).
@@ -399,7 +411,7 @@ async function runImport(env, { maxChunks } = {}) {
   const budgetRemaining = progress.daily_cap - (progress.imported_today + imported + authorsImported + publishersImported);
   if (budgetRemaining > 0) {
     const ol = await fetchFromOpenLibrary(db, env.AI, {
-      pages: olPages, pageSize: olPageSize, minRating: olMinRating, minRatingsCount: olMinRatingsCount,
+      pages: olPages, pageSize: olPageSize, minRating: olMinRating, minReaders: olMinReaders,
       maxBooks: Math.min(budgetRemaining, olMaxEnrich),
     });
     source = ol.subject;
@@ -465,16 +477,67 @@ export default {
   // Manual trigger, called only by the main app's server (never the
   // browser directly) — requires the shared secret set via
   // `wrangler secret put IMPORT_TRIGGER_SECRET`.
-  async fetch(request, env) {
+  //
+  // `burst=N` runs N chunks back-to-back WITHOUT the caller (the admin's
+  // browser) needing to stay connected: after each chunk, the worker calls
+  // *itself* for the next one via a self-referencing Service Binding (SELF
+  // in wrangler.jsonc), wrapped in ctx.waitUntil so the chain keeps going
+  // in Cloudflare's infrastructure even if the admin closes the tab that
+  // started it — each hop is a fresh Worker invocation with its own
+  // subrequest budget, so this sidesteps the 50-subrequest-per-invocation
+  // cap that would otherwise block doing hundreds of enriched books in one
+  // shot. `x-import-chain` marks a hop as part of an existing chain (as
+  // opposed to a fresh admin click) so only a genuinely new click clears
+  // any previous stop request.
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/run") {
       const provided = request.headers.get("x-import-secret");
       if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
         return new Response("unauthorized", { status: 401 });
       }
+      const isChainHop = request.headers.get("x-import-chain") === "1";
       const maxChunks = Number(url.searchParams.get("maxChunks")) || undefined;
-      const result = await runImport(env, { maxChunks });
-      return Response.json(result);
+      const burst = Number(url.searchParams.get("burst")) || 0;
+
+      await env.DB.prepare(
+        "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
+      ).run();
+
+      if (burst > 0 && !isChainHop) {
+        // A fresh admin-triggered burst — clear any earlier Stop request.
+        await env.DB.prepare("UPDATE import_progress SET stop_requested = 0 WHERE id = 1").run();
+      }
+      if (burst > 0 && isChainHop) {
+        const flag = await env.DB.prepare("SELECT stop_requested FROM import_progress WHERE id = 1").first();
+        if (flag?.stop_requested) return Response.json({ stopped: true });
+      }
+
+      const result = await runImport(env, { maxChunks: maxChunks || (burst ? 1 : undefined) });
+
+      const somethingHappened = result.imported > 0 || result.authorsImported > 0 || result.publishersImported > 0 || result.chunksProcessed > 0;
+      const shouldContinue = burst > 1 && !result.capped && somethingHappened;
+      if (shouldContinue) {
+        ctx.waitUntil(
+          env.SELF.fetch("https://self/run?burst=" + (burst - 1), {
+            method: "POST",
+            headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET, "x-import-chain": "1" },
+          }).catch(() => {})
+        );
+      }
+
+      return Response.json({ ...result, burstRemaining: shouldContinue ? burst - 1 : 0 });
+    }
+    // Lets the admin dashboard halt an in-progress burst chain — the chain
+    // checks this flag before each hop and stops itself rather than the
+    // client needing to cancel an in-flight request.
+    if (url.pathname === "/stop") {
+      const provided = request.headers.get("x-import-secret");
+      if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      await env.DB.prepare("UPDATE import_progress SET stop_requested = 1 WHERE id = 1").run();
+      return Response.json({ stopped: true });
     }
     return new Response("bookqubit-import-cron is running.", { status: 200 });
   },
