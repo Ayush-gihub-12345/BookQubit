@@ -3,10 +3,19 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
+import SortDropdown from "./SortDropdown";
+
+const SORTS = [
+  { value: "name", label: "Name A–Z" },
+  { value: "name-desc", label: "Name Z–A" },
+  { value: "recent", label: "Recently Added" },
+  { value: "founded", label: "Oldest Founded" },
+];
 
 export default function PublishersBrowser({ publications }) {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
+  const [sort, setSort] = useState("name");
 
   const types = useMemo(() => {
     const counts = new Map();
@@ -16,12 +25,18 @@ export default function PublishersBrowser({ publications }) {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return publications.filter((p) => {
+    const list = publications.filter((p) => {
       if (type && p.type !== type) return false;
       if (term && !p.name.toLowerCase().includes(term)) return false;
       return true;
     });
-  }, [publications, q, type]);
+    const sorted = [...list];
+    if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
+    else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+    else if (sort === "founded") sorted.sort((a, b) => (Number(a.founded) || 9999) - (Number(b.founded) || 9999));
+    return sorted;
+  }, [publications, q, type, sort]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -30,12 +45,15 @@ export default function PublishersBrowser({ publications }) {
           <h1 className="text-3xl font-bold">Publishers</h1>
           <p className="text-muted mt-1 text-sm">{filtered.length} of {publications.length} publishers</p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Search publishers…" className="input !py-2 !pl-9 text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-64">
+            <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              value={q} onChange={(e) => setQ(e.target.value)}
+              placeholder="Search publishers…" className="input !py-2 !pl-9 text-sm"
+            />
+          </div>
+          <SortDropdown value={sort} options={SORTS} onChange={setSort} />
         </div>
       </div>
 

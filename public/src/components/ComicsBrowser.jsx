@@ -5,10 +5,18 @@ import Link from "next/link";
 import Rating from "./Rating";
 import BookCover from "./BookCover";
 import Icon from "./Icon";
+import SortDropdown from "./SortDropdown";
+
+const SORTS = [
+  { value: "title", label: "Title A–Z" },
+  { value: "rating", label: "Highest Rated" },
+  { value: "recent", label: "Recently Added" },
+];
 
 export default function ComicsBrowser({ comics }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
+  const [sort, setSort] = useState("title");
 
   const categories = useMemo(() => {
     const counts = new Map();
@@ -18,12 +26,17 @@ export default function ComicsBrowser({ comics }) {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return comics.filter((c) => {
+    const list = comics.filter((c) => {
       if (category && c.category !== category) return false;
       if (term && !`${c.title} ${c.publisher || ""}`.toLowerCase().includes(term)) return false;
       return true;
     });
-  }, [comics, q, category]);
+    const sorted = [...list];
+    if (sort === "title") sorted.sort((a, b) => a.title.localeCompare(b.title));
+    else if (sort === "rating") sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+    return sorted;
+  }, [comics, q, category, sort]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -32,12 +45,15 @@ export default function ComicsBrowser({ comics }) {
           <h1 className="text-3xl font-bold">Comics</h1>
           <p className="text-muted mt-1 text-sm">{filtered.length} of {comics.length} comics</p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Search comics or publishers…" className="input !py-2 !pl-9 text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-64">
+            <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              value={q} onChange={(e) => setQ(e.target.value)}
+              placeholder="Search comics or publishers…" className="input !py-2 !pl-9 text-sm"
+            />
+          </div>
+          <SortDropdown value={sort} options={SORTS} onChange={setSort} />
         </div>
       </div>
 

@@ -3,14 +3,23 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
+import SortDropdown from "./SortDropdown";
 
-// Client-side search + country filter over the full authors list — the
-// catalog here is small enough (hundreds, not the books-scale thousands)
-// that fetching once and filtering in-browser is instant, no per-keystroke
-// network round-trip needed.
+const SORTS = [
+  { value: "name", label: "Name A–Z" },
+  { value: "name-desc", label: "Name Z–A" },
+  { value: "recent", label: "Recently Added" },
+  { value: "birth", label: "Birth Year" },
+];
+
+// Client-side search + country filter + sort over the full authors list —
+// the catalog here is small enough (hundreds, not the books-scale
+// thousands) that fetching once and filtering/sorting in-browser is
+// instant, no per-keystroke network round-trip needed.
 export default function AuthorsBrowser({ authors }) {
   const [q, setQ] = useState("");
   const [country, setCountry] = useState("");
+  const [sort, setSort] = useState("name");
 
   const countries = useMemo(() => {
     const counts = new Map();
@@ -20,12 +29,18 @@ export default function AuthorsBrowser({ authors }) {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return authors.filter((a) => {
+    const list = authors.filter((a) => {
       if (country && a.country !== country) return false;
       if (term && !a.name.toLowerCase().includes(term)) return false;
       return true;
     });
-  }, [authors, q, country]);
+    const sorted = [...list];
+    if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
+    else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+    else if (sort === "birth") sorted.sort((a, b) => (b.birth_year || 0) - (a.birth_year || 0));
+    return sorted;
+  }, [authors, q, country, sort]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -34,12 +49,15 @@ export default function AuthorsBrowser({ authors }) {
           <h1 className="text-3xl font-bold">Authors</h1>
           <p className="text-muted mt-1 text-sm">{filtered.length} of {authors.length} authors</p>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Search authors…" className="input !py-2 !pl-9 text-sm"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-64">
+            <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              value={q} onChange={(e) => setQ(e.target.value)}
+              placeholder="Search authors…" className="input !py-2 !pl-9 text-sm"
+            />
+          </div>
+          <SortDropdown value={sort} options={SORTS} onChange={setSort} />
         </div>
       </div>
 

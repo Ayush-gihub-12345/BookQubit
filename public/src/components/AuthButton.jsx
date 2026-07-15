@@ -3,6 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import Icon from "./Icon";
+
+// Beyond the account/sign-out links this dropdown already had, these give
+// quick access to a reader's other saved state without navigating through
+// the account page first — a standard SaaS profile-menu pattern.
+const QUICK_LINKS = [
+  { href: "/liked", icon: "heart", label: "Liked Books" },
+  { href: "/achievements", icon: "award", label: "Achievements" },
+  { href: "/leaderboard", icon: "trophy", label: "Leaderboard" },
+];
 
 export default function AuthButton({ labels }) {
   const [user, setUser] = useState(null);
@@ -54,18 +64,25 @@ export default function AuthButton({ labels }) {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-[60] w-48 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
+        <div className="absolute right-0 top-12 z-[60] w-56 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
           <p className="truncate border-b border-line px-4 py-3 text-sm font-medium">
             {user.displayName || user.email}
           </p>
-          <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5">
-            {labels.account}
+          <Link href="/account" onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5">
+            <Icon name="user" size={15} className="text-muted" /> {labels.account}
           </Link>
+          {QUICK_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name={l.icon} size={15} className="text-muted" /> {l.label}
+            </Link>
+          ))}
           <button
             onClick={async () => { await getFirebaseAuth().signOut(); setOpen(false); }}
-            className="block w-full px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-500/10"
+            className="flex w-full items-center gap-2.5 border-t border-line px-4 py-2.5 text-left text-sm text-red-500 hover:bg-red-500/10"
           >
-            {labels.signOut}
+            <Icon name="logout" size={15} /> {labels.signOut}
           </button>
         </div>
       )}
