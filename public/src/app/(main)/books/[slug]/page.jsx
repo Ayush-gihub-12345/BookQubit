@@ -69,8 +69,14 @@ export default async function BookPage({ params }) {
     bookFormat: book.format || undefined,
     image: book.cover_url || undefined,
     description: book.description?.slice(0, 300),
-    aggregateRating: book.rating
-      ? { "@type": "AggregateRating", ratingValue: book.rating, bestRating: "5", ratingCount: community.rating_count || 1 }
+    // Google requires ratingCount/reviewCount to reflect a real number of
+    // reviews — book.rating is Open Library's imported average, which has
+    // no review count we actually store, so it can't honestly back a
+    // ratingCount. Only our own community reviews have a real count behind
+    // them, so aggregateRating uses those, and is omitted entirely (not
+    // faked with a placeholder like ratingCount: 1) when there are none yet.
+    aggregateRating: community.rating_count > 0
+      ? { "@type": "AggregateRating", ratingValue: community.avg_rating, bestRating: "5", ratingCount: community.rating_count }
       : undefined,
     inLanguage: book.language || undefined,
   };

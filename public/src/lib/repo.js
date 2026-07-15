@@ -235,6 +235,27 @@ export async function getRandomBook(lang) {
   return row ? mapBook(row, amazon_assoc_tag) : null;
 }
 
+// Real, non-random pairings — top-rated books sharing a category, so each
+// "X vs Y" reflects an actual choice a reader might be weighing. Shared by
+// the /compare landing page (as suggested pairings/internal links) and the
+// sitemap (so crawlers can discover these pages directly, not just via
+// clicks) — a comparison page nobody links to won't get indexed no matter
+// how well-optimized it is.
+export async function getComparisonSuggestions(lang, limit = 8) {
+  const topRated = await listBooks(lang, { sort: "rating", limit: 40 });
+  const byCategory = new Map();
+  for (const b of topRated) {
+    if (!b.category) continue;
+    const list = byCategory.get(b.category) || [];
+    if (list.length < 2) list.push(b);
+    byCategory.set(b.category, list);
+  }
+  return [...byCategory.values()]
+    .filter((pair) => pair.length === 2)
+    .slice(0, limit)
+    .map(([a, b]) => ({ slug: `${a.slug}-vs-${b.slug}`, title: `${a.title} vs ${b.title}` }));
+}
+
 // Slugs only, uncapped by design — used exclusively by the (server-only,
 // never publicly exposed) sitemap generator, which needs to enumerate the
 // entire catalog a shard at a time rather than a UI-sized page.

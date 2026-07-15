@@ -37,9 +37,24 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const [open, setOpen] = useState(false);
   const [myGenres, setMyGenres] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
+  const [surprising, setSurprising] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const headerRef = useRef(null);
+
+  // Unlike the homepage's own "Surprise me" link (which reuses whatever
+  // random book that page's server render happened to pick), this fetches
+  // a genuinely fresh pick on every click, from anywhere on the site.
+  const surpriseMe = async () => {
+    setSurprising(true);
+    try {
+      const r = await fetch(`/api/random-book?lang=${lang}`);
+      const d = await r.json();
+      if (d.slug) router.push(`/books/${encodeURIComponent(d.slug)}`);
+    } finally {
+      setSurprising(false);
+    }
+  };
 
   // Powers the "Your Genres" row in the Discover dropdown — set during
   // onboarding, editable from the account page.
@@ -185,6 +200,15 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           </div>
         </div>
         <div className="flex-1 md:hidden" />
+
+        {/* Surprise me — fresh random book on every click */}
+        <button
+          onClick={surpriseMe} disabled={surprising}
+          className={`${iconBtn} hidden sm:grid disabled:opacity-50`}
+          aria-label="Surprise me" title="Surprise me"
+        >
+          <Icon name="zap" size={17} />
+        </button>
 
         {/* Notifications */}
         <Link href="/notifications" className={`${iconBtn} relative hidden sm:grid`} aria-label="Notifications" title="Notifications">
@@ -339,6 +363,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             </div>
           </div>
 
+          <Link href="/compare"
+            className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/compare" || pathname.startsWith("/compare/") ? "text-brand-600" : ""}`}>
+            <Icon name="layers" size={14} className="opacity-70" /> Compare
+            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/compare" || pathname.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
+          </Link>
+
           <Link href="/about"
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/about" ? "text-brand-600" : ""}`}>
             <Icon name="shieldCheck" size={14} className="opacity-70" /> About
@@ -363,6 +393,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             <Link href="/liked" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="heart" size={15} className="text-muted" /> Liked Books
             </Link>
+            <Link href="/compare" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name="layers" size={15} className="text-muted" /> Compare
+            </Link>
+            <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+              <Icon name="zap" size={15} className="text-muted" /> Surprise me
+            </button>
             <Link href="/about" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="shieldCheck" size={15} className="text-muted" /> About
             </Link>
