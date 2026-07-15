@@ -7,7 +7,7 @@ import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
 
-const PER_PAGE = 32;
+const PER_PAGE = 60;
 
 const SORTS = [
   ["", "Relevance"],

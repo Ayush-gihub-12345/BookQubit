@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth } from "@/lib/firebase";
 import BookCover from "./BookCover";
+import Rating from "./Rating";
 import Icon from "./Icon";
 
-// "Because you read X" — naive personalization: find the user's most-read
-// category and recommend unread books from it.
+// Real personalization: the heavy lifting (scoring against the reader's
+// full shelf history + onboarding genre picks, not just one random "seed"
+// book) happens server-side in getRecommendations() — this just renders
+// the ranked result, plus the per-book `reason` it came with.
 export default function ForYou({ lang }) {
   const [data, setData] = useState(null);
 
@@ -17,26 +20,13 @@ export default function ForYou({ lang }) {
     return auth.onAuthStateChanged(async (u) => {
       if (!u) { setData(null); return; }
       try {
-        const shelfRes = await fetch(`/api/shelf?uid=${u.uid}`).then((r) => r.json());
-        const shelf = shelfRes.shelf || [];
-        if (!shelf.length) return;
-
-        const seed = shelf.find((s) => s.status === "read") || shelf[0];
-        const booksRes = await fetch(`/api/books?lang=${lang}`).then((r) => r.json());
-        const all = booksRes.books || [];
-        const seedBook = all.find((b) => b.slug === seed.book_slug);
-        if (!seedBook) return;
-
-        const owned = new Set(shelf.map((s) => s.book_slug));
-        const picks = all
-          .filter((b) => !owned.has(b.slug) && (b.category === seedBook.category || b.author === seedBook.author))
-          .slice(0, 6);
-        if (picks.length) setData({ seed: seedBook, picks });
+        const res = await fetch(`/api/recommendations?uid=${u.uid}&lang=${lang}&limit=12`).then((r) => r.json());
+        if (res.picks?.length) setData(res);
       } catch { /* ignore */ }
     });
   }, [lang]);
 
-  if (!data) return null;
+  if (!data?.picks?.length) return null;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10">
@@ -44,7 +34,9 @@ export default function ForYou({ lang }) {
         <Icon name="compass" size={18} className="text-brand-600" />
         <div>
           <h2 className="text-2xl font-bold">Picked for you</h2>
-          <p className="text-muted mt-0.5 text-sm">Because you read <span className="font-medium text-brand-600">{data.seed.title}</span></p>
+          <p className="text-muted mt-0.5 text-sm">
+            {data.basis ? <>Based on your reading history in <span className="font-medium text-brand-600">{data.basis}</span> and more</> : "Based on your reading history"}
+          </p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
@@ -57,6 +49,8 @@ export default function ForYou({ lang }) {
             <div className="p-3">
               <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600">{b.title}</p>
               <p className="text-muted line-clamp-1 text-xs">{b.author}</p>
+              <div className="mt-1"><Rating value={b.rating} /></div>
+              {b.reason && <p className="text-muted mt-1.5 line-clamp-1 text-[11px] italic">{b.reason}</p>}
             </div>
           </Link>
         ))}

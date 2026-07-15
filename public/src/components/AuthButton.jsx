@@ -1,18 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 
 export default function AuthButton({ labels }) {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (!auth) return;
     return auth.onAuthStateChanged(setUser);
   }, []);
+
+  // Close the dropdown on any click outside it (or Escape), not just its
+  // own links/buttons — the previous version only closed via those.
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKeyDown = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   if (!firebaseEnabled) return null;
 
@@ -25,7 +42,7 @@ export default function AuthButton({ labels }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <button onClick={() => setOpen(!open)} className="flex items-center" aria-label="Account menu">
         {user.photoURL ? (
           // eslint-disable-next-line @next/next/no-img-element

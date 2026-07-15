@@ -348,6 +348,22 @@ export async function getAuthor(slug, lang) {
 export async function getPublication(slug, lang) {
   return (await listPublications(lang)).find((p) => p.slug === decodeURIComponent(slug)) || null;
 }
+
+// Cross-linking helpers: a book's `author`/`publisher` columns are plain
+// text (a book can list multiple authors as "A, B, C"), so pages that want
+// to link straight to the real profile — instead of a search query for the
+// name — need to resolve name -> slug. Cheap: reuses listAuthors/
+// listPublications' own cached full list, no extra query.
+export async function getAuthorByName(name, lang) {
+  if (!name) return null;
+  const first = name.split(",")[0].trim().toLowerCase();
+  return (await listAuthors(lang)).find((a) => a.name.trim().toLowerCase() === first) || null;
+}
+export async function getPublicationByName(name, lang) {
+  if (!name) return null;
+  const target = name.trim().toLowerCase();
+  return (await listPublications(lang)).find((p) => p.name.trim().toLowerCase() === target) || null;
+}
 export async function getComic(slug, lang) {
   return (await listComics(lang)).find((c) => c.slug === decodeURIComponent(slug)) || null;
 }
@@ -1047,4 +1063,76 @@ export async function addDiscussionPost(discussionId, userId, body) {
   await db.prepare(
     "UPDATE discussion_members SET last_read_at=CURRENT_TIMESTAMP WHERE discussion_id=?1 AND user_id=?2"
   ).bind(discussionId, userId).run();
+}
+
+// Real personalization, computed server-side from a reader's actual
+// history — not a single random "seed" book (the old client-side ForYou
+// logic) and not limited to whatever page of the catalog happened to load.
+// Signals, weighted:
+//   - category/genre overlap with everything on the shelf (read counts 3x,
+//     reading 2x, want-to-read 1x — a finished book is a stronger signal
+//     than something merely bookmarked)
+//   - the genres picked during onboarding (user_preferences) — an explicit
+//     signal that's otherwise never used anywhere after onboarding
+//   - repeat-author matches, weighted highest (someone who's read 2 James
+//     Clear books is very likely to want a 3rd)
+// Every returned book carries a `reason` so the UI can show *why* it was
+// picked, not just present it as an opaque black box.
+export async function getRecommendations(uid, lang, limit = 12) {
+  const db = await getDb();
+  const catalogDb = await getCatalogDb();
+
+  const [{ results: shelfRows }, prefs] = await Promise.all([
+    db.prepare("SELECT book_slug, status FROM shelf WHERE user_id=?1").bind(uid).all(),
+    getUserPreferences(uid),
+  ]);
+  if (!shelfRows.length && !prefs.genres.length) return { picks: [], basis: null };
+
+  const shelfBooks = await getBooksBySlug(shelfRows.map((r) => r.book_slug), lang, "slug, category, genres, author, rating");
+  const STATUS_WEIGHT = { read: 3, reading: 2, want: 1 };
+
+  const categoryScores = new Map();
+  const genreScores = new Map();
+  const authorScores = new Map();
+  const bump = (map, key, n) => { if (key) map.set(key, (map.get(key) || 0) + n); };
+
+  for (const row of shelfRows) {
+    const b = shelfBooks.get(row.book_slug);
+    if (!b) continue;
+    const weight = STATUS_WEIGHT[row.status] || 1;
+    bump(categoryScores, b.category, weight);
+    bump(authorScores, b.author, weight);
+    for (const g of J(b.genres)) bump(genreScores, g, weight);
+  }
+  // Onboarding picks are an explicit signal, not inferred — worth as much
+  // as having finished a book in that genre.
+  for (const g of prefs.genres) bump(genreScores, g, 3);
+
+  const owned = new Set(shelfRows.map((r) => r.book_slug));
+  const { results: candidates } = await catalogDb.prepare(
+    "SELECT slug, title, author, category, genres, rating, cover_url FROM books WHERE lang=?1 ORDER BY rating DESC LIMIT 500"
+  ).bind(lang).all();
+
+  const scored = candidates
+    .filter((b) => !owned.has(b.slug))
+    .map((b) => {
+      const authorScore = (authorScores.get(b.author) || 0) * 2; // repeat-author is the strongest signal
+      const categoryScore = categoryScores.get(b.category) || 0;
+      const genres = J(b.genres);
+      const genreScore = genres.reduce((sum, g) => sum + (genreScores.get(g) || 0), 0);
+      const score = authorScore + categoryScore + genreScore + (b.rating || 0) / 10; // rating only breaks ties
+      let reason = null;
+      if (authorScore > 0) reason = `More by ${b.author}`;
+      else if (genreScore >= categoryScore && genreScore > 0) {
+        const topGenre = genres.find((g) => genreScores.has(g));
+        reason = topGenre ? `Because you like ${topGenre}` : null;
+      } else if (categoryScore > 0) reason = `Because you read ${b.category}`;
+      return { ...b, genres, score, reason };
+    })
+    .filter((b) => b.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  const topCategory = [...categoryScores.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  return { picks: scored, basis: topCategory };
 }

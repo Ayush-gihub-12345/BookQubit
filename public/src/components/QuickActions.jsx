@@ -149,14 +149,15 @@ export default function QuickActions({ book }) {
         </button>
       </div>
 
+      <button disabled={busy} onClick={() => setShelfStatus("want")} className={status === "want" ? gridPillActive : gridPillOutline}>
+        <Icon name="bookmark" size={15} filled={status === "want"} /> {status === "want" ? "In My Library" : "Add to My Library"}
+      </button>
+
       <div className="grid grid-cols-2 gap-2.5">
-        <button disabled={busy} onClick={() => setShelfStatus("want")} className={status === "want" ? gridPillActive : gridPillOutline}>
-          <Icon name="bookmark" size={15} filled={status === "want"} /> {status === "want" ? "In My Library" : "Add to My Library"}
-        </button>
         <button disabled={busy} onClick={() => setShelfStatus("reading")} className={status === "reading" ? gridPillActive : gridPillOutline}>
           <Icon name="clock" size={15} filled={status === "reading"} /> {status === "reading" ? "Currently Reading" : "Track Book"}
         </button>
-        <button disabled={busy} onClick={() => setShelfStatus("read")} className={`${status === "read" ? gridPillActive : gridPillOutline} col-span-2`}>
+        <button disabled={busy} onClick={() => setShelfStatus("read")} className={status === "read" ? gridPillActive : gridPillOutline}>
           <Icon name="check" size={15} /> {status === "read" ? "Marked Read" : "Mark Read"}
         </button>
       </div>

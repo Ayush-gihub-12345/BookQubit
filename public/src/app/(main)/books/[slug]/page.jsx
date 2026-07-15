@@ -11,7 +11,7 @@ import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
 import QuotesSection from "@/components/QuotesSection";
 import { TrackView } from "@/components/RecentlyViewed";
-import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook } from "@/lib/repo";
+import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorByName, getPublicationByName } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -49,10 +49,12 @@ export default async function BookPage({ params }) {
   const lang = await getLang();
   const book = await getBook(slug, lang);
   if (!book) notFound();
-  const [related, community, bookDiscussions] = await Promise.all([
+  const [related, community, bookDiscussions, authorProfile, publisherProfile] = await Promise.all([
     relatedBooks(book, lang),
     getBookCommunity(book.slug),
     getDiscussionsForBook(book.slug, 3),
+    getAuthorByName(book.author, lang),
+    getPublicationByName(book.publisher, lang),
   ]);
   const _ = t(lang);
 
@@ -107,6 +109,7 @@ export default async function BookPage({ params }) {
     ["Format", book.format],
     ["ISBN", book.isbn],
     ["Country", book.country],
+    ["Genres", book.genres?.length > 0 && book.genres.join(", ")],
   ].filter(([, v]) => v);
 
   return (
@@ -173,7 +176,10 @@ export default async function BookPage({ params }) {
             <h1 className="text-3xl font-bold sm:text-4xl"><Translated text={book.title} /></h1>
             <p className="text-muted mt-2 text-lg">
               by{" "}
-              <Link href={`/books?q=${encodeURIComponent(book.author || "")}`} className="font-medium text-brand-600 hover:underline">
+              <Link
+                href={authorProfile ? `/authors/${authorProfile.slug}` : `/books?q=${encodeURIComponent(book.author || "")}`}
+                className="font-medium text-brand-600 hover:underline"
+              >
                 {book.author}
               </Link>
             </p>
@@ -248,14 +254,23 @@ export default async function BookPage({ params }) {
                   {meta.map(([k, v]) => (
                     <div key={k}>
                       <dt className="text-muted text-xs uppercase tracking-wide">{k}</dt>
-                      <dd className="text-sm font-medium">{v}</dd>
+                      <dd className="text-sm font-medium">
+                        {k === "Publisher" && publisherProfile ? (
+                          <Link href={`/publications/${publisherProfile.slug}`} className="text-brand-600 hover:underline">{v}</Link>
+                        ) : v}
+                      </dd>
                     </div>
                   ))}
                 </dl>
               </div>
             )}
 
-            <div className="mt-8 scroll-mt-24" id="write-review">
+            {/* Reader quotes */}
+            <div className="mt-8">
+              <QuotesSection bookSlug={book.slug} />
+            </div>
+
+            <div className="mt-10 scroll-mt-24" id="write-review">
               <ShelfControls slug={book.slug} />
             </div>
 
@@ -266,11 +281,6 @@ export default async function BookPage({ params }) {
                 ))}
               </div>
             )}
-
-            {/* Reader quotes */}
-            <div className="mt-10">
-              <QuotesSection bookSlug={book.slug} />
-            </div>
 
             {/* Community section */}
             <div id="reviews" className="mt-10 scroll-mt-24">

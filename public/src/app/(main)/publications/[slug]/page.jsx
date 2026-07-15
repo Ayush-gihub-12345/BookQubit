@@ -27,6 +27,9 @@ export default async function PublicationPage({ params }) {
     ["Type", pub.type],
   ].filter(([, v]) => v);
 
+  const ratedBooks = books.filter((b) => b.rating);
+  const avgRating = ratedBooks.length ? (ratedBooks.reduce((n, b) => n + b.rating, 0) / ratedBooks.length).toFixed(1) : "—";
+
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 py-10">
@@ -36,7 +39,7 @@ export default async function PublicationPage({ params }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={pub.logo_url} alt={pub.name} className="h-24 w-24 rounded-2xl object-cover shadow-lg" />
             )}
-            <div className="text-center sm:text-left">
+            <div className="min-w-0 flex-1 text-center sm:text-left">
               <h1 className="text-3xl font-bold">{pub.name}</h1>
               <p className="mt-2 max-w-2xl opacity-90">{pub.about || pub.description}</p>
               {pub.website && (
@@ -44,6 +47,19 @@ export default async function PublicationPage({ params }) {
                   {pub.website} ↗
                 </a>
               )}
+            </div>
+            {/* Engagement stats — same pattern as the author page */}
+            <div className="grid shrink-0 grid-cols-3 gap-3 sm:grid-cols-1">
+              {[
+                [books.length, "Books"],
+                [avgRating, "Avg rating"],
+                [pub.founded || "—", "Founded"],
+              ].map(([val, label]) => (
+                <div key={label} className="rounded-xl border border-line px-4 py-3 text-center">
+                  <p className="text-lg font-extrabold">{val}</p>
+                  <p className="text-muted text-[11px]">{label}</p>
+                </div>
+              ))}
             </div>
           </div>
 

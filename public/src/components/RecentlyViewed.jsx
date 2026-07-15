@@ -38,12 +38,12 @@ export default function RecentlyViewed() {
       </div>
       <HScrollRow>
         {items.map((b) => (
-          <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-32 overflow-hidden sm:w-36">
+          <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-36 overflow-hidden sm:w-40">
             <div className="aspect-[2/3] overflow-hidden">
               <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
                 imgClassName="transition duration-500 group-hover:scale-105" />
             </div>
-            <p className="line-clamp-1 p-2.5 text-xs font-semibold group-hover:text-brand-600">{b.title}</p>
+            <p className="line-clamp-2 min-h-[2.2em] p-2.5 text-xs font-semibold leading-snug group-hover:text-brand-600">{b.title}</p>
           </Link>
         ))}
       </HScrollRow>
