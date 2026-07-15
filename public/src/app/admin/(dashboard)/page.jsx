@@ -37,6 +37,15 @@ const MODERATION = [
   ["requests", "Book Requests", "bookmark"],
 ];
 
+// D1's CURRENT_TIMESTAMP writes UTC as "YYYY-MM-DD HH:MM:SS" — no "T"/"Z",
+// so `new Date(...)` on that string parses it as LOCAL time in most
+// browsers, not UTC. That silently displayed raw UTC numbers as if they
+// were already IST (off by 5:30). Force it to be read as UTC before letting
+// toLocaleString() do the real local-timezone conversion.
+function parseUtcTimestamp(sqliteTimestamp) {
+  return new Date(sqliteTimestamp.replace(" ", "T") + "Z");
+}
+
 // Big automatic sweep is fixed in bulk-import/cron-worker/wrangler.jsonc
 // ("0 */6 * * *") — every 6 hours, on the hour, UTC (there's also a
 // separate "*/5 * * * *" cron driving the auto-pilot toggle below, but that
@@ -521,7 +530,7 @@ export default function AdminDashboard() {
               <p className="text-muted text-[11px]">Est. time left</p>
             </div>
             <div>
-              <p className="text-sm font-bold text-white">{importStatus.last_run_at ? new Date(importStatus.last_run_at).toLocaleString() : "—"}</p>
+              <p className="text-sm font-bold text-white">{importStatus.last_run_at ? parseUtcTimestamp(importStatus.last_run_at).toLocaleString() : "—"}</p>
               <p className="text-muted text-[11px]">Last run</p>
             </div>
             <div>
