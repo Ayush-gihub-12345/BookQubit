@@ -723,8 +723,20 @@ async function runImport(env, { maxChunks } = {}) {
 }
 
 export default {
+  // Automatic runs go through the same self-chaining burst as the admin's
+  // manual "Run Now" (see the /run handler below) instead of a single
+  // runImport() call — a lone invocation can only safely process ~10 books
+  // before hitting Cloudflare's 50-subrequest cap, so getting ~1,000 books
+  // per scheduled fire needs the same hop-by-hop chain. No x-import-chain
+  // header here since this is a fresh trigger (like an admin click), so it
+  // clears any stale Stop request from a previous run.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runImport(env));
+    ctx.waitUntil(
+      env.SELF.fetch(`https://self/run?burst=${Number(env.SCHEDULED_BURST_CHUNKS) || 100}`, {
+        method: "POST",
+        headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET },
+      }).catch(() => {})
+    );
   },
   // Manual trigger, called only by the main app's server (never the
   // browser directly) — requires the shared secret set via

@@ -76,14 +76,21 @@ export default function AdminDashboard() {
 
   // The actual import now runs server-side (the worker chains itself via a
   // self service-binding + ctx.waitUntil — see cron-worker/src/index.js),
-  // so it survives this tab closing. This just polls import_progress's
-  // running totals to show live progress, and stops polling once totals
-  // haven't moved for a few checks in a row (burst finished, cap hit, or
-  // someone hit Stop).
-  const pollProgress = (prevTotals) => {
+  // so it survives this tab closing. This polls import_progress to show
+  // live totals, and stops watching once the worker itself looks done.
+  //
+  // Book/author/publisher totals are NOT a reliable "still alive" signal on
+  // their own: the worker tolerates up to 30 empty hops in a row (cycling
+  // past subjects whose popular titles are already exhausted) before it
+  // actually stops, and those hops can run several-to-the-second — so
+  // totals can sit still for a while even though the chain is very much
+  // still running. `last_run_at` is updated on every single hop, empty or
+  // not, so it's the real heartbeat: only give up once BOTH totals and
+  // last_run_at have stopped moving for POLL_IDLE_STOPS checks in a row.
+  const pollProgress = (prevTotals, prevLastRunAt) => {
     pollTimer.current = setTimeout(async () => {
       const progress = await loadImportStatus().catch(() => null);
-      if (!progress) { pollProgress(prevTotals); return; }
+      if (!progress) { pollProgress(prevTotals, prevLastRunAt); return; }
 
       const totals = {
         imported: progress.total_imported, authors: progress.total_authors_imported || 0,
@@ -94,17 +101,16 @@ export default function AdminDashboard() {
         authors: totals.authors - prevTotals.authors,
         publishers: totals.publishers - prevTotals.publishers,
       };
-      const moved = delta.imported > 0 || delta.authors > 0 || delta.publishers > 0;
+      const totalsMoved = delta.imported > 0 || delta.authors > 0 || delta.publishers > 0;
+      const heartbeatMoved = progress.last_run_at !== prevLastRunAt;
 
-      if (moved) {
-        idlePolls.current = 0;
+      if (totalsMoved) {
         setImportLog((prev) => [
           { id: `${Date.now()}`, imported: delta.imported, skipped: 0, authorsImported: delta.authors, publishersImported: delta.publishers, source: null, titles: [], time: new Date() },
           ...prev,
         ].slice(0, 50));
-      } else {
-        idlePolls.current += 1;
       }
+      idlePolls.current = (totalsMoved || heartbeatMoved) ? 0 : idlePolls.current + 1;
 
       const capReached = progress.imported_today >= progress.daily_cap;
       if (capReached || idlePolls.current >= POLL_IDLE_STOPS) {
@@ -112,7 +118,7 @@ export default function AdminDashboard() {
         if (capReached) toast("Daily write cap reached — try again tomorrow.", "info");
         return;
       }
-      pollProgress(totals);
+      pollProgress(totals, progress.last_run_at);
     }, POLL_INTERVAL_MS);
   };
 
@@ -165,7 +171,7 @@ export default function AdminDashboard() {
       pollProgress({
         imported: progress.total_imported, authors: progress.total_authors_imported || 0,
         publishers: progress.total_publishers_imported || 0,
-      });
+      }, progress.last_run_at);
     } catch {
       toast("Import run failed to start.", "error");
       setRunning(false);

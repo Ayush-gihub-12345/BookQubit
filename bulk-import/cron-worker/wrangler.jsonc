@@ -32,17 +32,16 @@
   "services": [
     { "binding": "SELF", "service": "bookqubit-import-cron" }
   ],
-  // Every 3 hours (8 runs/day). PER_RUN_CHUNKS/D1_BATCH_SIZE govern the
-  // optional pre-staged queue (only relevant if you've loaded one via
-  // prepare_import.py); OL_* govern the live Open Library fetch, which is
-  // the primary path and needs no queue at all. Every imported book gets a
-  // real fetched synopsis (one extra fetch() call each), which is why
-  // OL_MAX_ENRICH_PER_RUN caps how many books get processed per run — stays
-  // well under Cloudflare's 50-subrequest-per-invocation free-plan limit.
-  // Set to 10 for now (testing) — at 10/run x 8 runs/day that's ~80 fully-
-  // enriched books/day; raise it once you're happy with quality/cost.
+  // Every 6 hours (4 runs/day). Each automatic fire now runs the same
+  // self-chaining burst as the admin's manual "Run Now" (see `scheduled()`
+  // below and SCHEDULED_BURST_CHUNKS) — ~1,000 books per run, ~4,000/day —
+  // rather than a single small pass, since one bare Worker invocation can
+  // only safely enrich ~10 books before the 50-subrequest cap. PER_RUN_CHUNKS/
+  // D1_BATCH_SIZE govern the optional pre-staged queue (only relevant if
+  // you've loaded one via prepare_import.py); OL_* govern the live Open
+  // Library fetch, which is the primary path and needs no queue at all.
   "triggers": {
-    "crons": ["0 */3 * * *"]
+    "crons": ["0 */6 * * *"]
   },
   "vars": {
     "PER_RUN_CHUNKS": "13",
@@ -58,6 +57,9 @@
     // How many of each run's book slots go to CURATED_TITLES (Atomic Habits,
     // The Psychology of Money, Sapiens, etc. — real bestsellers OL's own
     // reader-log data underrepresents) before falling back to subject rotation.
-    "OL_CURATED_PER_RUN": "4"
+    "OL_CURATED_PER_RUN": "4",
+    // Chunks per automatic (cron-triggered) burst — same math as the admin
+    // dashboard's BURST_CHUNKS: ~10 books/chunk, 100 = ~1,000 books/run.
+    "SCHEDULED_BURST_CHUNKS": "100"
   }
 }
