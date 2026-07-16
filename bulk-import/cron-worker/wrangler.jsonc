@@ -40,11 +40,12 @@
   // D1_BATCH_SIZE govern the optional pre-staged queue (only relevant if
   // you've loaded one via prepare_import.py); OL_* govern the live Open
   // Library fetch, which is the primary path and needs no queue at all.
-  // Second cron ("*/5 * * * *") drives the admin dashboard's toggleable
-  // auto-pilot — every 5 minutes it checks import_progress.auto_run_enabled
-  // and, if on, does one ~10-book pass; if off, it's a near-instant no-op.
+  // Second cron ("* * * * *") drives the admin dashboard's toggleable
+  // auto-pilot — every minute it checks import_progress.auto_run_enabled
+  // and, if on, does one ~2-book pass (see AUTO_PILOT_MAX_BOOKS below —
+  // literally 2 books/minute); if off, it's a near-instant no-op.
   "triggers": {
-    "crons": ["0 */6 * * *", "*/5 * * * *"]
+    "crons": ["0 */6 * * *", "* * * * *"]
   },
   "vars": {
     "PER_RUN_CHUNKS": "13",
@@ -72,6 +73,11 @@
     // Chunks per automatic (cron-triggered) burst — at ~5 books/chunk now,
     // 200 chunks ≈ 1,000 books/run (was 100 chunks @ ~10 books/chunk before
     // the extra per-book enrichment fetches).
-    "SCHEDULED_BURST_CHUNKS": "200"
+    "SCHEDULED_BURST_CHUNKS": "200",
+    // Books per auto-pilot tick, fired every minute — literally 2 books a
+    // minute, not an averaged approximation. Deliberately separate from
+    // OL_MAX_ENRICH_PER_RUN (which governs the big 6-hour sweep and manual
+    // burst button) so auto-pilot's pace can be tuned independently.
+    "AUTO_PILOT_MAX_BOOKS": "2"
   }
 }

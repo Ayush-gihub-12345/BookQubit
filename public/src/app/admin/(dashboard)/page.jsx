@@ -119,7 +119,7 @@ export default function AdminDashboard() {
         return;
       }
       setImportStatus((prev) => prev && { ...prev, auto_run_enabled: d.autoRunEnabled ? 1 : 0 });
-      toast(next ? "Auto-pilot on — ~10 books every 5 minutes." : "Auto-pilot stopped.");
+      toast(next ? "Auto-pilot on — ~2 books every minute." : "Auto-pilot stopped.");
     } catch {
       toast("Failed to reach the import worker.", "error");
     } finally {
@@ -462,8 +462,8 @@ export default function AdminDashboard() {
                 disabled={autoToggling}
                 title={
                   importStatus.auto_run_enabled
-                    ? "Auto-pilot is on — ~10 books every 5 minutes. Click to stop."
-                    : "Turn on auto-pilot — automatically imports ~10 books every 5 minutes, until stopped."
+                    ? "Auto-pilot is on — ~2 books every minute. Click to stop."
+                    : "Turn on auto-pilot — automatically imports ~2 books every minute, until stopped."
                 }
                 className={`btn-ghost !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
                   importStatus.auto_run_enabled ? "!border-emerald-500/50 !text-emerald-400" : ""
@@ -491,7 +491,7 @@ export default function AdminDashboard() {
           {importStatus.auto_run_enabled && (
             <p className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-400">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-              Auto-pilot running — importing ~10 books every 5 minutes in the background.
+              Auto-pilot running — importing ~2 books every minute in the background.
             </p>
           )}
 

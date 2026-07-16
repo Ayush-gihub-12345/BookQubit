@@ -608,16 +608,49 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
       break; // network hiccup — stop for this run, cursor is unchanged so next run retries the same page
     }
     const docs = data.docs || [];
-    let qualifyingOnPage = 0;
 
+    // Cheap pre-filter, no network calls: compute the slug every popularity-
+    // qualifying candidate WOULD get, then one batched DB lookup for which
+    // of those already exist. Enrichment (a real synopsis fetch, series
+    // resolution, edition format, author + publisher lookups — several
+    // fetches per book) then only ever runs on genuinely new candidates.
+    // Without this, a page landing on already-imported territory (e.g.
+    // after several manual bulk-import bursts already covered a subject's
+    // most-popular titles) burns a tick's entire fetch budget fully
+    // enriching books it's about to discover are duplicates at insert time
+    // anyway — observed live: a 23s, ~20-fetch run that inserted zero new
+    // books because every candidate on that page turned out already owned.
+    const qualifying = [];
     for (const doc of docs) {
-      if (books.length >= maxBooks) break;
       // Popularity gate: a high average rating alone lets through obscure
       // books with one perfect vote — readinglog_count (readers who've put
       // this on any shelf: want-to-read + reading + already-read) is what
       // actually distinguishes "widely read" from "technically rated".
       if ((doc.ratings_average || 0) < minRating || (doc.readinglog_count || 0) < minReaders) continue;
-      qualifyingOnPage += 1;
+      const isbn = (doc.isbn || [])[0];
+      if (!isbn || !doc.title) continue;
+      qualifying.push({ doc, slug: slugify(doc.title, isbn) });
+    }
+    // Tied to popularity-qualifying count (not post-dedup count) — a page
+    // that's all duplicates still means "keep paging this subject", since
+    // there may be genuinely new candidates further in; it's only a truly
+    // *empty* page (nothing clears the popularity bar at all) that means
+    // this subject is exhausted and it's time to move to the next one.
+    const qualifyingOnPage = qualifying.length;
+
+    let newCandidates = qualifying;
+    if (qualifying.length) {
+      const slugs = qualifying.map((q) => q.slug);
+      const placeholders = slugs.map((_, i) => `?${i + 2}`).join(",");
+      const { results: existing } = await db.prepare(
+        `SELECT slug FROM books WHERE lang=?1 AND slug IN (${placeholders})`
+      ).bind("en", ...slugs).all();
+      const existingSlugs = new Set(existing.map((r) => r.slug));
+      newCandidates = qualifying.filter((q) => !existingSlugs.has(q.slug));
+    }
+
+    for (const { doc } of newCandidates) {
+      if (books.length >= maxBooks) break;
       await enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames });
     }
 
@@ -640,7 +673,7 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
   return { books, authors, publications, subject: subjectFetched };
 }
 
-async function runImport(env, { maxChunks } = {}) {
+async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride } = {}) {
   const db = env.DB;
   const perRunChunks = maxChunks || Number(env.PER_RUN_CHUNKS) || 13;
   const batchSize = Number(env.D1_BATCH_SIZE) || 100;
@@ -654,11 +687,14 @@ async function runImport(env, { maxChunks } = {}) {
   // Every imported book gets a real fetched synopsis (one extra fetch() call
   // each) — capped well under Cloudflare's 50-subrequest-per-invocation free
   // plan limit (search pages + this cap must stay under that, with margin).
-  const olMaxEnrich = Number(env.OL_MAX_ENRICH_PER_RUN) || 30;
+  // maxBooksOverride lets a specific caller (the auto-pilot cron) run at a
+  // deliberately different, smaller pace than the big scheduled sweep and
+  // manual burst button, without those needing separate config.
+  const olMaxEnrich = maxBooksOverride || Number(env.OL_MAX_ENRICH_PER_RUN) || 30;
   // How many of this run's book budget go to CURATED_TITLES before falling
   // back to subject rotation — keeps the recognizable "must-have" titles
   // landing early without ballooning subrequest use on top of everything else.
-  const olCuratedPerRun = Number(env.OL_CURATED_PER_RUN) || 5;
+  const olCuratedPerRun = curatedOverride ?? (Number(env.OL_CURATED_PER_RUN) || 5);
 
   await db.prepare(
     "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
@@ -920,18 +956,29 @@ export default {
   // Two independent cron triggers fire this, distinguished by event.cron:
   //   "0 */6 * * *"  — the big automatic sweep, same self-chaining burst as
   //                    the admin's manual "Run Now" (~1,000 books).
-  //   "*/5 * * * *"  — the admin-toggleable "auto-pilot": a single small
-  //                    ~10-book pass, but ONLY when auto_run_enabled is set
-  //                    (via the /auto route below) — otherwise a fast no-op.
-  //                    Not chained/bursted on purpose: it's meant to tick
-  //                    steadily every 5 minutes for as long as it's left on,
-  //                    not race ahead of itself.
+  //   "* * * * *"    — the admin-toggleable "auto-pilot": a single small
+  //                    ~2-book pass, literally every minute, but ONLY when
+  //                    auto_run_enabled is set (via the /auto route below)
+  //                    — otherwise a fast no-op. Not chained/bursted on
+  //                    purpose: it's meant to tick steadily for as long as
+  //                    it's left on, not race ahead of itself.
   async scheduled(event, env, ctx) {
-    if (event.cron === "*/5 * * * *") {
+    if (event.cron === "* * * * *") {
       ctx.waitUntil(
         (async () => {
           const flag = await env.DB.prepare("SELECT auto_run_enabled FROM import_progress WHERE id=1").first();
-          if (flag?.auto_run_enabled) await runImport(env);
+          if (!flag?.auto_run_enabled) return;
+          // maxChunks: 1 forces a single OL page (fast) instead of the big
+          // sweep's default 3 pages — this previously wasn't set at all, so
+          // every auto-pilot tick was silently running the full scheduled-
+          // sweep pacing (observed live: ~20-23s per tick). 2 books/tick,
+          // every minute, is the literal "2 books per minute" ask — not an
+          // averaged-out 4-books-per-2-minutes approximation.
+          await runImport(env, {
+            maxChunks: 1,
+            maxBooksOverride: Number(env.AUTO_PILOT_MAX_BOOKS) || 2,
+            curatedOverride: 1,
+          });
         })()
       );
       return;
@@ -1022,9 +1069,9 @@ export default {
       return Response.json({ stopped: true });
     }
     // Toggles the "auto-pilot" mode the admin dashboard's Start/Stop switch
-    // controls: while on, the */5 * * * * cron does one small ~10-book pass
-    // every 5 minutes; while off, that same cron tick is a fast no-op. This
-    // just flips the flag — the actual work happens on the next 5-minute tick.
+    // controls: while on, the * * * * * cron does one small ~2-book pass
+    // every minute; while off, that same cron tick is a fast no-op. This
+    // just flips the flag — the actual work happens on the next tick.
     if (url.pathname === "/auto") {
       const provided = request.headers.get("x-import-secret");
       if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
