@@ -78,6 +78,15 @@
     // minute, not an averaged approximation. Deliberately separate from
     // OL_MAX_ENRICH_PER_RUN (which governs the big 6-hour sweep and manual
     // burst button) so auto-pilot's pace can be tuned independently.
-    "AUTO_PILOT_MAX_BOOKS": "2"
+    "AUTO_PILOT_MAX_BOOKS": "2",
+    // How many subjects/pages a single auto-pilot tick will try before
+    // giving up for that minute. With 1,600+ books already imported across
+    // many earlier bulk-import bursts, several subjects are now thin at
+    // their current rotation offset — trying only 1 per tick meant a lot of
+    // consecutive ticks just cycling through exhausted subjects with zero
+    // net progress. Empty pages are cheap (one search fetch, no
+    // enrichment), so trying up to 8 costs little and finds fresh supply
+    // much faster.
+    "AUTO_PILOT_PAGES": "8"
   }
 }

@@ -673,11 +673,19 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
   return { books, authors, publications, subject: subjectFetched };
 }
 
-async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride } = {}) {
+async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pagesOverride } = {}) {
   const db = env.DB;
   const perRunChunks = maxChunks || Number(env.PER_RUN_CHUNKS) || 13;
   const batchSize = Number(env.D1_BATCH_SIZE) || 100;
-  const olPages = maxChunks ? 1 : (Number(env.OL_PAGES_PER_RUN) || 3);
+  // pagesOverride lets a caller (the auto-pilot cron) try several subjects
+  // in one invocation instead of giving up after just one — with 1,663+
+  // books already imported across many earlier bulk-import bursts, several
+  // subjects are now thin at their current rotation offset, so a single
+  // subject/page attempt per tick can spend many consecutive ticks just
+  // cycling through already-exhausted subjects before landing anything.
+  // Empty pages are cheap (one search fetch, no enrichment — see the
+  // dedup-before-enrich fix), so trying several per tick costs little.
+  const olPages = pagesOverride || (maxChunks ? 1 : (Number(env.OL_PAGES_PER_RUN) || 3));
   const olPageSize = Number(env.OL_PAGE_SIZE) || 100;
   const olMinRating = Number(env.OL_MIN_RATING) || 4.0;
   // readinglog_count = readers who've put this on any shelf (want-to-read +
@@ -978,6 +986,7 @@ export default {
             maxChunks: 1,
             maxBooksOverride: Number(env.AUTO_PILOT_MAX_BOOKS) || 2,
             curatedOverride: 1,
+            pagesOverride: Number(env.AUTO_PILOT_PAGES) || 8,
           });
         })()
       );
