@@ -673,7 +673,7 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
   return { books, authors, publications, subject: subjectFetched };
 }
 
-async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pagesOverride } = {}) {
+async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pagesOverride, skipBackfill } = {}) {
   const db = env.DB;
   const perRunChunks = maxChunks || Number(env.PER_RUN_CHUNKS) || 13;
   const batchSize = Number(env.D1_BATCH_SIZE) || 100;
@@ -832,117 +832,117 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
     publishersImported += await upsertBatch("publications", pubColumns, ol.publications, toPubValues, pubUpdateCols);
   }
 
-  // 3. Backfill existing authors missing bio OR country — search OL for
-  // their author key, fetch details, and separately fetch Wikipedia's short
-  // description for nationality. Capped at 1/run (up to 3 fetches: OL
-  // author search + author details + Wikipedia) to stay within budget
-  // alongside the curated pass and everything else this run does.
-  const { results: sparseAuthors } = await db.prepare(
-    "SELECT id, name FROM authors WHERE bio IS NULL OR country IS NULL LIMIT 1"
-  ).all();
-  for (const row of sparseAuthors) {
-    try {
-      const searchRes = await fetch(
-        `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(row.name)}&limit=1`,
-        { headers: UA }
-      );
-      if (!searchRes.ok) continue;
-      const searchData = await searchRes.json();
-      const authorKey = searchData.docs?.[0]?.key;
-      if (!authorKey) continue;
-      const [details, wiki] = await Promise.all([
-        fetchAuthorDetails(authorKey),
-        fetchWikipediaSummary(row.name),
-      ]);
-      if (!details && !wiki) continue;
-      const country = inferCountryFromDescription(wiki?.shortDescription);
-      await db.prepare(
-        `UPDATE authors SET
-          birth_year = COALESCE(?1, birth_year),
-          bio = COALESCE(?2, bio),
-          image_url = COALESCE(?3, image_url),
-          wikipedia_url = COALESCE(?4, wikipedia_url),
-          website_url = COALESCE(?5, website_url),
-          country = COALESCE(?6, country)
-        WHERE id = ?7`
-      ).bind(
-        details?.birthYear || null, details?.bio || null,
-        details?.imageUrl || null, details?.wikipedia || null,
-        details?.websiteUrl || null, country || null, row.id
-      ).run();
-      authorsImported += 1;
-    } catch { /* skip this author, try next run */ }
-  }
+  // 3-5. Backfill passes (existing authors' bio/country, publishers'
+  // description/founded, books' collection/format/country) — each one is
+  // extra network + CPU work (regex-heavy text cleaning, nationality
+  // matching, JSON parsing) on top of whatever this run's primary job was.
+  // Fine for the big 6-hour sweep and manual burst button, which have a
+  // generous time/CPU budget per hop — but the auto-pilot cron fires every
+  // single MINUTE, and running all three backfill loops on every one of
+  // those ticks was adding enough CPU time to push invocations over the
+  // free Workers plan's ~10ms budget: verified live via wrangler tail that
+  // this was a real, ongoing cause of "outcome":"exceededCpu" kills, not
+  // just a one-time fluke. skipBackfill lets the auto-pilot opt out of all
+  // three so its ticks stay small and reliably complete within budget.
+  if (!skipBackfill) {
+    const { results: sparseAuthors } = await db.prepare(
+      "SELECT id, name FROM authors WHERE bio IS NULL OR country IS NULL LIMIT 1"
+    ).all();
+    for (const row of sparseAuthors) {
+      try {
+        const searchRes = await fetch(
+          `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(row.name)}&limit=1`,
+          { headers: UA }
+        );
+        if (!searchRes.ok) continue;
+        const searchData = await searchRes.json();
+        const authorKey = searchData.docs?.[0]?.key;
+        if (!authorKey) continue;
+        const [details, wiki] = await Promise.all([
+          fetchAuthorDetails(authorKey),
+          fetchWikipediaSummary(row.name),
+        ]);
+        if (!details && !wiki) continue;
+        const country = inferCountryFromDescription(wiki?.shortDescription);
+        await db.prepare(
+          `UPDATE authors SET
+            birth_year = COALESCE(?1, birth_year),
+            bio = COALESCE(?2, bio),
+            image_url = COALESCE(?3, image_url),
+            wikipedia_url = COALESCE(?4, wikipedia_url),
+            website_url = COALESCE(?5, website_url),
+            country = COALESCE(?6, country)
+          WHERE id = ?7`
+        ).bind(
+          details?.birthYear || null, details?.bio || null,
+          details?.imageUrl || null, details?.wikipedia || null,
+          details?.websiteUrl || null, country || null, row.id
+        ).run();
+        authorsImported += 1;
+      } catch { /* skip this author, try next run */ }
+    }
 
-  // 4. Backfill existing publishers missing description OR founded/headquarters
-  // (a publisher can have one filled in from an earlier run without the other,
-  // e.g. if Wikidata lacked a linked item then but a later resolution helps).
-  // Capped at 1/run — each can cost up to 3 fetches (Wikipedia + Wikidata
-  // entity + label resolution) — to stay within budget alongside everything else.
-  const { results: sparsePublishers } = await db.prepare(
-    "SELECT id, name FROM publications WHERE description IS NULL OR founded IS NULL LIMIT 1"
-  ).all();
-  for (const row of sparsePublishers) {
-    try {
-      const wiki = await fetchWikipediaSummary(row.name);
-      if (!wiki) continue;
-      const wikidata = await fetchWikidataFoundedAndHQ(wiki.wikidataId);
-      await db.prepare(
-        `UPDATE publications SET
-          description = COALESCE(?1, description),
-          about = COALESCE(?2, about),
-          logo_url = COALESCE(?3, logo_url),
-          website = COALESCE(?4, website),
-          founded = COALESCE(?5, founded),
-          headquarters = COALESCE(?6, headquarters)
-        WHERE id = ?7`
-      ).bind(
-        wiki.about.split(/(?<=[.!?])\s/)[0], wiki.about, wiki.logoUrl, wiki.pageUrl,
-        wikidata?.founded || null, wikidata?.headquarters || null, row.id
-      ).run();
-      publishersImported += 1;
-    } catch { /* skip this publisher, try next run */ }
-  }
+    const { results: sparsePublishers } = await db.prepare(
+      "SELECT id, name FROM publications WHERE description IS NULL OR founded IS NULL LIMIT 1"
+    ).all();
+    for (const row of sparsePublishers) {
+      try {
+        const wiki = await fetchWikipediaSummary(row.name);
+        if (!wiki) continue;
+        const wikidata = await fetchWikidataFoundedAndHQ(wiki.wikidataId);
+        await db.prepare(
+          `UPDATE publications SET
+            description = COALESCE(?1, description),
+            about = COALESCE(?2, about),
+            logo_url = COALESCE(?3, logo_url),
+            website = COALESCE(?4, website),
+            founded = COALESCE(?5, founded),
+            headquarters = COALESCE(?6, headquarters)
+          WHERE id = ?7`
+        ).bind(
+          wiki.about.split(/(?<=[.!?])\s/)[0], wiki.about, wiki.logoUrl, wiki.pageUrl,
+          wikidata?.founded || null, wikidata?.headquarters || null, row.id
+        ).run();
+        publishersImported += 1;
+      } catch { /* skip this publisher, try next run */ }
+    }
 
-  // 5. Backfill existing books missing collection/format/country — reuses
-  // the isbn already on the row (no new title search needed). Capped at
-  // 1/run: each book here needs its own work+series+edition lookups, same
-  // cost profile as a newly-imported book.
-  const { results: sparseBooks } = await db.prepare(
-    "SELECT id, isbn, author FROM books WHERE isbn IS NOT NULL AND (collection IS NULL OR format IS NULL OR country IS NULL) LIMIT 1"
-  ).all();
-  for (const row of sparseBooks) {
-    try {
-      const searchRes = await fetch(
-        `https://openlibrary.org/search.json?q=${encodeURIComponent(`isbn:${row.isbn}`)}&limit=1&fields=key`,
-        { headers: UA }
-      );
-      if (!searchRes.ok) continue;
-      const searchData = await searchRes.json();
-      const workKey = searchData.docs?.[0]?.key;
-      if (!workKey) continue;
-      const workDetails = await fetchWorkDetails(workKey);
-      const [collection, format] = await Promise.all([
-        fetchSeriesName(workDetails?.seriesKey),
-        fetchEditionFormat(row.isbn),
-      ]);
-      let country = null;
-      const primaryAuthor = (row.author || "").split(",")[0]?.trim();
-      if (primaryAuthor) {
-        const wiki = await fetchWikipediaSummary(primaryAuthor);
-        country = inferCountryFromDescription(wiki?.shortDescription);
-      }
-      if (!collection && !format && !country) continue;
-      await db.prepare(
-        `UPDATE books SET
-          collection = COALESCE(?1, collection),
-          format = COALESCE(?2, format),
-          country = COALESCE(?3, country)
-        WHERE id = ?4`
-      ).bind(collection || null, format || null, country || null, row.id).run();
-      // Not counted toward `imported` — this enriches an already-counted
-      // existing row, it isn't a new book.
-    } catch { /* skip this book, try next run */ }
+    const { results: sparseBooks } = await db.prepare(
+      "SELECT id, isbn, author FROM books WHERE isbn IS NOT NULL AND (collection IS NULL OR format IS NULL OR country IS NULL) LIMIT 1"
+    ).all();
+    for (const row of sparseBooks) {
+      try {
+        const searchRes = await fetch(
+          `https://openlibrary.org/search.json?q=${encodeURIComponent(`isbn:${row.isbn}`)}&limit=1&fields=key`,
+          { headers: UA }
+        );
+        if (!searchRes.ok) continue;
+        const searchData = await searchRes.json();
+        const workKey = searchData.docs?.[0]?.key;
+        if (!workKey) continue;
+        const workDetails = await fetchWorkDetails(workKey);
+        const [collection, format] = await Promise.all([
+          fetchSeriesName(workDetails?.seriesKey),
+          fetchEditionFormat(row.isbn),
+        ]);
+        let country = null;
+        const primaryAuthor = (row.author || "").split(",")[0]?.trim();
+        if (primaryAuthor) {
+          const wiki = await fetchWikipediaSummary(primaryAuthor);
+          country = inferCountryFromDescription(wiki?.shortDescription);
+        }
+        if (!collection && !format && !country) continue;
+        await db.prepare(
+          `UPDATE books SET
+            collection = COALESCE(?1, collection),
+            format = COALESCE(?2, format),
+            country = COALESCE(?3, country)
+          WHERE id = ?4`
+        ).bind(collection || null, format || null, country || null, row.id).run();
+        // Not counted toward `imported` — this enriches an already-counted
+        // existing row, it isn't a new book.
+      } catch { /* skip this book, try next run */ }
+    }
   }
 
   const remaining = await db.prepare("SELECT COUNT(*) AS n FROM import_chunks WHERE consumed = 0").first();
@@ -986,7 +986,18 @@ export default {
             maxChunks: 1,
             maxBooksOverride: Number(env.AUTO_PILOT_MAX_BOOKS) || 2,
             curatedOverride: 1,
-            pagesOverride: Number(env.AUTO_PILOT_PAGES) || 8,
+            pagesOverride: Number(env.AUTO_PILOT_PAGES) || 1,
+            // The three backfill passes (author bio/country, publisher
+            // description/founded, book collection/format/country) run
+            // fine on the 6-hour sweep and manual burst — but doing all
+            // three on EVERY single per-minute tick was real, ongoing CPU
+            // + network overhead (confirmed live: median CPU time was
+            // above the free plan's ~10ms budget, and the Wikipedia host
+            // alone was seeing ~10k failed requests vs 36 successful,
+            // largely from these backfill loops probing obscure names
+            // every single minute). Auto-pilot's job is finding new books;
+            // let the sweep/burst handle backfilling existing rows.
+            skipBackfill: true,
           });
         })()
       );
@@ -1029,42 +1040,79 @@ export default {
       const isChainHop = request.headers.get("x-import-chain") === "1";
       const maxChunks = Number(url.searchParams.get("maxChunks")) || undefined;
       const burst = Number(url.searchParams.get("burst")) || 0;
+      // `target=N` chains hop-to-hop, no fixed chunk count, until the
+      // catalog's real total_imported reaches N — "keep going again and
+      // again until it hits 100,000", not a burst that stops after however
+      // many chunks were guessed up front.
+      const target = Number(url.searchParams.get("target")) || 0;
       // How many hops in a row have yielded nothing — a single empty hop is
       // normal (e.g. the current subject/offset is past its popular titles
       // and the cursor just needs to roll to the next of 26 subjects), not
       // a reason to kill the whole burst. Only a long unbroken run of empty
       // hops (network trouble, OL outage) should actually stop it.
       const emptyStreak = Number(url.searchParams.get("empty")) || 0;
-      const MAX_EMPTY_STREAK = 30;
+      // A target-mode run ("keep going until N books") is meant to run
+      // indefinitely, so it gets a much longer leash — 300 hops is enough
+      // to cycle the full 26-subject rotation more than 10x over before
+      // concluding real exhaustion (vs. genuine trouble like an OL outage).
+      const MAX_EMPTY_STREAK = target > 0 ? 300 : 30;
 
       await env.DB.prepare(
         "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
       ).run();
 
-      if (burst > 0 && !isChainHop) {
+      if ((burst > 0 || target > 0) && !isChainHop) {
         // A fresh admin-triggered burst — clear any earlier Stop request.
         await env.DB.prepare("UPDATE import_progress SET stop_requested = 0 WHERE id = 1").run();
       }
-      if (burst > 0 && isChainHop) {
+      if ((burst > 0 || target > 0) && isChainHop) {
         const flag = await env.DB.prepare("SELECT stop_requested FROM import_progress WHERE id = 1").first();
         if (flag?.stop_requested) return Response.json({ stopped: true });
       }
 
-      const result = await runImport(env, { maxChunks: maxChunks || (burst ? 1 : undefined) });
+      // ?pages=N lets a manual test call exercise the exact same code path
+      // as the auto-pilot cron (which sets pagesOverride) — otherwise a
+      // manual /run test only ever exercises the maxChunks-forced
+      // single-page behavior, not what's actually deployed for auto-pilot.
+      const pagesParam = Number(url.searchParams.get("pages")) || undefined;
+      // Burst/target-mode hops skip backfill too — with 10 books/chunk now,
+      // the CPU/subrequest budget goes to finding new books, not enriching
+      // already-existing rows. Backfill work still happens via the
+      // dedicated one-time scripts if/when that's wanted again.
+      const result = await runImport(env, {
+        maxChunks: maxChunks || (burst || target ? 1 : undefined),
+        pagesOverride: pagesParam,
+        skipBackfill: burst > 0 || target > 0,
+      });
 
       const somethingHappened = result.imported > 0 || result.authorsImported > 0 || result.publishersImported > 0 || result.chunksProcessed > 0;
       const newEmptyStreak = somethingHappened ? 0 : emptyStreak + 1;
-      const shouldContinue = burst > 1 && !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
+
+      let shouldContinue;
+      if (target > 0) {
+        // No fixed hop count — keep chaining until the real catalog total
+        // hits the target, checked fresh from the DB each hop (not the
+        // per-hop delta, since that'd drift from the true count over
+        // thousands of hops).
+        const progressRow = await env.DB.prepare("SELECT total_imported FROM import_progress WHERE id=1").first();
+        shouldContinue = (progressRow?.total_imported || 0) < target && !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
+      } else {
+        shouldContinue = burst > 1 && !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
+      }
+
       if (shouldContinue) {
+        const nextUrl = target > 0
+          ? `https://self/run?target=${target}&empty=${newEmptyStreak}`
+          : `https://self/run?burst=${burst - 1}&empty=${newEmptyStreak}`;
         ctx.waitUntil(
-          env.SELF.fetch(`https://self/run?burst=${burst - 1}&empty=${newEmptyStreak}`, {
+          env.SELF.fetch(nextUrl, {
             method: "POST",
             headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET, "x-import-chain": "1" },
           }).catch(() => {})
         );
       }
 
-      return Response.json({ ...result, burstRemaining: shouldContinue ? burst - 1 : 0, emptyStreak: newEmptyStreak });
+      return Response.json({ ...result, burstRemaining: shouldContinue ? (target > 0 ? "until target" : burst - 1) : 0, emptyStreak: newEmptyStreak });
     }
     // Lets the admin dashboard halt an in-progress burst chain — the chain
     // checks this flag before each hop and stops itself rather than the

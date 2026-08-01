@@ -57,15 +57,11 @@
     // (want-to-read/reading/already-read combined). 200 keeps only genuinely
     // popular, widely-read titles instead of any book that clears the rating bar.
     "OL_MIN_READERS": "200",
-    // Each book now costs several more fetches than before (series-name
-    // resolution, edition format, author Wikipedia nationality lookup,
-    // publisher Wikidata founded/headquarters) to fill in collection/
-    // format/country everywhere — dropped from 10 to 6 books/chunk to stay
-    // safely under Cloudflare's 50-subrequest-per-invocation cap. The admin
-    // dashboard's BURST_CHUNKS and SCHEDULED_BURST_CHUNKS below are scaled
-    // up to compensate, so ~1,000 books/run is still the real target — it
-    // just takes more (smaller, safer) chunks to get there.
-    "OL_MAX_ENRICH_PER_RUN": "5",
+    // 10 books/chunk (back up from 5) — safe now that burst/target-mode
+    // hops skip the backfill passes (see skipBackfill in the /run handler),
+    // freeing up CPU/subrequest budget that was going to enriching already-
+    // existing rows instead of finding new ones.
+    "OL_MAX_ENRICH_PER_RUN": "10",
     // How many of each run's book slots go to CURATED_TITLES (Atomic Habits,
     // The Psychology of Money, Sapiens, etc. — real bestsellers OL's own
     // reader-log data underrepresents) before falling back to subject rotation.
@@ -80,13 +76,15 @@
     // burst button) so auto-pilot's pace can be tuned independently.
     "AUTO_PILOT_MAX_BOOKS": "2",
     // How many subjects/pages a single auto-pilot tick will try before
-    // giving up for that minute. With 1,600+ books already imported across
-    // many earlier bulk-import bursts, several subjects are now thin at
-    // their current rotation offset — trying only 1 per tick meant a lot of
-    // consecutive ticks just cycling through exhausted subjects with zero
-    // net progress. Empty pages are cheap (one search fetch, no
-    // enrichment), so trying up to 8 costs little and finds fresh supply
-    // much faster.
-    "AUTO_PILOT_PAGES": "8"
+    // giving up for that minute. IMPORTANT: this was raised to 8 and it
+    // broke every single tick — verified live via wrangler tail that 100%
+    // of scheduled invocations were being killed with outcome:"exceededCpu"
+    // (the free Workers plan's ~10ms CPU-time budget, not wall-clock time).
+    // Evaluating up to 100 candidates/page x 8 pages (property comparisons,
+    // slugify on every popularity-qualifying one) is real CPU work that
+    // adds up fast against a 10ms ceiling — network waiting doesn't count
+    // against it, but this does. Back to 1: safe, and cheap empty pages
+    // just mean the next minute's tick tries the next subject instead.
+    "AUTO_PILOT_PAGES": "1"
   }
 }

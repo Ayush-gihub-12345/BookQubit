@@ -1,7 +1,9 @@
+import Script from "next/script";
 import "./globals.css";
 import { getLang, RTL } from "@/lib/lang";
 import { getTheme } from "@/lib/theme";
 import { ToastProvider } from "@/components/Toast";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com"),
@@ -31,6 +33,16 @@ export default async function RootLayout({ children }) {
         <link rel="alternate" type="application/rss+xml" title="BookQubit — New Releases" href="/feed.xml" />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-BXT9J1YW9J" strategy="afterInteractive" />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-BXT9J1YW9J', { send_page_view: false });
+          `}
+        </Script>
+        <GoogleAnalytics />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
