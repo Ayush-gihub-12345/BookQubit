@@ -33,13 +33,13 @@ export default async function RootLayout({ children }) {
         <link rel="alternate" type="application/rss+xml" title="BookQubit — New Releases" href="/feed.xml" />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
-        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-BXT9J1YW9J" strategy="afterInteractive" />
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-2MX9WZ1SPL" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-BXT9J1YW9J', { send_page_view: false });
+            gtag('config', 'G-2MX9WZ1SPL', { send_page_view: false });
           `}
         </Script>
         <GoogleAnalytics />

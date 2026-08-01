@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-const GA_ID = "G-BXT9J1YW9J";
+const GA_IDS = ["G-2MX9WZ1SPL"];
 
 // gtag's own script only fires a pageview on the initial full page load.
 // Next.js App Router navigations (clicking between book/author pages, etc.)
@@ -20,7 +20,7 @@ function Tracker() {
     if (typeof window.gtag !== "function") return;
     const query = searchParams.toString();
     const url = query ? `${pathname}?${query}` : pathname;
-    window.gtag("config", GA_ID, { page_path: url });
+    GA_IDS.forEach((id) => window.gtag("config", id, { page_path: url }));
   }, [pathname, searchParams]);
 
   return null;
