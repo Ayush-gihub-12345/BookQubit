@@ -335,6 +335,11 @@ const CATALOG_MIGRATIONS = [
   "ALTER TABLE import_progress ADD COLUMN stop_requested INTEGER DEFAULT 0",
   "ALTER TABLE ol_fetch_state ADD COLUMN curated_index INTEGER DEFAULT 0",
   "ALTER TABLE import_progress ADD COLUMN auto_run_enabled INTEGER DEFAULT 0",
+  // Tracks whether a continuous self-chaining import loop is currently
+  // alive in bulk-import/cron-worker — the per-minute cron watchdog there
+  // only starts a fresh chain when this is 0, so it doesn't stack multiple
+  // overlapping chains on top of each other.
+  "ALTER TABLE import_progress ADD COLUMN chain_running INTEGER DEFAULT 0",
 ];
 
 let schemaReady;

@@ -1,5 +1,5 @@
-// Daily (well, every-3-hours) bulk import cron. Two sources feed the same
-// pipeline:
+// Continuous, never-stopping bulk import — not a fixed schedule or a fixed
+// book count. Two sources feed the same pipeline:
 //   1. import_chunks — an optional pre-staged queue (JSON blobs written by
 //      the local prepare_import.py script from Open Library bulk dumps).
 //   2. A live fetch straight from Open Library's search API (openlibrary.org
@@ -10,23 +10,33 @@
 //
 // Every inserted book also gets author + publisher stub profiles (name +
 // slug at minimum) instead of just plain text, deduped against what's
-// already in the catalog and against each other within a run.
+// already in the catalog and against each other within a run — see the
+// pre-enrichment slug-existence check in fetchFromOpenLibrary() below, which
+// is what keeps this duplicate-free without wasting enrichment work on
+// books already owned.
+//
+// How "continuous" actually works on Cloudflare (there's no such thing as a
+// long-lived background process here): a self-chaining hop-to-hop loop.
+// /run?continuous=1 does the smallest safe unit of work (1 book, 1 curated
+// title, 1 OL search page, no backfill), then immediately calls itself again
+// via ctx.waitUntil(env.SELF.fetch(...)) with no delay — each hop is a fresh
+// Worker invocation with its own CPU/subrequest budget, so this never
+// accumulates cost across hops the way looping inside one invocation would.
+// The once-a-minute cron (see scheduled()) is just a watchdog: if the chain
+// is ever not running (first deploy, or it stopped itself after a long
+// empty streak / hit the daily cap / an admin clicked Stop) while auto-pilot
+// is toggled on, it starts a fresh chain. If a chain is already alive, the
+// watchdog tick is one cheap DB read and nothing else.
 //
 // Two independent safeguards protect the daily D1 write quota:
 //   1. daily_cap/imported_today/today_date on import_progress — enforced
-//      here regardless of who or what triggered the run (scheduled cron OR
-//      a manual "Run now" click), so a manual trigger can never blow past
-//      the day's budget even if clicked repeatedly. Counts ALL rows written
-//      (books + author/publisher stubs), not just books.
+//      here regardless of who or what triggered the run (the continuous
+//      chain, the watchdog, OR a manual "Run now" click), so nothing can
+//      blow past the day's budget. Counts ALL rows written (books +
+//      author/publisher stubs), not just books.
 //   2. The /run HTTP route requires a shared secret header, known only to
 //      the main app's server (never sent to the browser) — the raw worker
 //      URL is not something "anyone" can use to trigger a run.
-//
-// maxChunks, when set (the admin dashboard's per-click "Run Now" loop uses
-// this), bounds a single call to a small amount of work — one queued chunk
-// and one Open Library page — so the dashboard can show live incremental
-// progress instead of one silent multi-thousand-book batch. The scheduled
-// (unbounded) run does a bigger sweep per the *_PER_RUN env vars.
 
 // Rotated across runs so coverage keeps growing across genres over time
 // instead of only ever re-fetching the same subject's first page.
@@ -961,58 +971,28 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
 }
 
 export default {
-  // Two independent cron triggers fire this, distinguished by event.cron:
-  //   "0 */6 * * *"  — the big automatic sweep, same self-chaining burst as
-  //                    the admin's manual "Run Now" (~1,000 books).
-  //   "* * * * *"    — the admin-toggleable "auto-pilot": a single small
-  //                    ~2-book pass, literally every minute, but ONLY when
-  //                    auto_run_enabled is set (via the /auto route below)
-  //                    — otherwise a fast no-op. Not chained/bursted on
-  //                    purpose: it's meant to tick steadily for as long as
-  //                    it's left on, not race ahead of itself.
+  // Single cron trigger, "* * * * *" — a cheap once-a-minute WATCHDOG, not a
+  // pacing mechanism. The actual importing happens via the self-chaining
+  // /run?continuous=1 loop below, which hops from one invocation straight to
+  // the next with no delay at all (real continuous throughput, not "N books
+  // per minute"). This tick's only job: if auto-pilot is on but no chain is
+  // currently alive (first deploy, or the previous chain stopped itself
+  // after a long empty streak / hit the daily cap / an admin called /stop),
+  // start a fresh one. If a chain is already running, this is a single cheap
+  // DB read and nothing else — effectively free.
   async scheduled(event, env, ctx) {
-    if (event.cron === "* * * * *") {
-      ctx.waitUntil(
-        (async () => {
-          const flag = await env.DB.prepare("SELECT auto_run_enabled FROM import_progress WHERE id=1").first();
-          if (!flag?.auto_run_enabled) return;
-          // maxChunks: 1 forces a single OL page (fast) instead of the big
-          // sweep's default 3 pages — this previously wasn't set at all, so
-          // every auto-pilot tick was silently running the full scheduled-
-          // sweep pacing (observed live: ~20-23s per tick). 2 books/tick,
-          // every minute, is the literal "2 books per minute" ask — not an
-          // averaged-out 4-books-per-2-minutes approximation.
-          await runImport(env, {
-            maxChunks: 1,
-            maxBooksOverride: Number(env.AUTO_PILOT_MAX_BOOKS) || 2,
-            curatedOverride: 1,
-            pagesOverride: Number(env.AUTO_PILOT_PAGES) || 1,
-            // The three backfill passes (author bio/country, publisher
-            // description/founded, book collection/format/country) run
-            // fine on the 6-hour sweep and manual burst — but doing all
-            // three on EVERY single per-minute tick was real, ongoing CPU
-            // + network overhead (confirmed live: median CPU time was
-            // above the free plan's ~10ms budget, and the Wikipedia host
-            // alone was seeing ~10k failed requests vs 36 successful,
-            // largely from these backfill loops probing obscure names
-            // every single minute). Auto-pilot's job is finding new books;
-            // let the sweep/burst handle backfilling existing rows.
-            skipBackfill: true,
-          });
-        })()
-      );
-      return;
-    }
-    // A lone invocation can only safely process ~10 books before hitting
-    // Cloudflare's 50-subrequest cap, so getting ~1,000 books per fire
-    // needs the same hop-by-hop chain the manual burst button uses. No
-    // x-import-chain header here since this is a fresh trigger (like an
-    // admin click), so it clears any stale Stop request from a previous run.
     ctx.waitUntil(
-      env.SELF.fetch(`https://self/run?burst=${Number(env.SCHEDULED_BURST_CHUNKS) || 100}`, {
-        method: "POST",
-        headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET },
-      }).catch(() => {})
+      (async () => {
+        const row = await env.DB.prepare(
+          "SELECT auto_run_enabled, chain_running FROM import_progress WHERE id=1"
+        ).first();
+        if (!row?.auto_run_enabled || row.chain_running) return;
+        await env.DB.prepare("UPDATE import_progress SET chain_running=1 WHERE id=1").run();
+        await env.SELF.fetch("https://self/run?continuous=1", {
+          method: "POST",
+          headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET },
+        }).catch(() => {});
+      })()
     );
   },
   // Manual trigger, called only by the main app's server (never the
@@ -1041,55 +1021,66 @@ export default {
       const maxChunks = Number(url.searchParams.get("maxChunks")) || undefined;
       const burst = Number(url.searchParams.get("burst")) || 0;
       // `target=N` chains hop-to-hop, no fixed chunk count, until the
-      // catalog's real total_imported reaches N — "keep going again and
-      // again until it hits 100,000", not a burst that stops after however
-      // many chunks were guessed up front.
+      // catalog's real total_imported reaches N.
       const target = Number(url.searchParams.get("target")) || 0;
+      // `continuous=1` — no target, no burst count, just keeps hopping to
+      // itself forever (until stop_requested, the daily cap, or a long
+      // empty streak). This is what the per-minute cron watchdog starts and
+      // keeps alive — the actual "never-stopping, no fixed count" import
+      // process the admin toggle turns on. Each hop does the smallest safe
+      // unit of work (1 book, 1 curated title, 1 OL page, no backfill) —
+      // production metrics showed even the old 2-book/1-page auto-pilot tick
+      // was landing ~13ms median CPU, right at the free-tier ~10ms ceiling,
+      // so this trims further rather than risk the same exceeded-CPU failures.
+      const continuous = url.searchParams.get("continuous") === "1";
       // How many hops in a row have yielded nothing — a single empty hop is
       // normal (e.g. the current subject/offset is past its popular titles
       // and the cursor just needs to roll to the next of 26 subjects), not
-      // a reason to kill the whole burst. Only a long unbroken run of empty
-      // hops (network trouble, OL outage) should actually stop it.
+      // a reason to stop. Only a long unbroken run of empty hops (network
+      // trouble, OL outage, or genuine exhaustion) should stop the chain —
+      // and even then, the cron watchdog will start a fresh one next minute.
       const emptyStreak = Number(url.searchParams.get("empty")) || 0;
-      // A target-mode run ("keep going until N books") is meant to run
-      // indefinitely, so it gets a much longer leash — 300 hops is enough
-      // to cycle the full 26-subject rotation more than 10x over before
-      // concluding real exhaustion (vs. genuine trouble like an OL outage).
-      const MAX_EMPTY_STREAK = target > 0 ? 300 : 30;
+      const MAX_EMPTY_STREAK = target > 0 || continuous ? 300 : 30;
 
       await env.DB.prepare(
         "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
       ).run();
 
-      if ((burst > 0 || target > 0) && !isChainHop) {
-        // A fresh admin-triggered burst — clear any earlier Stop request.
+      if ((burst > 0 || target > 0 || continuous) && !isChainHop) {
+        // A fresh trigger (admin click, or the watchdog starting a new
+        // chain) — clear any earlier Stop request.
         await env.DB.prepare("UPDATE import_progress SET stop_requested = 0 WHERE id = 1").run();
       }
-      if ((burst > 0 || target > 0) && isChainHop) {
+      if ((burst > 0 || target > 0 || continuous) && isChainHop) {
         const flag = await env.DB.prepare("SELECT stop_requested FROM import_progress WHERE id = 1").first();
-        if (flag?.stop_requested) return Response.json({ stopped: true });
+        if (flag?.stop_requested) {
+          await env.DB.prepare("UPDATE import_progress SET chain_running = 0 WHERE id = 1").run();
+          return Response.json({ stopped: true });
+        }
       }
 
       // ?pages=N lets a manual test call exercise the exact same code path
-      // as the auto-pilot cron (which sets pagesOverride) — otherwise a
-      // manual /run test only ever exercises the maxChunks-forced
-      // single-page behavior, not what's actually deployed for auto-pilot.
-      const pagesParam = Number(url.searchParams.get("pages")) || undefined;
-      // Burst/target-mode hops skip backfill too — with 10 books/chunk now,
-      // the CPU/subrequest budget goes to finding new books, not enriching
-      // already-existing rows. Backfill work still happens via the
-      // dedicated one-time scripts if/when that's wanted again.
+      // as continuous mode — otherwise a manual /run test only ever
+      // exercises the maxChunks-forced single-page behavior.
+      const pagesParam = Number(url.searchParams.get("pages")) || (continuous ? 1 : undefined);
+      // Burst/target/continuous hops all skip backfill — CPU/subrequest
+      // budget goes to finding new books, not enriching already-existing
+      // rows. Backfill still happens via the dedicated one-time scripts.
       const result = await runImport(env, {
-        maxChunks: maxChunks || (burst || target ? 1 : undefined),
+        maxChunks: maxChunks || (burst || target || continuous ? 1 : undefined),
+        maxBooksOverride: continuous ? 1 : undefined,
+        curatedOverride: continuous ? 1 : undefined,
         pagesOverride: pagesParam,
-        skipBackfill: burst > 0 || target > 0,
+        skipBackfill: burst > 0 || target > 0 || continuous,
       });
 
       const somethingHappened = result.imported > 0 || result.authorsImported > 0 || result.publishersImported > 0 || result.chunksProcessed > 0;
       const newEmptyStreak = somethingHappened ? 0 : emptyStreak + 1;
 
       let shouldContinue;
-      if (target > 0) {
+      if (continuous) {
+        shouldContinue = !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
+      } else if (target > 0) {
         // No fixed hop count — keep chaining until the real catalog total
         // hits the target, checked fresh from the DB each hop (not the
         // per-hop delta, since that'd drift from the true count over
@@ -1101,7 +1092,9 @@ export default {
       }
 
       if (shouldContinue) {
-        const nextUrl = target > 0
+        const nextUrl = continuous
+          ? `https://self/run?continuous=1&empty=${newEmptyStreak}`
+          : target > 0
           ? `https://self/run?target=${target}&empty=${newEmptyStreak}`
           : `https://self/run?burst=${burst - 1}&empty=${newEmptyStreak}`;
         ctx.waitUntil(
@@ -1110,25 +1103,39 @@ export default {
             headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET, "x-import-chain": "1" },
           }).catch(() => {})
         );
+      } else if (continuous) {
+        // Chain is ending (capped, or genuinely exhausted for now) — mark
+        // it not-running so next minute's watchdog tick starts a fresh one
+        // rather than assuming a chain is still alive forever.
+        await env.DB.prepare("UPDATE import_progress SET chain_running = 0 WHERE id = 1").run();
       }
 
-      return Response.json({ ...result, burstRemaining: shouldContinue ? (target > 0 ? "until target" : burst - 1) : 0, emptyStreak: newEmptyStreak });
+      return Response.json({
+        ...result,
+        burstRemaining: shouldContinue ? (continuous ? "continuous" : target > 0 ? "until target" : burst - 1) : 0,
+        emptyStreak: newEmptyStreak,
+      });
     }
-    // Lets the admin dashboard halt an in-progress burst chain — the chain
-    // checks this flag before each hop and stops itself rather than the
-    // client needing to cancel an in-flight request.
+    // Lets the admin dashboard halt an in-progress chain — the chain checks
+    // this flag before each hop and stops itself rather than the client
+    // needing to cancel an in-flight request. Also turns auto-pilot off so
+    // next minute's watchdog doesn't immediately start a new chain back up —
+    // a real Stop should actually stop, not resume within 60 seconds.
     if (url.pathname === "/stop") {
       const provided = request.headers.get("x-import-secret");
       if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
         return new Response("unauthorized", { status: 401 });
       }
-      await env.DB.prepare("UPDATE import_progress SET stop_requested = 1 WHERE id = 1").run();
+      await env.DB.prepare(
+        "UPDATE import_progress SET stop_requested = 1, auto_run_enabled = 0, chain_running = 0 WHERE id = 1"
+      ).run();
       return Response.json({ stopped: true });
     }
-    // Toggles the "auto-pilot" mode the admin dashboard's Start/Stop switch
-    // controls: while on, the * * * * * cron does one small ~2-book pass
-    // every minute; while off, that same cron tick is a fast no-op. This
-    // just flips the flag — the actual work happens on the next tick.
+    // Toggles continuous mode the admin dashboard's Start/Stop switch
+    // controls: while on, the per-minute cron watchdog keeps a self-chaining
+    // import loop alive (see scheduled() above); while off, that same tick
+    // is a fast no-op. This just flips the flag — the watchdog starts the
+    // actual chain on its next tick.
     if (url.pathname === "/auto") {
       const provided = request.headers.get("x-import-secret");
       if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
@@ -1139,7 +1146,11 @@ export default {
       await env.DB.prepare(
         "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
       ).run();
-      await env.DB.prepare("UPDATE import_progress SET auto_run_enabled = ?1 WHERE id = 1").bind(enabled).run();
+      // Turning it back on should clear any earlier stop request so the
+      // watchdog's next tick can actually start a fresh chain.
+      await env.DB.prepare(
+        "UPDATE import_progress SET auto_run_enabled = ?1, stop_requested = 0 WHERE id = 1"
+      ).bind(enabled).run();
       return Response.json({ autoRunEnabled: !!enabled });
     }
     return new Response("bookqubit-import-cron is running.", { status: 200 });
