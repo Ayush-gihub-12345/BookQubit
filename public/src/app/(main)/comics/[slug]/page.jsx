@@ -31,7 +31,7 @@ export default async function ComicPage({ params }) {
     <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
         <div className="card aspect-[2/3] overflow-hidden hover:!translate-y-0">
-          <BookCover title={comic.title} author={comic.publisher} cover_url={comic.cover_url} />
+          <BookCover title={comic.title} author={comic.publisher} cover_url={comic.cover_url} size="L" />
         </div>
 
         <div>

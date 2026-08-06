@@ -141,7 +141,7 @@ export default async function BookPage({ params }) {
         <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
           <div>
             <div className="card aspect-[2/3] overflow-hidden !shadow-xl hover:!translate-y-0">
-              <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
+              <BookCover title={book.title} author={book.author} cover_url={book.cover_url} size="L" />
             </div>
 
             <QuickActions book={book} />

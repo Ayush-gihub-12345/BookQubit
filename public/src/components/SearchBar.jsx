@@ -123,7 +123,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
           </button>
         ) : (
           big && (
-            <kbd className="border-line text-muted pointer-events-none absolute right-3.5 top-1/2 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold sm:block">
+            <kbd className="border-line text-muted bg-surface pointer-events-none absolute right-3.5 top-1/2 hidden -translate-y-1/2 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold sm:block">
               Ctrl K
             </kbd>
           )
