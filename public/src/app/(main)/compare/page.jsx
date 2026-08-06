@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Compare Books — Which Should You Read Next?",
   description: "Pick two or more books and compare them side by side: ratings, page count, format, and key takeaways.",
+  alternates: { canonical: "/compare" },
 };
 
 export default async function ComparePage() {

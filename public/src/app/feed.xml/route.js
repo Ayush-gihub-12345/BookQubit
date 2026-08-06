@@ -1,6 +1,6 @@
 import { getRecentlyAdded } from "@/lib/repo";
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com";
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.shop";
 
 const escapeXml = (s = "") =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");

@@ -175,7 +175,15 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
   const setCookie = (name, value) => {
     document.cookie = `${name}=${value};path=/;max-age=31536000`;
-    if (name === "lang") window.dispatchEvent(new Event("bq:langchange"));
+    if (name === "lang") {
+      // A full reload (not router.refresh()) so every part of the site —
+      // not just the current route's server tree — re-renders in the new
+      // language on the very next paint, matching what a returning visit
+      // would look like instead of leaving some already-mounted client
+      // state behind in the old language.
+      window.location.reload();
+      return;
+    }
     router.refresh();
   };
   const currentTheme = themes.find((t) => t.id === theme) || themes[0];

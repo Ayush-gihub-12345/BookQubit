@@ -1,4 +1,4 @@
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com";
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.shop";
 
 export default function robots() {
   return {

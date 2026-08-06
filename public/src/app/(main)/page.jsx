@@ -18,6 +18,7 @@ import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
+export const metadata = { alternates: { canonical: "/" } };
 
 export default async function Home() {
   const lang = await getLang();

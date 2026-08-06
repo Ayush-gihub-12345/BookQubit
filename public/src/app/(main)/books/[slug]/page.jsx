@@ -81,7 +81,7 @@ export default async function BookPage({ params }) {
     inLanguage: book.language || undefined,
   };
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.com";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.shop";
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

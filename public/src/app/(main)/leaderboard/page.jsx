@@ -4,7 +4,11 @@ import { getLeaderboard, getPopularReaders, facets } from "@/lib/repo";
 import { FollowButton } from "@/components/FollowButton";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Bookworm Ranking — Top Readers" };
+export const metadata = {
+  title: "Bookworm Ranking — Top Readers",
+  description: "See who's reading the most on BookQubit — the Bookworm Ranking leaderboard of the platform's most active readers.",
+  alternates: { canonical: "/leaderboard" },
+};
 
 const MEDAL_STYLE = ["text-amber-400", "text-muted", "text-amber-700"];
 const CURRENT_YEAR = new Date().getFullYear();
