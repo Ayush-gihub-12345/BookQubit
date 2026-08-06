@@ -976,17 +976,29 @@ export default {
   // /run?continuous=1 loop below, which hops from one invocation straight to
   // the next with no delay at all (real continuous throughput, not "N books
   // per minute"). This tick's only job: if auto-pilot is on but no chain is
-  // currently alive (first deploy, or the previous chain stopped itself
-  // after a long empty streak / hit the daily cap / an admin called /stop),
-  // start a fresh one. If a chain is already running, this is a single cheap
-  // DB read and nothing else — effectively free.
+  // currently alive, start a fresh one.
+  //
+  // "Alive" isn't just the chain_running flag — verified live that if the
+  // very first self.fetch() kicking off a chain fails for any reason (seen
+  // once right after a fresh deploy, silently swallowed by the .catch()
+  // below since a stuck flag must never crash the watchdog), chain_running
+  // stays stuck at 1 forever with zero hops ever actually running, and
+  // nothing would ever clear it. So a chain also counts as dead if
+  // last_run_at hasn't moved in over 2 minutes — comfortably longer than a
+  // single hop ever takes — and gets restarted rather than trusted forever.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
       (async () => {
         const row = await env.DB.prepare(
-          "SELECT auto_run_enabled, chain_running FROM import_progress WHERE id=1"
+          "SELECT auto_run_enabled, chain_running, last_run_at FROM import_progress WHERE id=1"
         ).first();
-        if (!row?.auto_run_enabled || row.chain_running) return;
+        if (!row?.auto_run_enabled) return;
+        // D1's CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS" (space-separated,
+        // implicitly UTC, no 'Z') — normalize to real ISO-8601 before parsing.
+        const staleMs = row.last_run_at
+          ? Date.now() - new Date(row.last_run_at.replace(" ", "T") + "Z").getTime()
+          : Infinity;
+        if (row.chain_running && staleMs < 120_000) return;
         await env.DB.prepare("UPDATE import_progress SET chain_running=1 WHERE id=1").run();
         await env.SELF.fetch("https://self/run?continuous=1", {
           method: "POST",
