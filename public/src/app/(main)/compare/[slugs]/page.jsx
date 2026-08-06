@@ -44,7 +44,7 @@ export default async function ComparePage({ params }) {
   if (books.length < 2) notFound();
 
   const heading = books.map((b) => b.title).join(" vs ");
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.shop";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",

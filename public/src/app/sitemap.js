@@ -10,7 +10,7 @@ import { getBookSlugsPage, listAuthors, listPublications, listComics, getCompari
 // interval.
 export const dynamic = "force-dynamic";
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://bookqubit.shop";
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
 
 // Deliberately NOT using Next.js's generateSitemaps() multi-file sharding
 // here — verified live that this deployment (OpenNext on Cloudflare
