@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ConditionalFooter from "@/components/ConditionalFooter";
 import { getLang, LANGUAGES } from "@/lib/lang";
 import { getTheme, THEMES } from "@/lib/theme";
 import { t } from "@/lib/i18n";
@@ -19,7 +20,9 @@ export default async function PublicLayout({ children }) {
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
       <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels} />
       <main id="main-content" className="flex-1">{children}</main>
-      <Footer lang={lang} />
+      <ConditionalFooter>
+        <Footer lang={lang} />
+      </ConditionalFooter>
     </>
   );
 }

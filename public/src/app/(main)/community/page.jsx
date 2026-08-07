@@ -100,21 +100,22 @@ function CommunityInner() {
   const visibleChats = mine.filter((d) => Boolean(d.archived) === (tab === "archived"));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-4 flex items-end justify-between">
+    <div className="flex h-[calc(100dvh-64px)] flex-col overflow-hidden lg:h-[calc(100dvh-113px)]">
+      {/* Slim top bar — no page-level scroll here, everything below manages its own */}
+      <div className="border-line flex shrink-0 items-center justify-between border-b px-4 py-3 sm:px-6">
         <div>
-          <h1 className="text-2xl font-bold">Community</h1>
-          <p className="text-muted text-sm">Join discussions with fellow readers, book by book.</p>
+          <h1 className="text-lg font-bold sm:text-xl">Community</h1>
+          <p className="text-muted hidden text-xs sm:block">Join discussions with fellow readers, book by book.</p>
         </div>
         <button onClick={() => setShowNew(true)} className="btn-primary text-sm">
-          <Icon name="feather" size={14} /> New Discussion
+          <Icon name="feather" size={14} /> <span className="hidden sm:inline">New Discussion</span>
         </button>
       </div>
 
-      <div className="card grid overflow-hidden hover:!translate-y-0 lg:grid-cols-[320px_1fr]" style={{ height: "70vh" }}>
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[340px_1fr]">
         {/* Sidebar */}
-        <div className="border-line flex min-h-0 flex-col border-b lg:border-b-0 lg:border-r">
-          <div className="border-line flex border-b p-2">
+        <div className={`border-line flex min-h-0 flex-col border-r bg-surface ${selected ? "hidden lg:flex" : "flex"}`}>
+          <div className="border-line flex gap-1 border-b p-2">
             {[["chats", "Chats"], ["archived", "Archived"], ["discover", "Discover"]].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)}
                 className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${tab === id ? "bg-brand-600 text-white" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"}`}>
@@ -136,9 +137,9 @@ function CommunityInner() {
             {tab === "discover" ? (
               discover.length ? discover.map((d) => (
                 <button key={d.id} onClick={() => (d.my_active ? setSelected(d.id) : join(d.id))}
-                  className={`flex w-full items-start gap-2.5 border-b border-line px-3 py-3 text-left hover:bg-black/5 dark:hover:bg-white/5 ${selected === d.id ? "bg-brand-600/10" : ""}`}>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-600/15 text-brand-600">
-                    <Icon name={d.book_slug ? "book" : "feather"} size={14} />
+                  className={`flex w-full items-start gap-2.5 border-b border-line px-3 py-3 text-left transition hover:bg-black/5 dark:hover:bg-white/5 ${selected === d.id ? "bg-brand-600/10" : ""}`}>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm">
+                    <Icon name={d.book_slug ? "book" : "feather"} size={15} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="line-clamp-1 block text-sm font-semibold">{d.title}</span>
@@ -151,16 +152,23 @@ function CommunityInner() {
                   ) : d.my_active ? (
                     <span className="shrink-0 text-[10px] font-semibold text-brand-600">Open</span>
                   ) : (
-                    <span className="shrink-0 text-[10px] font-semibold text-brand-600">Join</span>
+                    <span className="shrink-0 rounded-full bg-brand-600/10 px-2 py-0.5 text-[10px] font-semibold text-brand-600">Join</span>
                   )}
                 </button>
-              )) : <p className="text-muted p-4 text-center text-sm">Search for a discussion by title or tag.</p>
+              )) : (
+                <div className="text-muted grid h-full place-items-center p-6 text-center text-sm">
+                  <div>
+                    <Icon name="search" size={24} className="mx-auto opacity-50" />
+                    <p className="mt-2">Search for a discussion by title, book, or tag.</p>
+                  </div>
+                </div>
+              )
             ) : visibleChats.length ? (
               visibleChats.map((d) => (
                 <button key={d.id} onClick={() => setSelected(d.id)}
-                  className={`flex w-full items-start gap-2.5 border-b border-line px-3 py-3 text-left hover:bg-black/5 dark:hover:bg-white/5 ${selected === d.id ? "bg-brand-600/10" : ""}`}>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-600/15 text-brand-600">
-                    <Icon name={d.book_slug ? "book" : "feather"} size={14} />
+                  className={`flex w-full items-start gap-2.5 border-b border-line px-3 py-3 text-left transition hover:bg-black/5 dark:hover:bg-white/5 ${selected === d.id ? "bg-brand-600/10" : ""}`}>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm">
+                    <Icon name={d.book_slug ? "book" : "feather"} size={15} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="line-clamp-1 block text-sm font-semibold">{d.title}</span>
@@ -175,27 +183,37 @@ function CommunityInner() {
                 </button>
               ))
             ) : (
-              <p className="text-muted p-4 text-center text-sm">
-                {tab === "archived" ? "No archived discussions." : "No discussions yet — join one from Discover or start your own."}
-              </p>
+              <div className="text-muted grid h-full place-items-center p-6 text-center text-sm">
+                <div>
+                  <Icon name="users" size={24} className="mx-auto opacity-50" />
+                  <p className="mt-2">
+                    {tab === "archived" ? "No archived discussions." : "No discussions yet — join one from Discover or start your own."}
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>
 
         {/* Chat panel */}
-        <div className="flex min-h-0 flex-col">
+        <div className={`min-h-0 flex-col bg-surface ${selected ? "flex" : "hidden lg:flex"}`}>
           {selected ? (
-            <ChatPanel
-              key={selected}
-              discussionId={selected}
-              user={user}
-              onLeft={() => { setSelected(null); loadMine(); }}
-              onArchiveChange={loadMine}
-            />
+            <>
+              <button onClick={() => setSelected(null)} className="btn-ghost m-2 self-start !px-3 text-xs lg:hidden">
+                <Icon name="arrowRight" size={13} className="rotate-180" /> Back
+              </button>
+              <ChatPanel
+                key={selected}
+                discussionId={selected}
+                user={user}
+                onLeft={() => { setSelected(null); loadMine(); }}
+                onArchiveChange={loadMine}
+              />
+            </>
           ) : (
             <div className="text-muted grid flex-1 place-items-center p-6 text-center text-sm">
               <div>
-                <Icon name="users" size={28} className="mx-auto" />
+                <Icon name="users" size={28} className="mx-auto opacity-50" />
                 <p className="mt-2">Select a discussion, or start a new one.</p>
               </div>
             </div>

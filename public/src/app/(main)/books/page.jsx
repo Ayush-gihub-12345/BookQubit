@@ -27,5 +27,21 @@ export default async function BooksPage({ searchParams }) {
     getMoodCounts(),
   ]);
 
-  return <BooksBrowser lang={lang} initialParams={params} initialData={initialData} facets={{ ...f, moods }} />;
+  // Keyed on the actual URL params: BooksBrowser is a client component that
+  // seeds its filter/sort/list state from initialParams/initialData via
+  // useState on mount only. Navigating here from a nav/footer link (e.g.
+  // "All Books", "Top Rated") changes the URL and these props, but without a
+  // key React reuses the same component instance and its internal state
+  // never re-syncs — the page looked stuck showing whatever was filtered
+  // before. Keying on the params forces a real remount on every distinct
+  // filter combination, same fix either way something changes the URL.
+  return (
+    <BooksBrowser
+      key={JSON.stringify(params)}
+      lang={lang}
+      initialParams={params}
+      initialData={initialData}
+      facets={{ ...f, moods }}
+    />
+  );
 }
