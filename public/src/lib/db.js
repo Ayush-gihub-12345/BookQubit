@@ -395,7 +395,15 @@ export async function getCatalogDb() {
 }
 
 // Read-through KV cache. Degrades gracefully to a direct D1 query if the
-// CACHE binding is missing (e.g. local `next dev`).
+// CACHE binding is missing (e.g. local `next dev`) — and, just as
+// importantly, if KV itself errors (a real one hit in production: the free
+// tier's daily kv.put() write quota got exceeded once enough functions
+// started caching distinct per-book/per-query keys). Before this, an
+// unhandled put()/get() rejection here propagated straight up through
+// getBook/queryBooks/etc., which broke the whole page's data-fetching and
+// left it stuck on its loading skeleton forever — caching must never be
+// able to take the actual page down; worst case it just falls back to an
+// uncached read for that request.
 export async function cached(key, fn, ttl = 300) {
   let kv;
   try {
@@ -406,10 +414,21 @@ export async function cached(key, fn, ttl = 300) {
   }
   if (!kv) return fn();
 
-  const hit = await kv.get(key, "json");
+  let hit = null;
+  try {
+    hit = await kv.get(key, "json");
+  } catch {
+    /* KV read failed — fall through to a fresh read below */
+  }
   if (hit !== null) return hit;
+
   const value = await fn();
-  await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
+  try {
+    await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
+  } catch {
+    /* KV write failed (e.g. daily quota exceeded) — the page still gets
+       its data, it just won't be cached for next time until KV recovers. */
+  }
   return value;
 }
 

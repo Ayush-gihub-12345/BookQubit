@@ -51,9 +51,14 @@
     "OL_PAGE_SIZE": "100",
     "OL_MIN_RATING": "4",
     // readinglog_count floor — how many readers have this book on any shelf
-    // (want-to-read/reading/already-read combined). 200 keeps only genuinely
-    // popular, widely-read titles instead of any book that clears the rating bar.
-    "OL_MIN_READERS": "200",
+    // (want-to-read/reading/already-read combined). Was 200; verified live
+    // via wrangler tail that the continuous chain's empty-hop streak climbs
+    // steadily toward its 300-hop cutoff without landing a single new book —
+    // at 2,033 books already imported, the current subject-rotation offsets
+    // are running dry of titles clearing a 200-reader bar. 50 still means
+    // "genuinely read by real people," just not exclusively bestseller-tier,
+    // and unblocks actual continuous growth instead of empty-cycling forever.
+    "OL_MIN_READERS": "50",
     // Default cap for a plain (non burst/target/continuous) manual /run
     // call. Continuous mode always overrides this to 1 book/hop regardless
     // of this value — see the fetch() handler's `continuous` branch.
