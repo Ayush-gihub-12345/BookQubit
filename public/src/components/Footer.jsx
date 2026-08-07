@@ -67,32 +67,32 @@ export default async function Footer({ lang = "en" }) {
         <div>
           <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerExplore")}</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/books" className="inline-block py-1.5 hover:text-brand-600">{_("browse")}</Link></li>
-            <li><Link href="/books?sort=rating" className="inline-block py-1.5 hover:text-brand-600">{_("topRated")}</Link></li>
-            <li><Link href="/books?sort=new" className="inline-block py-1.5 hover:text-brand-600">{_("newReleases")}</Link></li>
-            <li><Link href="/collections" className="inline-block py-1.5 hover:text-brand-600">{_("collections")}</Link></li>
-            <li><Link href="/tags" className="inline-block py-1.5 hover:text-brand-600">{_("tags")}</Link></li>
+            <li><Link href="/books" className="hover:text-brand-600">{_("browse")}</Link></li>
+            <li><Link href="/books?sort=rating" className="hover:text-brand-600">{_("topRated")}</Link></li>
+            <li><Link href="/books?sort=new" className="hover:text-brand-600">{_("newReleases")}</Link></li>
+            <li><Link href="/collections" className="hover:text-brand-600">{_("collections")}</Link></li>
+            <li><Link href="/tags" className="hover:text-brand-600">{_("tags")}</Link></li>
           </ul>
         </div>
 
         <div>
           <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerBrowse")}</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/authors" className="inline-block py-1.5 hover:text-brand-600">{_("authors")}</Link></li>
-            <li><Link href="/publications" className="inline-block py-1.5 hover:text-brand-600">{_("publishers")}</Link></li>
-            <li><Link href="/comics" className="inline-block py-1.5 hover:text-brand-600">{_("comics")}</Link></li>
-            <li><Link href="/community" className="inline-block py-1.5 hover:text-brand-600">{_("communityTitle")}</Link></li>
-            <li><Link href="/leaderboard" className="inline-block py-1.5 hover:text-brand-600">Bookworm Ranking</Link></li>
+            <li><Link href="/authors" className="hover:text-brand-600">{_("authors")}</Link></li>
+            <li><Link href="/publications" className="hover:text-brand-600">{_("publishers")}</Link></li>
+            <li><Link href="/comics" className="hover:text-brand-600">{_("comics")}</Link></li>
+            <li><Link href="/community" className="hover:text-brand-600">{_("communityTitle")}</Link></li>
+            <li><Link href="/leaderboard" className="hover:text-brand-600">Bookworm Ranking</Link></li>
           </ul>
         </div>
 
         <div>
           <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerCompany")}</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/about" className="inline-block py-1.5 hover:text-brand-600">{_("footerAbout")}</Link></li>
-            <li><Link href="/contact" className="inline-block py-1.5 hover:text-brand-600">{_("footerContact")}</Link></li>
-            <li><Link href="/privacy" className="inline-block py-1.5 hover:text-brand-600">{_("footerPrivacy")}</Link></li>
-            <li><Link href="/terms" className="inline-block py-1.5 hover:text-brand-600">{_("footerTerms")}</Link></li>
+            <li><Link href="/about" className="hover:text-brand-600">{_("footerAbout")}</Link></li>
+            <li><Link href="/contact" className="hover:text-brand-600">{_("footerContact")}</Link></li>
+            <li><Link href="/privacy" className="hover:text-brand-600">{_("footerPrivacy")}</Link></li>
+            <li><Link href="/terms" className="hover:text-brand-600">{_("footerTerms")}</Link></li>
           </ul>
         </div>
       </div>

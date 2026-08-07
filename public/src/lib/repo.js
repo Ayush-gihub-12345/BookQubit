@@ -92,79 +92,77 @@ export async function queryBooks(lang, opts = {}) {
   // Clamped regardless of caller — protects against an accidental (or
   // malicious) request for perPage=1000000 forcing a huge unbounded read.
   const perPage = Math.min(Math.max(1, Number(opts.perPage) || 32), 200);
+  const db = await getCatalogDb();
 
-  // Cache the raw D1 round-trip (count + rows) — a plain reload of the same
-  // filtered/sorted list is extremely common (home, /books, back-button) and
-  // was hitting D1 fresh every time. Short TTL so newly-imported books still
-  // surface within a minute. mapBook() runs after the cache lookup, outside
-  // it, so an admin's Amazon associate-tag change still applies immediately.
-  const cacheKey = `query:${lang}:${JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort, page, perPage })}`;
-  const { rows, count } = await cached(cacheKey, async () => {
-    const db = await getCatalogDb();
-    const where = ["lang = ?"];
-    const binds = [lang];
-    if (category) { where.push("category = ?"); binds.push(category); }
-    if (collection) { where.push("collection = ?"); binds.push(collection); }
-    if (format) { where.push("format LIKE ?"); binds.push(`%${format}%`); }
-    if (country) { where.push("country = ?"); binds.push(country); }
-    if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
-    if (tag) { where.push("tags LIKE ?"); binds.push(`%"${tag}"%`); }
-    // Mood/pace come from what readers actually felt while reading (shelf.moods,
-    // a different D1 database) — so this is resolved as two steps: find the
-    // matching book_slugs there first, then filter the catalog query on them.
-    if (mood) {
-      const moodDb = await getDb();
-      const { results: moodRows } = await moodDb
-        .prepare("SELECT DISTINCT book_slug FROM shelf WHERE moods LIKE ?1 LIMIT 100")
-        .bind(`%"${mood}"%`).all();
-      const slugs = moodRows.map((r) => r.book_slug);
-      if (!slugs.length) return { rows: [], count: 0 };
-      where.push(`slug IN (${slugs.map((_, i) => `?${binds.length + i + 1}`).join(",")})`);
-      binds.push(...slugs);
-    }
-    if (q) {
-      where.push("(title LIKE ? OR author LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)");
-      const like = `%${q}%`;
-      binds.push(like, like, like, like, like);
-    }
+  const where = ["lang = ?"];
+  const binds = [lang];
+  if (category) { where.push("category = ?"); binds.push(category); }
+  if (collection) { where.push("collection = ?"); binds.push(collection); }
+  if (format) { where.push("format LIKE ?"); binds.push(`%${format}%`); }
+  if (country) { where.push("country = ?"); binds.push(country); }
+  if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
+  if (tag) { where.push("tags LIKE ?"); binds.push(`%"${tag}"%`); }
+  // Mood/pace come from what readers actually felt while reading (shelf.moods,
+  // a different D1 database) — so this is resolved as two steps: find the
+  // matching book_slugs there first, then filter the catalog query on them.
+  if (mood) {
+    const moodDb = await getDb();
+    const { results: moodRows } = await moodDb
+      .prepare("SELECT DISTINCT book_slug FROM shelf WHERE moods LIKE ?1 LIMIT 100")
+      .bind(`%"${mood}"%`).all();
+    const slugs = moodRows.map((r) => r.book_slug);
+    if (!slugs.length) return { books: [], total: 0, page: Number(page), pages: 1 };
+    where.push(`slug IN (${slugs.map((_, i) => `?${binds.length + i + 1}`).join(",")})`);
+    binds.push(...slugs);
+  }
+  if (q) {
+    where.push("(title LIKE ? OR author LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?)");
+    const like = `%${q}%`;
+    binds.push(like, like, like, like, like);
+  }
 
-    const ORDER = {
-      rating: "rating DESC NULLS LAST",
-      // "Newest" reflects when a book was actually added to the catalog
-      // (created_at), not its original publication year — a book published in
-      // 1950 that we just added should still show up as new here.
-      new: "created_at DESC, id DESC",
-      title: "title COLLATE NOCASE ASC",
-      default: "id ASC",
-    };
-    const orderBy = ORDER[sort] || ORDER.default;
-    const wsql = where.join(" AND ");
+  const ORDER = {
+    rating: "rating DESC NULLS LAST",
+    // "Newest" reflects when a book was actually added to the catalog
+    // (created_at), not its original publication year — a book published in
+    // 1950 that we just added should still show up as new here.
+    new: "created_at DESC, id DESC",
+    title: "title COLLATE NOCASE ASC",
+    default: "id ASC",
+  };
+  const orderBy = ORDER[sort] || ORDER.default;
+  const wsql = where.join(" AND ");
+  // Different editions of the same work (different ISBN -> different import
+  // slug) were landing as separate rows — e.g. 3 near-identical
+  // "Winnie-the-Pooh" cards. Collapse to one row per (title, author) via the
+  // lowest id (first imported edition) both for the page of results and for
+  // the count that drives pagination, so page counts stay consistent with
+  // what's actually shown.
+  const dedupSql = `SELECT MIN(id) AS id FROM books WHERE ${wsql} GROUP BY LOWER(title), LOWER(author)`;
 
-    let [cnt, r] = await Promise.all([
-      db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...binds).first(),
-      db.prepare(`SELECT * FROM books WHERE ${wsql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-        .bind(...binds, perPage, (page - 1) * perPage).all(),
+  let [count, rows] = await Promise.all([
+    db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...binds).first(),
+    db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+      .bind(...binds, perPage, (page - 1) * perPage).all(),
+  ]);
+
+  // Empty language falls back to English rows with the same filters.
+  if (!count.n && lang !== "en") {
+    const enBinds = [...binds];
+    enBinds[0] = "en";
+    [count, rows] = await Promise.all([
+      db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...enBinds).first(),
+      db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+        .bind(...enBinds, perPage, (page - 1) * perPage).all(),
     ]);
-
-    // Empty language falls back to English rows with the same filters.
-    if (!cnt.n && lang !== "en") {
-      const enBinds = [...binds];
-      enBinds[0] = "en";
-      [cnt, r] = await Promise.all([
-        db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...enBinds).first(),
-        db.prepare(`SELECT * FROM books WHERE ${wsql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-          .bind(...enBinds, perPage, (page - 1) * perPage).all(),
-      ]);
-    }
-    return { rows: r.results, count: cnt.n };
-  }, 60);
+  }
 
   const { amazon_assoc_tag } = await getSiteSettings();
   return {
-    books: rows.map((r) => mapBook(r, amazon_assoc_tag)),
-    total: count,
+    books: rows.results.map((r) => mapBook(r, amazon_assoc_tag)),
+    total: count.n,
     page: Number(page),
-    pages: Math.max(1, Math.ceil(count / perPage)),
+    pages: Math.max(1, Math.ceil(count.n / perPage)),
   };
 }
 
@@ -172,18 +170,16 @@ export async function queryBooks(lang, opts = {}) {
 // so this stays fast whether there are dozens of books or millions.
 export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
+  const db = await getCatalogDb();
   const [row, { amazon_assoc_tag }] = await Promise.all([
-    cached(`book:${lang}:${decoded}`, async () => {
-      const db = await getCatalogDb();
-      const exact = await db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first();
-      if (exact) return exact;
-      // Localized-slug support: the slug may belong to another language's row
-      // (e.g. a Devanagari slug opened while the UI language is English).
-      return db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
-    }, 300),
+    db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first(),
     getSiteSettings(),
   ]);
-  return row ? mapBook(row, amazon_assoc_tag) : null;
+  if (row) return mapBook(row, amazon_assoc_tag);
+  // Localized-slug support: the slug may belong to another language's row
+  // (e.g. a Devanagari slug opened while the UI language is English).
+  const fallback = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
+  return fallback ? mapBook(fallback, amazon_assoc_tag) : null;
 }
 
 // All language variants of a book (matched by ISBN prefix-insensitive title
@@ -280,27 +276,23 @@ export async function getBookSlugsPage(lang, { page = 1, perPage = 40000 } = {})
 
 export async function getBookAlternates(book) {
   if (!book?.isbn && !book?.title) return [];
-  return cached(`alternates:${book.isbn || ""}:${book.title}`, async () => {
-    const db = await getCatalogDb();
-    const { results } = await db
-      .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2 LIMIT 25")
-      .bind(book.isbn || "", book.title)
-      .all();
-    return results;
-  }, 600);
+  const db = await getCatalogDb();
+  const { results } = await db
+    .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2 LIMIT 25")
+    .bind(book.isbn || "", book.title)
+    .all();
+  return results;
 }
 
 // Direct SQL query, bounded by `limit` — matches on the same category or
 // author, ranked by rating. Never loads the catalog to find these.
 export async function relatedBooks(book, lang, limit = 4) {
+  const db = await getCatalogDb();
   const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    cached(`related:${lang}:${book.slug}:${limit}`, async () => {
-      const db = await getCatalogDb();
-      return db.prepare(
-        `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
-         ORDER BY rating DESC NULLS LAST LIMIT ?5`
-      ).bind(lang, book.id, book.category || "", book.author || "", limit).all();
-    }, 300),
+    db.prepare(
+      `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
+       ORDER BY rating DESC NULLS LAST LIMIT ?5`
+    ).bind(lang, book.id, book.category || "", book.author || "", limit).all(),
     getSiteSettings(),
   ]);
   return results.map((r) => mapBook(r, amazon_assoc_tag));
@@ -374,7 +366,45 @@ async function listEntity(table, lang, jsonCols) {
   });
 }
 
-export const listAuthors = (lang) => listEntity("authors", lang, ["genres"]);
+// listEntity("authors", ...) returns every row in the authors table, including
+// stub profiles created during import for an author whose book didn't end up
+// staying in the catalog (or was later removed) — so the /authors page was
+// showing authors with zero actual books. Filter to only authors that have at
+// least one matching book.
+//
+// Two earlier attempts at this both blew the Worker's CPU budget in
+// production (verified live via wrangler tail — genuine "exceeded CPU time
+// limit" kills, not a one-off): a per-author x per-book-line nested loop
+// (~3,000 x 3,700 checks), then a "joined corpus + indexOf per author"
+// version that was still borderline/intermittent. Root cause both times was
+// treating this as fuzzy substring matching. It doesn't need to be — the
+// import always writes books.author as an exact ", "-joined list of
+// individual names (see cron-worker's `authorLine`), so splitting on ", "
+// gives exact names, which turns this into a Set built once (O(total book
+// rows)) and O(1) lookups per author — not scans. Whole result still cached
+// on top of that, so the split/Set-build cost is paid once per TTL window.
+export async function listAuthors(lang) {
+  return cached(`authors-with-books:${lang}`, async () => {
+    const [authors, bookAuthorNames] = await Promise.all([
+      listEntity("authors", lang, ["genres"]),
+      (async () => {
+        const db = await getCatalogDb();
+        const { results } = await db
+          .prepare("SELECT DISTINCT author FROM books WHERE lang=?1 AND author IS NOT NULL AND author != ''")
+          .bind(lang).all();
+        const set = new Set();
+        for (const { author } of results) {
+          for (const name of author.split(",")) {
+            const trimmed = name.trim().toLowerCase();
+            if (trimmed) set.add(trimmed);
+          }
+        }
+        return set;
+      })(),
+    ]);
+    return authors.filter((a) => bookAuthorNames.has(a.name.trim().toLowerCase()));
+  }, 300);
+}
 export const listPublications = (lang) => listEntity("publications", lang, ["notable_authors", "imprints"]);
 export const listComics = (lang) => listEntity("comics", lang, ["characters", "creators"]);
 
@@ -407,26 +437,22 @@ export async function getComic(slug, lang) {
 // Direct, indexed (lang, author) query — an author page never needs to
 // filter the whole catalog to find their own books.
 export async function booksByAuthor(name, lang) {
+  const db = await getCatalogDb();
   const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    cached(`booksby-author:${lang}:${name || ""}`, async () => {
-      const db = await getCatalogDb();
-      return db.prepare(
-        "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
-      ).bind(lang, name || "").all();
-    }, 300),
+    db.prepare(
+      "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
+    ).bind(lang, name || "").all(),
     getSiteSettings(),
   ]);
   return results.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 export async function booksByPublisher(name, lang) {
+  const db = await getCatalogDb();
   const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    cached(`booksby-publisher:${lang}:${name || ""}`, async () => {
-      const db = await getCatalogDb();
-      return db.prepare(
-        "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
-      ).bind(lang, `%${name || ""}%`).all();
-    }, 300),
+    db.prepare(
+      "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
+    ).bind(lang, `%${name || ""}%`).all(),
     getSiteSettings(),
   ]);
   return results.map((r) => mapBook(r, amazon_assoc_tag));
@@ -447,47 +473,45 @@ export const pointsFor = (r) =>
 
 // Community stats + reviews for one book (drives the book-page social section)
 export async function getBookCommunity(slug) {
-  return cached(`community:${slug}`, async () => {
-    const db = await getDb();
-    const [agg, dist, vibes, reviews] = await Promise.all([
-      db.prepare(
-        `SELECT COUNT(*) AS total,
-           SUM(CASE WHEN status='want' THEN 1 ELSE 0 END) AS want,
-           SUM(CASE WHEN status='reading' THEN 1 ELSE 0 END) AS reading,
-           SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS read,
-           AVG(rating) AS avg_rating,
-           COUNT(rating) AS rating_count
-         FROM shelf WHERE book_slug=?1`
-      ).bind(slug).first(),
-      db.prepare(
-        `SELECT rating, COUNT(*) AS n FROM shelf
-         WHERE book_slug=?1 AND rating IS NOT NULL GROUP BY rating`
-      ).bind(slug).all(),
-      db.prepare(
-        `SELECT moods, pace FROM shelf
-         WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
-      ).bind(slug).all(),
-      db.prepare(
-        `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url, u.slug
-         FROM shelf s JOIN users u ON u.id=s.user_id
-         WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
-         ORDER BY s.updated_at DESC LIMIT 20`
-      ).bind(slug).all(),
-    ]);
-    const distribution = [5, 4, 3, 2, 1].map((star) => ({
-      star,
-      n: dist.results.find((d) => d.rating === star)?.n || 0,
-    }));
-    const moodCounts = new Map();
-    const paceCounts = new Map();
-    for (const v of vibes.results) {
-      for (const m of J(v.moods)) moodCounts.set(m, (moodCounts.get(m) || 0) + 1);
-      if (v.pace) paceCounts.set(v.pace, (paceCounts.get(v.pace) || 0) + 1);
-    }
-    const moods = [...moodCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
-    const pace = [...paceCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
-    return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, moods, pace, reviews: reviews.results };
-  }, 30);
+  const db = await getDb();
+  const [agg, dist, vibes, reviews] = await Promise.all([
+    db.prepare(
+      `SELECT COUNT(*) AS total,
+         SUM(CASE WHEN status='want' THEN 1 ELSE 0 END) AS want,
+         SUM(CASE WHEN status='reading' THEN 1 ELSE 0 END) AS reading,
+         SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS read,
+         AVG(rating) AS avg_rating,
+         COUNT(rating) AS rating_count
+       FROM shelf WHERE book_slug=?1`
+    ).bind(slug).first(),
+    db.prepare(
+      `SELECT rating, COUNT(*) AS n FROM shelf
+       WHERE book_slug=?1 AND rating IS NOT NULL GROUP BY rating`
+    ).bind(slug).all(),
+    db.prepare(
+      `SELECT moods, pace FROM shelf
+       WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
+    ).bind(slug).all(),
+    db.prepare(
+      `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url, u.slug
+       FROM shelf s JOIN users u ON u.id=s.user_id
+       WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
+       ORDER BY s.updated_at DESC LIMIT 20`
+    ).bind(slug).all(),
+  ]);
+  const distribution = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    n: dist.results.find((d) => d.rating === star)?.n || 0,
+  }));
+  const moodCounts = new Map();
+  const paceCounts = new Map();
+  for (const v of vibes.results) {
+    for (const m of J(v.moods)) moodCounts.set(m, (moodCounts.get(m) || 0) + 1);
+    if (v.pace) paceCounts.set(v.pace, (paceCounts.get(v.pace) || 0) + 1);
+  }
+  const moods = [...moodCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+  const pace = [...paceCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+  return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, moods, pace, reviews: reviews.results };
 }
 
 // Latest community activity — only public-worthy events (finished books,

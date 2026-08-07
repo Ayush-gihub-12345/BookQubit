@@ -18,31 +18,16 @@ const GRADIENTS = [
 
 const hash = (s = "") => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-// Open Library cover URLs end in -S/-M/-L before the extension, each a
-// distinct file (not a resize param) — S ~45px wide, M ~180px, L is the raw
-// scan (often 500px+, sometimes a very large file). Every thumbnail/card/hero
-// context here renders at well under 230px, so requesting -L for those was
-// pure waste — the single biggest line item in Lighthouse's "improve image
-// delivery" / "enormous network payloads" findings, since most pages show
-// a dozen-plus covers at once. Only the book/comic detail page's large cover
-// column passes size="L" explicitly.
-function coverUrlAtSize(url, size) {
-  if (!url) return url;
-  return url.replace(/-[SML](\.\w+)(\?.*)?$/i, `-${size}$1$2`);
-}
-
-export default function BookCover({ title, author, cover_url, className = "", imgClassName = "", priority = false, size = "M" }) {
+export default function BookCover({ title, author, cover_url, className = "", imgClassName = "", priority = false }) {
   const [broken, setBroken] = useState(false);
-  const src = coverUrlAtSize(cover_url, size);
 
   if (cover_url && !broken) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
+        src={cover_url}
         alt={`Cover of ${title}${author ? ` by ${author}` : ""}`}
         loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : "auto"}
         decoding="async"
         onError={() => setBroken(true)}
         className={`h-full w-full object-cover ${imgClassName}`}

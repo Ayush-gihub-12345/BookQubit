@@ -34,7 +34,7 @@ export default function HeroSlider({ books, labels }) {
       )}
 
       <div className="grid items-center gap-8 md:grid-cols-[240px_1fr]">
-        <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group mx-auto" aria-label={`${b.title}${b.author ? ` by ${b.author}` : ""}`}>
+        <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
           <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
             style={{ animation: "fadeIn .5s ease" }}>
             <BookCover title={b.title} author={b.author} cover_url={b.cover_url} priority />
