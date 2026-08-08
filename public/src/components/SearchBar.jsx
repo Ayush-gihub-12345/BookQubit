@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "./Icon";
+import { readLocalCache, writeLocalCache } from "@/lib/localCache";
+
+// Short-lived — a search suggestion list going briefly stale is harmless,
+// but it should still reflect a book imported minutes ago, not hours.
+const SUGGEST_CACHE_MS = 5 * 60 * 1000;
 
 const RECENT_KEY = "bq_recent";
 const readRecent = () => {
@@ -58,9 +63,14 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
     if (value.trim().length < 2) { setRes(null); return; }
     setLoading(true);
     timer.current = setTimeout(async () => {
+      const cacheKey = `suggest:${lang}:${value.trim().toLowerCase()}`;
+      const cachedResult = readLocalCache(cacheKey, SUGGEST_CACHE_MS);
+      if (cachedResult) { setRes(cachedResult); setLoading(false); return; }
       try {
         const r = await fetch(`/api/suggest?q=${encodeURIComponent(value.trim())}&lang=${lang}`);
-        setRes(await r.json());
+        const json = await r.json();
+        writeLocalCache(cacheKey, json);
+        setRes(json);
       } catch { setRes(null); }
       setLoading(false);
     }, 220);

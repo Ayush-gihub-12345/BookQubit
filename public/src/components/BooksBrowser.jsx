@@ -6,6 +6,13 @@ import BookCard from "./BookCard";
 import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
+import { readLocalCache, writeLocalCache } from "@/lib/localCache";
+
+// How long a given filter/sort combination's result is trusted from the
+// browser's own cache before re-asking the server — short enough that newly
+// imported books surface reasonably fast, long enough that flipping between
+// a couple of sort orders (or back to one you already viewed) feels instant.
+const LOCAL_CACHE_MS = 5 * 60 * 1000;
 
 const PER_PAGE = 20;
 
@@ -42,21 +49,28 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   useEffect(() => {
     if (firstRun.current) { firstRun.current = false; return; }
     const id = ++reqId.current;
-    setLoading(true);
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries({ ...params, lang, perPage: PER_PAGE }).filter(([, v]) => v))
     );
+    const applyResult = (json) => {
+      setBooks(json.books);
+      setTotal(json.total);
+      setPages(json.pages);
+      setPage(1);
+      setLoading(false);
+      const url = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)));
+      window.history.replaceState(null, "", `/books${url.size ? `?${url}` : ""}`);
+    };
+    const cacheKey = `books:${qs.toString()}`;
+    const cachedResult = readLocalCache(cacheKey, LOCAL_CACHE_MS);
+    if (cachedResult) { applyResult(cachedResult); return; }
+    setLoading(true);
     fetch(`/api/books?${qs}`)
       .then((r) => r.json())
       .then((json) => {
         if (id !== reqId.current) return; // stale response, ignore
-        setBooks(json.books);
-        setTotal(json.total);
-        setPages(json.pages);
-        setPage(1);
-        setLoading(false);
-        const url = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)));
-        window.history.replaceState(null, "", `/books${url.size ? `?${url}` : ""}`);
+        writeLocalCache(cacheKey, json);
+        applyResult(json);
       })
       .catch(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
