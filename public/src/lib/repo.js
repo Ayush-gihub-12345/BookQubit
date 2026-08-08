@@ -137,32 +137,46 @@ export async function queryBooks(lang, opts = {}) {
   // "Winnie-the-Pooh" cards. Collapse to one row per (title, author) via the
   // lowest id (first imported edition) both for the page of results and for
   // the count that drives pagination, so page counts stay consistent with
-  // what's actually shown.
-  const dedupSql = `SELECT MIN(id) AS id FROM books WHERE ${wsql} GROUP BY LOWER(title), LOWER(author)`;
+  // what's actually shown. COLLATE NOCASE (not LOWER()) so this can use
+  // idx_books_dedup — verified live with EXPLAIN QUERY PLAN that LOWER()
+  // wrapping bypasses the index entirely and forces a full scan.
+  const dedupSql = `SELECT MIN(id) AS id FROM books WHERE ${wsql} GROUP BY title COLLATE NOCASE, author COLLATE NOCASE`;
 
-  let [count, rows] = await Promise.all([
-    db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...binds).first(),
-    db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-      .bind(...binds, perPage, (page - 1) * perPage).all(),
-  ]);
-
-  // Empty language falls back to English rows with the same filters.
-  if (!count.n && lang !== "en") {
-    const enBinds = [...binds];
-    enBinds[0] = "en";
-    [count, rows] = await Promise.all([
-      db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...enBinds).first(),
+  // A GROUP BY still has to touch every row matching the filters no matter
+  // how well-indexed it is, so the real fix for repeat cost is caching the
+  // whole result — this page's D1 reads happen once per TTL window instead
+  // of once per request. Verified live via Cloudflare's D1 dashboard: this
+  // uncached query alone was reading tens of millions of rows/day with the
+  // continuous import chain and crawler traffic hitting it constantly, far
+  // past the free tier's 5M-rows/day budget, despite very little real
+  // human traffic. Keyed on every filter/sort/page combination.
+  const cacheKey = `query:${lang}:${JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort, page, perPage })}`;
+  const { rows, count } = await cached(cacheKey, async () => {
+    let [cnt, r] = await Promise.all([
+      db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...binds).first(),
       db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-        .bind(...enBinds, perPage, (page - 1) * perPage).all(),
+        .bind(...binds, perPage, (page - 1) * perPage).all(),
     ]);
-  }
+
+    // Empty language falls back to English rows with the same filters.
+    if (!cnt.n && lang !== "en") {
+      const enBinds = [...binds];
+      enBinds[0] = "en";
+      [cnt, r] = await Promise.all([
+        db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...enBinds).first(),
+        db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+          .bind(...enBinds, perPage, (page - 1) * perPage).all(),
+      ]);
+    }
+    return { rows: r.results, count: cnt.n };
+  }, 60);
 
   const { amazon_assoc_tag } = await getSiteSettings();
   return {
-    books: rows.results.map((r) => mapBook(r, amazon_assoc_tag)),
-    total: count.n,
+    books: rows.map((r) => mapBook(r, amazon_assoc_tag)),
+    total: count,
     page: Number(page),
-    pages: Math.max(1, Math.ceil(count.n / perPage)),
+    pages: Math.max(1, Math.ceil(count / perPage)),
   };
 }
 
