@@ -446,7 +446,7 @@ async function generateEnrichment(ai, title, author, summary) {
 // stubs into the passed-in arrays. Used by both the subject-rotation path
 // and the curated-title path so every book — famous or not — goes through
 // identical enrichment. Returns true if a book stub was actually added.
-async function enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames }) {
+async function enrichAndCollect(doc, ai, titlesDb, { books, authors, publications, seenAuthorNames, seenPublisherNames }) {
   const isbn = (doc.isbn || [])[0];
   const title = doc.title;
   const authorNames = doc.author_name || [];
@@ -504,6 +504,13 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
     const dedupeKey = olKey || name.trim().toLowerCase();
     if (seenAuthorNames.has(dedupeKey)) continue;
     seenAuthorNames.add(dedupeKey);
+    // Skip entirely if this author's already known — no Wikipedia/OL
+    // author-detail fetches wasted re-deriving data we already have, and
+    // no risk of a second stub row for the same person.
+    const authorKnown = await titlesDb.prepare(
+      "SELECT 1 FROM author_names WHERE lang='en' AND name=?1 COLLATE NOCASE LIMIT 1"
+    ).bind(name.trim()).first();
+    if (authorKnown) continue;
     // Two independent sources per author: OL's own author record (bio,
     // birth year, photo, links) and Wikipedia's short description, whose
     // nationality phrasing ("British author") is what fills `country` —
@@ -533,6 +540,10 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
     const key = publisherName.trim().toLowerCase();
     if (!seenPublisherNames.has(key)) {
       seenPublisherNames.add(key);
+      const publisherKnown = await titlesDb.prepare(
+        "SELECT 1 FROM publisher_names WHERE lang='en' AND name=?1 COLLATE NOCASE LIMIT 1"
+      ).bind(publisherName.trim()).first();
+      if (publisherKnown) return true;
       const wiki = await fetchWikipediaSummary(publisherName.trim());
       // Founded/headquarters need the Wikidata item linked from the
       // Wikipedia page — only fetched when that link actually exists.
@@ -559,7 +570,7 @@ async function enrichAndCollect(doc, ai, { books, authors, publications, seenAut
 // genuinely can't match well isn't worth re-querying every run) — once past
 // the end of the list it just stops being a no-op source forever, so this
 // costs nothing on future runs once exhausted.
-async function fetchCuratedBooks(db, ai, { maxBooks }) {
+async function fetchCuratedBooks(db, titlesDb, ai, { maxBooks }) {
   const state = await db.prepare("SELECT curated_index FROM ol_fetch_state WHERE id=1").first();
   let idx = state?.curated_index || 0;
 
@@ -572,6 +583,14 @@ async function fetchCuratedBooks(db, ai, { maxBooks }) {
   while (idx < CURATED_TITLES.length && books.length < maxBooks) {
     const { title, author } = CURATED_TITLES[idx];
     idx += 1;
+    // Title match against the lightweight titles DB (not catalog — see
+    // wrangler.jsonc TITLES_DB binding comment) before spending a single
+    // enrichment fetch. CURATED_TITLES entries are specific enough that a
+    // title match alone is a safe identity check here.
+    const existing = await titlesDb.prepare(
+      "SELECT 1 FROM book_titles WHERE lang='en' AND title=?1 COLLATE NOCASE LIMIT 1"
+    ).bind(title.trim()).first();
+    if (existing) continue;
     let doc;
     try {
       doc = await fetchCuratedMatch(title, author);
@@ -579,7 +598,7 @@ async function fetchCuratedBooks(db, ai, { maxBooks }) {
       continue;
     }
     if (!doc) continue;
-    await enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames });
+    await enrichAndCollect(doc, ai, titlesDb, { books, authors, publications, seenAuthorNames, seenPublisherNames });
   }
 
   await db.prepare("UPDATE ol_fetch_state SET curated_index=?1 WHERE id=1").bind(idx).run();
@@ -590,7 +609,7 @@ async function fetchCuratedBooks(db, ai, { maxBooks }) {
 // for rating and basic completeness, and returns book/author/publisher
 // stubs ready to upsert — advancing (and persisting) the rotation cursor as
 // it goes so the next run continues from here instead of restarting.
-async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minReaders, maxBooks }) {
+async function fetchFromOpenLibrary(db, titlesDb, ai, { pages, pageSize, minRating, minReaders, maxBooks }) {
   let state = await db.prepare("SELECT * FROM ol_fetch_state WHERE id=1").first();
   if (!state) {
     await db.prepare("INSERT INTO ol_fetch_state (id, query_index, offset_val) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING").run();
@@ -619,17 +638,20 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
     }
     const docs = data.docs || [];
 
-    // Cheap pre-filter, no network calls: compute the slug every popularity-
-    // qualifying candidate WOULD get, then one batched DB lookup for which
-    // of those already exist. Enrichment (a real synopsis fetch, series
-    // resolution, edition format, author + publisher lookups — several
-    // fetches per book) then only ever runs on genuinely new candidates.
-    // Without this, a page landing on already-imported territory (e.g.
-    // after several manual bulk-import bursts already covered a subject's
-    // most-popular titles) burns a tick's entire fetch budget fully
-    // enriching books it's about to discover are duplicates at insert time
-    // anyway — observed live: a 23s, ~20-fetch run that inserted zero new
-    // books because every candidate on that page turned out already owned.
+    // Cheap pre-filter, no network calls: compute the (title, author) identity
+    // every popularity-qualifying candidate would be stored under, then one
+    // batched DB lookup for which of those titles already exist. Enrichment
+    // (a real synopsis fetch, series resolution, edition format, author +
+    // publisher lookups — several fetches per book) then only ever runs on
+    // genuinely new candidates.
+    //
+    // This used to match on the generated slug (title+ISBN) instead — which
+    // meant a different ISBN edition of a book already owned got a different
+    // slug, sailed past this check, and landed as a second row. Verified live
+    // in the catalog: multiple duplicate "Winnie-the-Pooh" entries from
+    // exactly this gap. Matching on (title, author) instead recognizes the
+    // book itself regardless of which specific edition Open Library hands
+    // back this time, and skips straight to the next candidate.
     const qualifying = [];
     for (const doc of docs) {
       // Popularity gate: a high average rating alone lets through obscure
@@ -638,8 +660,15 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
       // actually distinguishes "widely read" from "technically rated".
       if ((doc.ratings_average || 0) < minRating || (doc.readinglog_count || 0) < minReaders) continue;
       const isbn = (doc.isbn || [])[0];
-      if (!isbn || !doc.title) continue;
-      qualifying.push({ doc, slug: slugify(doc.title, isbn) });
+      const authorNames = doc.author_name || [];
+      if (!isbn || !doc.title || !authorNames.length) continue;
+      const authorLine = [...new Set(authorNames.map((n) => n.trim()))].slice(0, 3).join(", ");
+      qualifying.push({
+        doc,
+        slug: slugify(doc.title, isbn),
+        titleKey: doc.title.trim().toLowerCase(),
+        authorKey: authorLine.trim().toLowerCase(),
+      });
     }
     // Tied to popularity-qualifying count (not post-dedup count) — a page
     // that's all duplicates still means "keep paging this subject", since
@@ -650,18 +679,31 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
 
     let newCandidates = qualifying;
     if (qualifying.length) {
-      const slugs = qualifying.map((q) => q.slug);
-      const placeholders = slugs.map((_, i) => `?${i + 2}`).join(",");
-      const { results: existing } = await db.prepare(
-        `SELECT slug FROM books WHERE lang=?1 AND slug IN (${placeholders})`
-      ).bind("en", ...slugs).all();
-      const existingSlugs = new Set(existing.map((r) => r.slug));
-      newCandidates = qualifying.filter((q) => !existingSlugs.has(q.slug));
+      // One indexed point-lookup per distinct title via titlesDb.batch(),
+      // not a single WHERE title IN (...) — verified live with EXPLAIN
+      // QUERY PLAN that an equivalent index only gets used for a plain
+      // `title = ? COLLATE NOCASE`; both `IN (...) COLLATE NOCASE` and an
+      // OR-chain fall back to a full scan (every row read, not just a
+      // match). Queried against the lightweight titles DB, not catalog —
+      // see wrangler.jsonc TITLES_DB binding comment — so this constant
+      // background lookup traffic never touches the DB the live website
+      // reads from.
+      const titleKeys = [...new Set(qualifying.map((q) => q.titleKey))];
+      const results = await titlesDb.batch(
+        titleKeys.map((t) =>
+          titlesDb.prepare("SELECT title, author FROM book_titles WHERE lang=?1 AND title=?2 COLLATE NOCASE").bind("en", t)
+        )
+      );
+      const existingKeys = new Set();
+      for (const r of results) {
+        for (const row of r.results) existingKeys.add(`${row.title.toLowerCase()}|${row.author.toLowerCase()}`);
+      }
+      newCandidates = qualifying.filter((q) => !existingKeys.has(`${q.titleKey}|${q.authorKey}`));
     }
 
     for (const { doc } of newCandidates) {
       if (books.length >= maxBooks) break;
-      await enrichAndCollect(doc, ai, { books, authors, publications, seenAuthorNames, seenPublisherNames });
+      await enrichAndCollect(doc, ai, titlesDb, { books, authors, publications, seenAuthorNames, seenPublisherNames });
     }
 
     // Results are sorted by readers descending (sort=readinglog), so once a
@@ -685,6 +727,7 @@ async function fetchFromOpenLibrary(db, ai, { pages, pageSize, minRating, minRea
 
 async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pagesOverride, skipBackfill } = {}) {
   const db = env.DB;
+  const titlesDb = env.TITLES_DB;
   const perRunChunks = maxChunks || Number(env.PER_RUN_CHUNKS) || 13;
   const batchSize = Number(env.D1_BATCH_SIZE) || 100;
   // pagesOverride lets a caller (the auto-pilot cron) try several subjects
@@ -758,11 +801,36 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
         ).bind(...toValues(r))
       );
       const results = await db.batch(stmts);
+      const newlyInserted = [];
       results.forEach((res, idx) => {
-        if (res.meta.changes > 0) insertedCount += 1;
-        else if (table === "books") skipped += 1;
+        if (res.meta.changes > 0) {
+          insertedCount += 1;
+          newlyInserted.push(slice[idx]);
+        } else if (table === "books") skipped += 1;
         if (table === "books" && res.meta.changes > 0) insertedTitles.push(slice[idx].title);
       });
+      // Mirror confirmed-new rows' identity into the lightweight titles DB —
+      // this is the only write path into it, keeping it in sync with what
+      // actually landed in catalog so the next dedup check (which queries
+      // titlesDb, never catalog) sees it immediately.
+      if (newlyInserted.length) {
+        if (table === "books") {
+          await titlesDb.batch(newlyInserted.map((r) =>
+            titlesDb.prepare("INSERT OR IGNORE INTO book_titles (lang, title, author) VALUES (?1, ?2, ?3)")
+              .bind(r.lang || "en", r.title, r.author || "")
+          ));
+        } else if (table === "authors") {
+          await titlesDb.batch(newlyInserted.map((r) =>
+            titlesDb.prepare("INSERT OR IGNORE INTO author_names (lang, name) VALUES (?1, ?2)")
+              .bind(r.lang || "en", r.name)
+          ));
+        } else if (table === "publications") {
+          await titlesDb.batch(newlyInserted.map((r) =>
+            titlesDb.prepare("INSERT OR IGNORE INTO publisher_names (lang, name) VALUES (?1, ?2)")
+              .bind(r.lang || "en", r.name)
+          ));
+        }
+      }
     }
     return insertedCount;
   }
@@ -820,7 +888,7 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
     Math.min(olMaxEnrich, olCuratedPerRun)
   );
   if (curatedBudget > 0) {
-    const curated = await fetchCuratedBooks(db, env.AI, { maxBooks: curatedBudget });
+    const curated = await fetchCuratedBooks(db, titlesDb, env.AI, { maxBooks: curatedBudget });
     if (curated.books.length) source = "curated";
     imported += await upsertBatch("books", bookColumns, curated.books, toBookValues);
     authorsImported += await upsertBatch("authors", authorColumns, curated.authors, toAuthorValues, authorUpdateCols);
@@ -832,7 +900,7 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
   const budgetRemaining = progress.daily_cap - (progress.imported_today + imported + authorsImported + publishersImported);
   const olBudget = Math.min(budgetRemaining, Math.max(0, olMaxEnrich - imported));
   if (olBudget > 0) {
-    const ol = await fetchFromOpenLibrary(db, env.AI, {
+    const ol = await fetchFromOpenLibrary(db, titlesDb, env.AI, {
       pages: olPages, pageSize: olPageSize, minRating: olMinRating, minReaders: olMinReaders,
       maxBooks: olBudget,
     });

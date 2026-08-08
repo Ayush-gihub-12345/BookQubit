@@ -15,6 +15,21 @@
       "binding": "DB",
       "database_name": "catalog",
       "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
+    },
+    // Lightweight identity-only mirror (book title+author, author names,
+    // publisher names — no descriptions/cover/etc.) used purely for the
+    // dedup "have we already got this?" check before enriching a candidate.
+    // Every continuous-chain hop was running that check straight against
+    // the live catalog DB — the same DB the website reads from on every
+    // page view — so import traffic and site traffic were contending for
+    // the same D1 quota/locks. Dedup reads now go here instead; a
+    // confirmed-new book/author/publisher still gets written to BOTH this
+    // DB and catalog, so catalog stays the single source of truth for the
+    // actual site, untouched by the constant background lookup traffic.
+    {
+      "binding": "TITLES_DB",
+      "database_name": "titles",
+      "database_id": "4111fbd4-0bae-4a09-b50c-09684a7848dc"
     }
   ],
   // Workers AI — generates key_points (3 short takeaways) once per book at

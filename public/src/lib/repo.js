@@ -222,6 +222,12 @@ export async function getRecentlyAdded(lang, limit = 8) {
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
+// Admin-curated, not tied to import cadence — safe to cache far longer than
+// the 5-min default. Same 3h TTL applied across the slow-changing lookups
+// below: verified live via Cloudflare's D1 dashboard that even with very
+// little real traffic, uncached/short-TTL full-table reads (facets,
+// author/publisher lists, platform stats on every page's footer) were
+// contributing heavily to blowing past the free tier's 5M-rows/day cap.
 export async function getFeaturedBooks(lang, limit = 5) {
   const [rows, { amazon_assoc_tag }] = await Promise.all([
     cached(`featured:${lang}:${limit}`, async () => {
@@ -235,7 +241,7 @@ export async function getFeaturedBooks(lang, limit = 5) {
           .bind(limit).all());
       }
       return results;
-    }, 300),
+    }, 10800),
     getSiteSettings(),
   ]);
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
@@ -290,12 +296,17 @@ export async function getBookSlugsPage(lang, { page = 1, perPage = 40000 } = {})
 
 export async function getBookAlternates(book) {
   if (!book?.isbn && !book?.title) return [];
-  const db = await getCatalogDb();
-  const { results } = await db
-    .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2 LIMIT 25")
-    .bind(book.isbn || "", book.title)
-    .all();
-  return results;
+  // Only changes when a new language edition of this exact book is
+  // imported — the current pipeline only ever imports lang='en', so in
+  // practice this never changes. Called on every book page view.
+  return cached(`alternates:${book.isbn || ""}:${book.title}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db
+      .prepare("SELECT slug, lang FROM books WHERE (isbn=?1 AND isbn IS NOT NULL) OR title=?2 LIMIT 25")
+      .bind(book.isbn || "", book.title)
+      .all();
+    return results;
+  }, 10800);
 }
 
 // Direct SQL query, bounded by `limit` — matches on the same category or
@@ -345,7 +356,7 @@ export async function facets(lang) {
       countries: countries.results,
       tags: tags.results,
     };
-  }, 600);
+  }, 10800);
 }
 
 // How readers actually felt about books, aggregated across every shelf entry
@@ -359,7 +370,7 @@ export async function getMoodCounts() {
       for (const m of J(row.moods)) counts.set(m, (counts.get(m) || 0) + 1);
     }
     return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-  }, 600);
+  }, 10800);
 }
 
 async function listEntity(table, lang, jsonCols) {
@@ -377,7 +388,7 @@ async function listEntity(table, lang, jsonCols) {
       jsonCols.forEach((c) => (out[c] = J(r[c])));
       return out;
     });
-  });
+  }, 10800);
 }
 
 // listEntity("authors", ...) returns every row in the authors table, including
@@ -417,7 +428,7 @@ export async function listAuthors(lang) {
       })(),
     ]);
     return authors.filter((a) => bookAuthorNames.has(a.name.trim().toLowerCase()));
-  }, 300);
+  }, 10800);
 }
 export const listPublications = (lang) => listEntity("publications", lang, ["notable_authors", "imprints"]);
 export const listComics = (lang) => listEntity("comics", lang, ["characters", "creators"]);
@@ -1086,13 +1097,19 @@ const SETTINGS_DEFAULTS = {
 };
 
 export async function getSiteSettings() {
+  // Already invalidate()'d on every admin write (see updateSiteSettings
+  // below), so a long TTL costs nothing on real freshness — an admin change
+  // still shows up on the very next request either way. This is one of the
+  // most-called cached functions in the whole app (every book/author/
+  // publisher fetch pulls the Amazon associate tag from it), so a short
+  // default TTL here meant near-constant re-reads.
   return cached("site:settings", async () => {
     const db = await getDb();
     const { results } = await db.prepare("SELECT key, value FROM site_settings").all();
     const map = { ...SETTINGS_DEFAULTS };
     for (const r of results) map[r.key] = r.value;
     return map;
-  }, 120);
+  }, 10800);
 }
 
 export async function updateSiteSettings(patch) {
@@ -1118,7 +1135,7 @@ export async function getPlatformStats() {
       db.prepare("SELECT COUNT(*) AS n FROM users").first(),
     ]);
     return { books: books.n, authors: authors.n, reviews: reviews.n, readers: readers.n };
-  }, 900);
+  }, 10800);
 }
 
 // Starting a discussion requires a book or author to be picked first — the
