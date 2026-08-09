@@ -1177,11 +1177,27 @@ export default {
           : target > 0
           ? `https://self/run?target=${target}&empty=${newEmptyStreak}`
           : `https://self/run?burst=${burst - 1}&empty=${newEmptyStreak}`;
+        // Continuous mode chained hop-to-hop with zero delay by design (for
+        // max throughput) — but with most hops finishing fast (a candidate
+        // getting filtered by popularity/dedup costs almost nothing), that
+        // meant hundreds+ Worker invocations/minute running 24/7. Verified
+        // live twice now: that request *rate* (not row-reads — those were
+        // already fixed) is enough on its own to trip Cloudflare's
+        // account-level resource limits and take down every Worker on the
+        // account with 503s, including the unrelated main site — not a
+        // catalog-size or query-cost problem, a sheer-volume one. A small
+        // floor between hops keeps continuous growth going indefinitely
+        // without ever being able to reproduce that again. Burst/target are
+        // bounded, admin-triggered runs (not 24/7), left unthrottled.
+        const hopDelayMs = continuous ? 3000 : 0;
         ctx.waitUntil(
-          env.SELF.fetch(nextUrl, {
-            method: "POST",
-            headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET, "x-import-chain": "1" },
-          }).catch(() => {})
+          (async () => {
+            if (hopDelayMs) await new Promise((resolve) => setTimeout(resolve, hopDelayMs));
+            return env.SELF.fetch(nextUrl, {
+              method: "POST",
+              headers: { "x-import-secret": env.IMPORT_TRIGGER_SECRET, "x-import-chain": "1" },
+            }).catch(() => {});
+          })()
         );
       } else if (continuous) {
         // Chain is ending (capped, or genuinely exhausted for now) — mark
