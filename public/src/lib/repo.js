@@ -173,17 +173,12 @@ export async function queryBooks(lang, opts = {}) {
     }, 300);
 
   let rows = await runRows(lang, binds);
-  // Same defensive guard as relatedBooks — the browse page is the most
-  // visited route on the site, so a malformed cache entry must degrade to
-  // "no results" rather than an error boundary.
-  if (!Array.isArray(rows)) rows = [];
 
   // Empty language falls back to English rows with the same filters.
   if (!rows.length && lang !== "en") {
     const enBinds = [...binds];
     enBinds[0] = "en";
     rows = await runRows("en", enBinds);
-    if (!Array.isArray(rows)) rows = [];
   }
 
   const hasMore = rows.length > perPage;
@@ -398,11 +393,7 @@ export async function relatedBooks(book, lang, limit = 4) {
     }, 3600),
     getSiteSettings(),
   ]);
-  // Defensive: a cached value of an unexpected shape must never crash a book
-  // page. CACHE_VERSION already prevents the stale-shape case that caused it
-  // once, but rendering an empty "related books" strip is always preferable
-  // to taking the whole page down with "map is not a function".
-  return Array.isArray(rows) ? rows.map((r) => mapBook(r, amazon_assoc_tag)) : [];
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // Facet counts computed entirely in SQL (GROUP BY / json_each) — no matter
@@ -610,60 +601,22 @@ export async function getAuthorLineProfiles(authorLine, lang) {
   return names.map((name) => ({ name, profile: byName.get(name.toLowerCase()) || null }));
 }
 
-// Distinct publisher string -> the slugs published under it, built once per
-// TTL window and shared by every publisher page.
-//
-// Publisher pages match loosely on purpose: books store the raw imprint
-// string, so "Penguin Books" legitimately has to match "Penguin Books,
-// Limited" too — measured live, exact matching returns 24 books where the
-// loose match returns 80. That means a leading-wildcard LIKE, which can
-// never use an index and scanned all 5,331 books PER PAGE. With 2,347
-// publisher pages, one crawl pass over them was ~12 million rows read.
-//
-// Caching the old query didn't help, because each publisher was its own
-// cache key — a single pass over all of them missed every time. Grouping
-// once and matching in JS turns that into ONE scan per TTL shared across
-// every publisher, then an indexed by-slug fetch per page. Same approach as
-// getAuthorBookIndex above.
-async function getPublisherBookIndex(lang) {
-  return cached(`publisher-book-index:${lang}`, async () => {
-    const db = await getCatalogDb();
-    const { results } = await db
-      .prepare("SELECT slug, publisher FROM books WHERE lang=?1 AND publisher IS NOT NULL AND publisher != ''")
-      .bind(lang).all();
-    // Keyed by the distinct publisher string (~2,600) rather than one entry
-    // per book (~5,300) — smaller to cache, and the substring match below
-    // then runs over distinct names instead of every row.
-    const index = {};
-    for (const { slug, publisher } of results) {
-      const key = publisher.trim().toLowerCase();
-      if (!key) continue;
-      (index[key] ||= []).push(slug);
-    }
-    return index;
-  }, 10800);
-}
-
+// `LIKE '%name%'` can't use an index (leading wildcard forces a full-table
+// scan) — this was showing up on the D1 dashboard as one of the worst
+// rows-read-per-query offenders. Caching doesn't fix the scan itself but
+// means it only happens once per TTL window instead of on every publisher
+// page view/reload.
 export async function booksByPublisher(name, lang) {
-  const needle = (name || "").trim().toLowerCase();
-  if (!needle) return [];
-  const [index, { amazon_assoc_tag }] = await Promise.all([
-    getPublisherBookIndex(lang),
+  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
+    cached(`by-publisher:${lang}:${name || ""}`, async () => {
+      const db = await getCatalogDb();
+      return db.prepare(
+        "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
+      ).bind(lang, `%${name || ""}%`).all();
+    }, 3600),
     getSiteSettings(),
   ]);
-  const slugs = [];
-  for (const key of Object.keys(index)) {
-    // Same substring semantics the old LIKE had, so results don't change.
-    if (key.includes(needle)) slugs.push(...index[key]);
-    if (slugs.length >= 200) break; // bounded page, as before
-  }
-  if (!slugs.length) return [];
-  const bySlug = await getBooksBySlug(slugs.slice(0, 200), lang, "*");
-  return slugs
-    .slice(0, 200)
-    .map((s) => bySlug.get(s))
-    .filter(Boolean)
-    .map((r) => mapBook(r, amazon_assoc_tag));
+  return results.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────
@@ -1337,11 +1290,6 @@ export async function updateSiteSettings(patch) {
 // rows today, and they grow only when a real person acts), so a scan there
 // costs almost nothing — not worth maintaining a counter for.
 export async function getPlatformStats() {
-  // No per-key version needed here — cached() namespaces every key with a
-  // global CACHE_VERSION, so the old 3-hour "platform:stats" entry (which
-  // kept its original expiry regardless of the shorter TTL passed here, and
-  // was confirmed live serving books:5240 while the real counter was at
-  // 5336) is already unreachable.
   return cached("platform:stats", async () => {
     const [db, catalogDb] = await Promise.all([getDb(), getCatalogDb()]);
     const [counts, reviews, readers] = await Promise.all([
@@ -1369,12 +1317,18 @@ export async function getPlatformStats() {
       ).bind(books, authors).run().catch(() => {});
     }
     return { books, authors, reviews: reviews.n, readers: readers.n };
-    // 30-second window: a visitor landing on the site reads this once, every
-    // page they view in the next 30s reuses it, and a reload after that reads
-    // the single counter row again. That's the whole cost — one row, not a
-    // scan — so the number tracks the import almost live without the footer
-    // (which renders on EVERY page) turning into repeated database work.
-  }, 30);
+    // Short TTL on purpose. This used to sit at 3 hours because getting these
+    // numbers meant COUNT(*) scans over the whole catalog — expensive enough
+    // that a stale figure was the lesser evil. Now books/authors are a single
+    // maintained row and the other two are tiny user-database lookups, so the
+    // whole call is a handful of rows and the stat bar can track the import in
+    // near-real time instead of lagging hours behind.
+    //
+    // Not left completely uncached: the footer renders this on EVERY page, and
+    // crawlers are effectively all of this site's traffic — a minute of
+    // caching collapses a whole crawl pass into one read while still looking
+    // live to a person watching books land.
+  }, 60);
 }
 
 // Starting a discussion requires a book or author to be picked first — the

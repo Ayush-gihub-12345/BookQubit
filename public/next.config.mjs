@@ -7,20 +7,15 @@ initOpenNextCloudflareForDev();
 const nextConfig = {
   images: { unoptimized: true },
   experimental: {
-    // Client-side Router Cache: once a page has been visited, the browser
-    // reuses its rendered payload for this long instead of re-fetching.
-    //
-    // This was 6 HOURS (21600) and that was a mistake. The Router Cache has
-    // no concept of "this render failed" — when a transient server error
-    // produced an error-boundary payload, the browser pinned that broken
-    // result for six hours and kept re-showing it long after the server had
-    // recovered. That is exactly how a brief blip turned into "the site is
-    // still broken for me" while every server-side check came back clean.
-    //
-    // Six hours also meant a reader couldn't see newly imported books for
-    // six hours. 5 minutes keeps back/forward navigation instant (the real
-    // benefit) while capping how long any bad or stale payload can survive.
-    staleTimes: { dynamic: 300, static: 600 },
+    // Client-side Router Cache: once a page (book detail, author, listing,
+    // etc.) has been visited, the browser holds onto its rendered payload
+    // for this long — revisiting it (back button, a repeat link click,
+    // browsing away and returning) shows the cached version instantly with
+    // zero server round-trip, instead of re-fetching from D1 every time.
+    // 6 hours, matching the "load once, stay cached while the visitor is
+    // still around, then quietly go stale" behavior asked for — a visit
+    // past that window (or a genuinely new page) fetches fresh again.
+    staleTimes: { dynamic: 21600, static: 21600 },
   },
 };
 
