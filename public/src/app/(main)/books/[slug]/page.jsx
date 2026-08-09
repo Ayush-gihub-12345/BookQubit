@@ -11,7 +11,7 @@ import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
 import QuotesSection from "@/components/QuotesSection";
 import { TrackView } from "@/components/RecentlyViewed";
-import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorByName, getPublicationByName } from "@/lib/repo";
+import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -49,12 +49,17 @@ export default async function BookPage({ params }) {
   const lang = await getLang();
   const book = await getBook(slug, lang);
   if (!book) notFound();
-  const [related, community, bookDiscussions, authorProfile, publisherProfile] = await Promise.all([
+  const [related, community, bookDiscussions, publisherProfile, authorLine] = await Promise.all([
     relatedBooks(book, lang),
     getBookCommunity(book.slug),
     getDiscussionsForBook(book.slug, 3),
-    getAuthorByName(book.author, lang),
     getPublicationByName(book.publisher, lang),
+    // Every co-author resolved individually — `book.author` is a ", "-joined
+    // list, so linking it as one string sent "Ken Follett, John Lee" to a
+    // single profile and left the second author unlinked entirely. This
+    // replaces the old single getAuthorByName() lookup, which only ever
+    // resolved the first name in the list.
+    getAuthorLineProfiles(book.author, lang),
   ]);
   const _ = t(lang);
 
@@ -182,12 +187,23 @@ export default async function BookPage({ params }) {
             <h1 className="text-3xl font-bold sm:text-4xl"><Translated text={book.title} /></h1>
             <p className="text-muted mt-2 text-lg">
               by{" "}
-              <Link
-                href={authorProfile ? `/authors/${authorProfile.slug}` : `/books?q=${encodeURIComponent(book.author || "")}`}
-                className="font-medium text-brand-600 hover:underline"
-              >
-                {book.author}
-              </Link>
+              {/* One link per co-author. Anyone with a real profile goes to
+                  their author page; anyone without one falls back to a search
+                  so the name is still clickable rather than dead text. */}
+              {(authorLine.length ? authorLine : [{ name: book.author, profile: null }])
+                .filter((a) => a.name)
+                .map((a, i) => (
+                  <span key={a.name}>
+                    {i > 0 && <span className="opacity-60">, </span>}
+                    <Link
+                      href={a.profile ? `/authors/${a.profile.slug}` : `/books?q=${encodeURIComponent(a.name)}`}
+                      prefetch={false}
+                      className="font-medium text-brand-600 hover:underline"
+                    >
+                      {a.name}
+                    </Link>
+                  </span>
+                ))}
             </p>
             {/* Compact meta line — StoryGraph-style at-a-glance facts */}
             <p className="text-muted mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

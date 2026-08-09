@@ -209,6 +209,14 @@ CREATE INDEX IF NOT EXISTS idx_books_country ON books(lang, country);
 CREATE INDEX IF NOT EXISTS idx_books_created ON books(lang, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_books_featured ON books(lang, featured);
 CREATE INDEX IF NOT EXISTS idx_books_author ON books(lang, author);
+-- Composite (filter + sort) indexes for relatedBooks, which runs on every
+-- book page view. Including the rating column lets SQLite satisfy both the
+-- WHERE and the ORDER BY from one index and stop after LIMIT rows, instead
+-- of scanning. Measured live: this took a niche-category lookup from 5,121
+-- rows read to 0, and a common-category one from 95 to 4. See relatedBooks
+-- in repo.js for the full before/after numbers.
+CREATE INDEX IF NOT EXISTS idx_books_cat_rating ON books(lang, category, rating DESC);
+CREATE INDEX IF NOT EXISTS idx_books_author_rating ON books(lang, author, rating DESC);
 
 CREATE TABLE IF NOT EXISTS authors (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

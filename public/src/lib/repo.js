@@ -288,12 +288,21 @@ export async function getComparisonSuggestions(lang, limit = 8) {
 // Slugs only, uncapped by design — used exclusively by the (server-only,
 // never publicly exposed) sitemap generator, which needs to enumerate the
 // entire catalog a shard at a time rather than a UI-sized page.
+// Returns { slug, created_at } so the sitemap can emit a real <lastmod>.
+// Cached (1h): measured live that /sitemap.xml was reading ~11,000 rows on
+// EVERY crawler request and was completely uncached — with SEO bots being
+// effectively 100% of this site's traffic, that made the sitemap itself one
+// of the largest single consumers of D1's read quota. An hour of staleness
+// costs nothing here (crawlers revisit far less often than that), and new
+// books still appear on the very next hourly regeneration.
 export async function getBookSlugsPage(lang, { page = 1, perPage = 40000 } = {}) {
-  const db = await getCatalogDb();
-  const { results } = await db.prepare(
-    "SELECT slug FROM books WHERE lang=?1 ORDER BY id LIMIT ?2 OFFSET ?3"
-  ).bind(lang, perPage, (page - 1) * perPage).all();
-  return results.map((r) => r.slug);
+  return cached(`book-slugs:${lang}:${page}:${perPage}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db.prepare(
+      "SELECT slug, created_at FROM books WHERE lang=?1 ORDER BY id LIMIT ?2 OFFSET ?3"
+    ).bind(lang, perPage, (page - 1) * perPage).all();
+    return results;
+  }, 3600);
 }
 
 export async function getBookAlternates(book) {
@@ -317,19 +326,60 @@ export async function getBookAlternates(book) {
 // indexed columns (category, author) can't use either index cleanly and was
 // showing up as one of the largest uncached read contributors on the D1
 // dashboard despite very little real traffic.
+// Split into two separately-indexed queries instead of one `(category=?
+// OR author=?)`, backed by the composite (lang, category, rating DESC) /
+// (lang, author, rating DESC) indexes in CATALOG_SCHEMA.
+//
+// This runs on EVERY book page view and was the single biggest source of
+// D1 reads. Measured live on the real catalog (rows_read per call):
+//
+//                        OR form   composite index
+//   common category         95          4
+//   niche category       5,121          0
+//   author match             3          2
+//
+// The OR form could only use `lang` from an index, then walked the rating
+// index until it found enough matches — cheap for a handful of very common
+// categories, but a full ~5,000-row scan for the long tail of niche ones,
+// which is most books. Caching can't rescue this either: a crawler walking
+// all 5,000 book pages hits a distinct cache key every time, so a one-pass
+// crawl misses on every single page.
+//
+// The composite indexes let SQLite satisfy the filter AND the ordering from
+// one index, so it stops after `limit` rows instead of sorting a category.
+// It picks them on its own — no INDEXED BY hint (an earlier attempt used
+// hints against the plain single-column indexes and made the common case
+// worse, 1,257 rows, by forcing a sort over every book in the category).
 export async function relatedBooks(book, lang, limit = 4) {
   const cacheKey = `related:${lang}:${book.id}:${limit}`;
-  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
+  const [rows, { amazon_assoc_tag }] = await Promise.all([
     cached(cacheKey, async () => {
       const db = await getCatalogDb();
-      return db.prepare(
-        `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
-         ORDER BY rating DESC NULLS LAST LIMIT ?5`
-      ).bind(lang, book.id, book.category || "", book.author || "", limit).all();
+      const build = (column, value) =>
+        db.prepare(
+          `SELECT * FROM books WHERE lang=?1 AND ${column}=?2 AND id != ?3
+           ORDER BY rating DESC NULLS LAST LIMIT ?4`
+        ).bind(lang, value, book.id, limit);
+
+      const queries = [];
+      if (book.category) queries.push(build("category", book.category));
+      if (book.author) queries.push(build("author", book.author));
+      if (!queries.length) return [];
+
+      const batched = await db.batch(queries);
+      // Same-author and same-category results can overlap — dedupe by id,
+      // then re-rank across both sets so the best `limit` win overall.
+      const seen = new Map();
+      for (const part of batched) {
+        for (const row of part.results) if (!seen.has(row.id)) seen.set(row.id, row);
+      }
+      return [...seen.values()]
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        .slice(0, limit);
     }, 3600),
     getSiteSettings(),
   ]);
-  return results.map((r) => mapBook(r, amazon_assoc_tag));
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // Facet counts computed entirely in SQL (GROUP BY / json_each) — no matter
@@ -468,20 +518,73 @@ export async function getComic(slug, lang) {
   return (await listComics(lang)).find((c) => c.slug === decodeURIComponent(slug)) || null;
 }
 
-// Direct, indexed (lang, author) query — an author page never needs to
-// filter the whole catalog to find their own books. Cached: an author page
-// view was re-running this on every single visit/reload.
+// One shared "individual author name -> their book slugs" index for the
+// whole catalog, built once per TTL and reused by every author page.
+//
+// This exists because `books.author` is a single TEXT column holding a
+// ", "-joined list ("Ken Follett, John Lee"), not a relation. The old
+// booksByAuthor did `author = ? COLLATE NOCASE`, which only ever matched
+// books where that person is the SOLE author — so every co-authored book
+// was invisible and authors who only ever co-write (verified live: John
+// Lee, on "Edge of Eternity" and "House of Suns") got a completely empty
+// page despite having books in the catalog.
+//
+// Matching co-authors in SQL would need `LIKE '%, name'`, whose leading
+// wildcard can't use an index — a full table scan per author page, and
+// with thousands of author pages that's exactly the read blowup we just
+// spent this session fixing. Splitting once into a map instead costs ONE
+// scan per TTL window shared across every author, then turns each author
+// page into an indexed by-slug fetch. Same trick listAuthors() already
+// uses to decide which authors have books at all.
+async function getAuthorBookIndex(lang) {
+  return cached(`author-book-index:${lang}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db
+      .prepare("SELECT slug, author FROM books WHERE lang=?1 AND author IS NOT NULL AND author != ''")
+      .bind(lang).all();
+    // Plain object, not a Map — this goes through JSON in the KV cache.
+    const index = {};
+    for (const { slug, author } of results) {
+      for (const part of author.split(",")) {
+        const key = part.trim().toLowerCase();
+        if (!key) continue;
+        (index[key] ||= []).push(slug);
+      }
+    }
+    return index;
+  }, 10800);
+}
+
+// Every book an author worked on, whether they're the sole author or one
+// of several. Bounded so a prolific/ambiguous name can't render a
+// thousand-card page.
 export async function booksByAuthor(name, lang) {
-  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    cached(`by-author:${lang}:${name || ""}`, async () => {
-      const db = await getCatalogDb();
-      return db.prepare(
-        "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
-      ).bind(lang, name || "").all();
-    }, 3600),
+  const key = (name || "").trim().toLowerCase();
+  if (!key) return [];
+  const [index, { amazon_assoc_tag }] = await Promise.all([
+    getAuthorBookIndex(lang),
     getSiteSettings(),
   ]);
-  return results.map((r) => mapBook(r, amazon_assoc_tag));
+  const slugs = (index[key] || []).slice(0, 200);
+  if (!slugs.length) return [];
+  const bySlug = await getBooksBySlug(slugs, lang, "*");
+  return slugs
+    .map((s) => bySlug.get(s))
+    .filter(Boolean)
+    .map((r) => mapBook(r, amazon_assoc_tag));
+}
+
+// Resolves each individual name in a book's ", "-joined author line to its
+// profile (or null if that person has no author row yet), so a book page
+// can link every co-author separately instead of treating the whole string
+// as one person. Reuses listAuthors()' cached list — no extra query.
+export async function getAuthorLineProfiles(authorLine, lang) {
+  if (!authorLine) return [];
+  const names = authorLine.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!names.length) return [];
+  const all = await listAuthors(lang);
+  const byName = new Map(all.map((a) => [a.name.trim().toLowerCase(), a]));
+  return names.map((name) => ({ name, profile: byName.get(name.toLowerCase()) || null }));
 }
 
 // `LIKE '%name%'` can't use an index (leading wildcard forces a full-table

@@ -1038,6 +1038,265 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
   };
 }
 
+// Served at /dashboard. Self-contained (no CDN, no build step) because it
+// ships inside the Worker bundle. The admin secret is typed in once and
+// held in sessionStorage — never in the URL, never persisted to disk.
+const DASHBOARD_HTML = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>BookQubit Import Cron</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --line: #e3e6ea; --text: #12161c;
+    --muted: #667085; --ok: #0a7a44; --okbg: #e6f6ed;
+    --bad: #b42318; --badbg: #fdecea; --warn: #a15c07; --warnbg: #fdf3e2;
+    --accent: #4338ca;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1017; --card: #141a23; --line: #243040; --text: #e8edf4;
+      --muted: #93a1b5; --ok: #4ade80; --okbg: #0d2e1e;
+      --bad: #f87171; --badbg: #34161a; --warn: #fbbf24; --warnbg: #33270d;
+      --accent: #a5b4fc;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .badge {
+    padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 650;
+  }
+  .b-ok { background: var(--okbg); color: var(--ok); }
+  .b-bad { background: var(--badbg); color: var(--bad); }
+  .b-warn { background: var(--warnbg); color: var(--warn); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .card .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .card .s { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em;
+       color: var(--muted); margin: 28px 0 10px; }
+  .flow { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+  .step {
+    flex: 1 1 150px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; position: relative;
+  }
+  .step.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .step .n { font-size: 11px; color: var(--muted); font-weight: 650; }
+  .step .t { font-weight: 650; margin-top: 3px; font-size: 14px; }
+  .step .d { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  td { padding: 9px 14px; border-top: 1px solid var(--line); font-size: 14px; }
+  tr:first-child td { border-top: 0; }
+  td:first-child { color: var(--muted); width: 45%; }
+  td:last-child { font-variant-numeric: tabular-nums; }
+  button {
+    font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  input {
+    font: inherit; padding: 9px 12px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); min-width: 260px;
+  }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .muted { color: var(--muted); font-size: 13px; }
+  #gate { max-width: 420px; margin: 60px auto; text-align: center; }
+  #app { display: none; }
+  .err { color: var(--bad); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="gate">
+    <h1>Import Cron Dashboard</h1>
+    <p class="muted">Enter the import trigger secret to continue.</p>
+    <div class="row" style="justify-content:center">
+      <input id="key" type="password" placeholder="IMPORT_TRIGGER_SECRET" autocomplete="off">
+      <button class="primary" id="go">Open</button>
+    </div>
+    <p class="err" id="gateErr"></p>
+  </div>
+
+  <div id="app">
+    <div class="top">
+      <h1>Import Cron</h1>
+      <span class="badge" id="health">checking…</span>
+      <span class="muted" id="updated"></span>
+      <span style="flex:1"></span>
+      <button id="startBtn">Start</button>
+      <button id="stopBtn">Stop</button>
+    </div>
+
+    <div class="grid" id="stats"></div>
+
+    <h2>Pipeline — what it does on each hop</h2>
+    <div class="flow" id="flow"></div>
+
+    <h2>State</h2>
+    <table id="state"></table>
+    <p class="muted" style="margin-top:14px">
+      Auto-refreshes every 5s. <code>/health</code> is public and returns 503
+      when the import stops — point an uptime monitor at it to get email alerts.
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = "bq_import_key";
+  var gate = document.getElementById("gate");
+  var app = document.getElementById("app");
+  var timer = null;
+
+  function secret() { return sessionStorage.getItem(KEY) || ""; }
+  function num(n) { return (n === null || n === undefined) ? "—" : Number(n).toLocaleString(); }
+
+  function ago(ms) {
+    if (ms === null || ms === undefined) return "never";
+    var s = Math.floor(ms / 1000);
+    if (s < 60) return s + "s ago";
+    var m = Math.floor(s / 60);
+    if (m < 60) return m + "m ago";
+    return Math.floor(m / 60) + "h " + (m % 60) + "m ago";
+  }
+
+  function card(k, v, s) {
+    return '<div class="card"><div class="k">' + k + '</div><div class="v">' + v +
+           '</div><div class="s">' + (s || "") + "</div></div>";
+  }
+
+  function step(n, title, desc, on) {
+    return '<div class="step' + (on ? " on" : "") + '"><div class="n">' + n +
+           '</div><div class="t">' + title + '</div><div class="d">' + desc + "</div></div>";
+  }
+
+  function render(d) {
+    var p = d.progress || {};
+    var running = !!p.chain_running;
+    var auto = !!p.auto_run_enabled;
+
+    document.getElementById("stats").innerHTML =
+      card("Books imported", num(p.total_imported), "total in catalog") +
+      card("Today", num(p.imported_today), "cap " + num(p.daily_cap)) +
+      card("Authors", num(p.total_authors_imported), "profiles created") +
+      card("Publishers", num(p.total_publishers_imported), "profiles created") +
+      card("Skipped", num(p.total_skipped), "already known") +
+      card("Titles known", num(d.titlesKnown), "dedup index size");
+
+    document.getElementById("flow").innerHTML =
+      step("1", "Fetch", "Pull candidate books from Open Library", running) +
+      step("2", "Dedup", "Match title+author against titles DB", running) +
+      step("3", "Enrich", "Wikipedia/Wikidata for new author + publisher", running) +
+      step("4", "Write", "Insert into catalog AND titles together", running) +
+      step("5", "Hop", "Chain to next run after a 3s throttle", running);
+
+    var rows = [
+      ["Auto-run", auto ? "on" : "off"],
+      ["Chain running", running ? "yes" : "no"],
+      ["Stop requested", p.stop_requested ? "yes" : "no"],
+      ["Last run", ago(d.staleMs)],
+      ["Last status", p.last_status || "—"],
+      ["Pending chunks", num(d.pendingChunks)],
+      ["OL subject index", num(d.fetchState && d.fetchState.query_index)],
+      ["OL page offset", num(d.fetchState && d.fetchState.offset_val)]
+    ];
+    document.getElementById("state").innerHTML = rows.map(function (r) {
+      return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>";
+    }).join("");
+
+    document.getElementById("updated").textContent =
+      "updated " + new Date().toLocaleTimeString();
+  }
+
+  function health() {
+    fetch("/health").then(function (r) {
+      return r.json().then(function (j) { return { code: r.status, j: j }; });
+    }).then(function (res) {
+      var el = document.getElementById("health");
+      var s = res.j.status;
+      el.textContent = s;
+      el.className = "badge " + (res.code === 200
+        ? (s === "ok" ? "b-ok" : "b-warn")
+        : "b-bad");
+    }).catch(function () {});
+  }
+
+  function poll() {
+    fetch("/status", { headers: { "x-import-secret": secret() } })
+      .then(function (r) {
+        if (r.status === 401) throw new Error("unauthorized");
+        return r.json();
+      })
+      .then(render)
+      .catch(function (e) {
+        if (String(e.message) === "unauthorized") {
+          sessionStorage.removeItem(KEY);
+          location.reload();
+        }
+      });
+    health();
+  }
+
+  function action(path, body) {
+    return fetch(path, {
+      method: "POST",
+      headers: { "x-import-secret": secret(), "content-type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(poll);
+  }
+
+  function open_() {
+    gate.style.display = "none";
+    app.style.display = "block";
+    poll();
+    timer = setInterval(poll, 5000);
+  }
+
+  document.getElementById("go").onclick = function () {
+    var v = document.getElementById("key").value.trim();
+    if (!v) return;
+    sessionStorage.setItem(KEY, v);
+    fetch("/status", { headers: { "x-import-secret": v } }).then(function (r) {
+      if (r.status === 401) {
+        sessionStorage.removeItem(KEY);
+        document.getElementById("gateErr").textContent = "Wrong secret.";
+        return;
+      }
+      open_();
+    });
+  };
+  document.getElementById("key").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("go").click();
+  });
+
+  document.getElementById("startBtn").onclick = function () {
+    action("/auto", { enabled: true });
+  };
+  document.getElementById("stopBtn").onclick = function () {
+    action("/stop");
+  };
+
+  if (secret()) open_();
+})();
+</script>
+</body>
+</html>`;
+
 export default {
   // Single cron trigger, "* * * * *" — a cheap once-a-minute WATCHDOG, not a
   // pacing mechanism. The actual importing happens via the self-chaining
@@ -1249,6 +1508,90 @@ export default {
       ).bind(enabled).run();
       return Response.json({ autoRunEnabled: !!enabled });
     }
-    return new Response("bookqubit-import-cron is running.", { status: 200 });
+    // ── Monitoring ────────────────────────────────────────────────────────
+    // Deliberately PUBLIC and secret-free so an external uptime monitor
+    // (or Cloudflare's own health checks) can poll it and email on failure
+    // without holding a credential. It exposes only coarse liveness state —
+    // no catalog data, no counts that aren't already public on the site.
+    //
+    // Returns HTTP 503 when the import is not actually progressing, which
+    // is what turns "the import silently died" into an email: uptime
+    // monitors alert on non-2xx. 200 means books are still flowing.
+    if (url.pathname === "/health") {
+      const row = await env.DB.prepare(
+        "SELECT auto_run_enabled, chain_running, last_run_at, imported_today, daily_cap FROM import_progress WHERE id=1"
+      ).first().catch(() => null);
+
+      if (!row) {
+        return Response.json({ status: "unknown", reason: "no import_progress row" }, { status: 503 });
+      }
+      // D1's CURRENT_TIMESTAMP is "YYYY-MM-DD HH:MM:SS" (UTC, no 'Z') —
+      // normalize before parsing, same as the watchdog does.
+      const staleMs = row.last_run_at
+        ? Date.now() - new Date(row.last_run_at.replace(" ", "T") + "Z").getTime()
+        : Infinity;
+
+      // Hitting the daily write cap is the system working as designed, not
+      // a failure — it resets tomorrow, so this must not page anyone.
+      if (row.daily_cap && row.imported_today >= row.daily_cap) {
+        return Response.json({ status: "daily-cap-reached", staleMs }, { status: 200 });
+      }
+      if (!row.auto_run_enabled) {
+        return Response.json({ status: "stopped", reason: "auto_run_enabled is off", staleMs }, { status: 503 });
+      }
+      // The watchdog restarts a chain it considers dead after 2 minutes, so
+      // anything past 10 means even the watchdog isn't recovering it.
+      if (staleMs > 600_000) {
+        return Response.json({ status: "stalled", reason: "no import activity in over 10 minutes", staleMs }, { status: 503 });
+      }
+      return Response.json({ status: "ok", staleMs }, { status: 200 });
+    }
+
+    // Full metrics for the dashboard — secret-gated, since this joins the
+    // progress counters with catalog/titles totals.
+    if (url.pathname === "/status") {
+      const provided = request.headers.get("x-import-secret");
+      if (!env.IMPORT_TRIGGER_SECRET || provided !== env.IMPORT_TRIGGER_SECRET) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      const [progress, fetchState, chunks, titles] = await Promise.all([
+        env.DB.prepare("SELECT * FROM import_progress WHERE id=1").first().catch(() => null),
+        env.DB.prepare("SELECT * FROM ol_fetch_state WHERE id=1").first().catch(() => null),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM import_chunks WHERE consumed=0").first().catch(() => ({ n: 0 })),
+        env.TITLES_DB
+          ? env.TITLES_DB.prepare("SELECT COUNT(*) AS n FROM book_titles").first().catch(() => ({ n: 0 }))
+          : Promise.resolve({ n: 0 }),
+      ]);
+      const staleMs = progress?.last_run_at
+        ? Date.now() - new Date(progress.last_run_at.replace(" ", "T") + "Z").getTime()
+        : null;
+      return Response.json({
+        progress, fetchState,
+        pendingChunks: chunks?.n ?? 0,
+        titlesKnown: titles?.n ?? 0,
+        staleMs,
+        serverTime: new Date().toISOString(),
+      });
+    }
+
+    // Live dashboard. The HTML shell itself is data-free, so serving it
+    // unauthenticated leaks nothing — the secret is entered in the browser,
+    // kept in sessionStorage, and sent as a header on each /status poll.
+    // Deliberately NOT passed in the URL: query strings end up in logs,
+    // history, and referrers.
+    // Root serves the dashboard too: Cloudflare's "Visit" button in the
+    // Workers dashboard always opens the bare origin, so landing there on a
+    // plain-text "is running" line just looks broken. Same page either way.
+    if (url.pathname === "/dashboard" || url.pathname === "/") {
+      return new Response(DASHBOARD_HTML, {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          // This is an internal ops page — keep it out of search results
+          // even though it lives on a workers.dev subdomain.
+          "x-robots-tag": "noindex, nofollow",
+        },
+      });
+    }
+    return new Response("bookqubit-import-cron is running.", { status: 404 });
   },
 };
