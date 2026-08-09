@@ -195,7 +195,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       <div className="h-0.5 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700" />
       {/* Row 1 */}
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2">
           <LogoMark size={36} />
           <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
             Book<span className="text-brand-600">Qubit</span>
@@ -219,7 +219,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         </button>
 
         {/* Notifications */}
-        <Link href="/notifications" className={`${iconBtn} relative hidden sm:grid`} aria-label="Notifications" title="Notifications">
+        <Link href="/notifications" prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label="Notifications" title="Notifications">
           <Icon name="bell" size={17} />
           {notifCount > 0 && (
             <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[9px] font-bold text-white">
@@ -229,7 +229,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         </Link>
 
         {/* Liked books */}
-        <Link href="/liked" className={`${iconBtn} hidden sm:grid`} aria-label="Liked books" title="Liked books">
+        <Link href="/liked" prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label="Liked books" title="Liked books">
           <Icon name="heart" size={17} />
         </Link>
 
@@ -299,7 +299,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             const active = m.href === "/" ? pathname === "/" : pathname.startsWith(m.href.split("?")[0]);
             return (
               <div key={m.label} className="group relative">
-                <Link href={m.href}
+                <Link href={m.href} prefetch={false}
                   className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${active ? "text-brand-600" : ""}`}>
                   <Icon name={m.icon} size={14} className="opacity-70" /> {m.label}
                   {m.items && <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />}
@@ -309,7 +309,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                   <div className="invisible absolute left-1/2 top-full z-50 w-60 -translate-x-1/2 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                     <div className="bg-surface border-line overflow-hidden rounded-2xl border shadow-2xl">
                       {m.items.map((it) => (
-                        <Link key={it.label} href={it.href}
+                        <Link key={it.label} href={it.href} prefetch={false}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-white/5">
                           <Icon name={it.icon} size={14} className="text-muted" /> {it.label}
                         </Link>
@@ -337,7 +337,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                       <ul className="space-y-1.5">
                         {col.links.map(([label, href]) => (
                           <li key={label}>
-                            <Link href={href} className="text-muted block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600">
+                            <Link href={href} prefetch={false} className="text-muted block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600">
                               {label}
                             </Link>
                           </li>
@@ -360,10 +360,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                   </div>
                 </div>
                 <div className="border-line flex justify-center gap-3 border-t p-4">
-                  <Link href="/categories" className="btn-primary !py-2 text-sm">
+                  <Link href="/categories" prefetch={false} className="btn-primary !py-2 text-sm">
                     Browse All Categories <Icon name="arrowRight" size={14} />
                   </Link>
-                  <Link href="/request-a-book" className="btn-ghost !py-2 text-sm">
+                  <Link href="/request-a-book" prefetch={false} className="btn-ghost !py-2 text-sm">
                     <Icon name="bookmark" size={14} /> Request a Book
                   </Link>
                 </div>
@@ -371,13 +371,13 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             </div>
           </div>
 
-          <Link href="/compare"
+          <Link href="/compare" prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/compare" || pathname.startsWith("/compare/") ? "text-brand-600" : ""}`}>
             <Icon name="layers" size={14} className="opacity-70" /> Compare
             <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/compare" || pathname.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
 
-          <Link href="/about"
+          <Link href="/about" prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/about" ? "text-brand-600" : ""}`}>
             <Icon name="shieldCheck" size={14} className="opacity-70" /> About
             <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
@@ -390,34 +390,34 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         <div className="border-line border-t px-4 py-4 lg:hidden">
           <div className="grid grid-cols-2 gap-2">
             {MENUS.map((m) => (
-              <Link key={m.label} href={m.href} onClick={() => setOpen(false)}
+              <Link key={m.label} href={m.href} prefetch={false} onClick={() => setOpen(false)}
                 className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
                 <Icon name={m.icon} size={15} className="text-muted" /> {m.label}
               </Link>
             ))}
-            <Link href="/notifications" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href="/notifications" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="bell" size={15} className="text-muted" /> Notifications {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
             </Link>
-            <Link href="/liked" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href="/liked" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="heart" size={15} className="text-muted" /> Liked Books
             </Link>
-            <Link href="/compare" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href="/compare" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="layers" size={15} className="text-muted" /> Compare
             </Link>
             <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="zap" size={15} className="text-muted" /> Surprise me
             </button>
-            <Link href="/about" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href="/about" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="shieldCheck" size={15} className="text-muted" /> About
             </Link>
-            <Link href="/login" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href="/login" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
             </Link>
           </div>
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Explore</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[["Top Rated", "/books?sort=rating"], ["New Releases", "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], ["Collections", "/collections"], ["Tags", "/tags"]].map(([label, href]) => (
-              <Link key={label} href={href} onClick={() => setOpen(false)} className="pill">{label}</Link>
+              <Link key={label} href={href} prefetch={false} onClick={() => setOpen(false)} className="pill">{label}</Link>
             ))}
           </div>
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Theme</p>

@@ -169,7 +169,7 @@ export async function queryBooks(lang, opts = {}) {
       ]);
     }
     return { rows: r.results, count: cnt.n };
-  }, 60);
+  }, 300);
 
   const { amazon_assoc_tag } = await getSiteSettings();
   return {
@@ -252,7 +252,9 @@ export async function getFeaturedBooks(lang, limit = 5) {
 // O(log n) via the primary key index no matter how many books there are.
 export async function getRandomBook(lang) {
   const db = await getCatalogDb();
-  const bounds = await db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first();
+  const bounds = await cached(`book-bounds:${lang}`, () =>
+    db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first()
+  , 10800);
   if (!bounds?.hi) return null;
   const randomId = bounds.lo + Math.floor(Math.random() * (bounds.hi - bounds.lo + 1));
   const [row, { amazon_assoc_tag }] = await Promise.all([
@@ -311,13 +313,20 @@ export async function getBookAlternates(book) {
 
 // Direct SQL query, bounded by `limit` — matches on the same category or
 // author, ranked by rating. Never loads the catalog to find these.
+// Called on every book page view, so cached — an OR across two differently
+// indexed columns (category, author) can't use either index cleanly and was
+// showing up as one of the largest uncached read contributors on the D1
+// dashboard despite very little real traffic.
 export async function relatedBooks(book, lang, limit = 4) {
-  const db = await getCatalogDb();
+  const cacheKey = `related:${lang}:${book.id}:${limit}`;
   const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    db.prepare(
-      `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
-       ORDER BY rating DESC NULLS LAST LIMIT ?5`
-    ).bind(lang, book.id, book.category || "", book.author || "", limit).all(),
+    cached(cacheKey, async () => {
+      const db = await getCatalogDb();
+      return db.prepare(
+        `SELECT * FROM books WHERE lang=?1 AND id != ?2 AND (category = ?3 OR author = ?4)
+         ORDER BY rating DESC NULLS LAST LIMIT ?5`
+      ).bind(lang, book.id, book.category || "", book.author || "", limit).all();
+    }, 3600),
     getSiteSettings(),
   ]);
   return results.map((r) => mapBook(r, amazon_assoc_tag));
@@ -460,24 +469,34 @@ export async function getComic(slug, lang) {
 }
 
 // Direct, indexed (lang, author) query — an author page never needs to
-// filter the whole catalog to find their own books.
+// filter the whole catalog to find their own books. Cached: an author page
+// view was re-running this on every single visit/reload.
 export async function booksByAuthor(name, lang) {
-  const db = await getCatalogDb();
   const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    db.prepare(
-      "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
-    ).bind(lang, name || "").all(),
+    cached(`by-author:${lang}:${name || ""}`, async () => {
+      const db = await getCatalogDb();
+      return db.prepare(
+        "SELECT * FROM books WHERE lang=?1 AND author=?2 COLLATE NOCASE ORDER BY id"
+      ).bind(lang, name || "").all();
+    }, 3600),
     getSiteSettings(),
   ]);
   return results.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
+// `LIKE '%name%'` can't use an index (leading wildcard forces a full-table
+// scan) — this was showing up on the D1 dashboard as one of the worst
+// rows-read-per-query offenders. Caching doesn't fix the scan itself but
+// means it only happens once per TTL window instead of on every publisher
+// page view/reload.
 export async function booksByPublisher(name, lang) {
-  const db = await getCatalogDb();
   const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    db.prepare(
-      "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
-    ).bind(lang, `%${name || ""}%`).all(),
+    cached(`by-publisher:${lang}:${name || ""}`, async () => {
+      const db = await getCatalogDb();
+      return db.prepare(
+        "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
+      ).bind(lang, `%${name || ""}%`).all();
+    }, 3600),
     getSiteSettings(),
   ]);
   return results.map((r) => mapBook(r, amazon_assoc_tag));
@@ -496,47 +515,53 @@ export const pointsFor = (r) =>
   (r.reads || 0) * 10 + (r.reviews || 0) * 5 + (r.ratings || 0) * 2 +
   (r.discussions || 0) * 3 + (r.posts || 0) * 1;
 
-// Community stats + reviews for one book (drives the book-page social section)
+// Community stats + reviews for one book (drives the book-page social section).
+// Runs on every book page view — a 4-way `shelf` scan per visit was another
+// uncached hot spot. Short TTL: new ratings/reviews should still surface
+// quickly, but a bot re-hitting the same book seconds apart shouldn't repeat
+// the full aggregation.
 export async function getBookCommunity(slug) {
-  const db = await getDb();
-  const [agg, dist, vibes, reviews] = await Promise.all([
-    db.prepare(
-      `SELECT COUNT(*) AS total,
-         SUM(CASE WHEN status='want' THEN 1 ELSE 0 END) AS want,
-         SUM(CASE WHEN status='reading' THEN 1 ELSE 0 END) AS reading,
-         SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS read,
-         AVG(rating) AS avg_rating,
-         COUNT(rating) AS rating_count
-       FROM shelf WHERE book_slug=?1`
-    ).bind(slug).first(),
-    db.prepare(
-      `SELECT rating, COUNT(*) AS n FROM shelf
-       WHERE book_slug=?1 AND rating IS NOT NULL GROUP BY rating`
-    ).bind(slug).all(),
-    db.prepare(
-      `SELECT moods, pace FROM shelf
-       WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
-    ).bind(slug).all(),
-    db.prepare(
-      `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url, u.slug
-       FROM shelf s JOIN users u ON u.id=s.user_id
-       WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
-       ORDER BY s.updated_at DESC LIMIT 20`
-    ).bind(slug).all(),
-  ]);
-  const distribution = [5, 4, 3, 2, 1].map((star) => ({
-    star,
-    n: dist.results.find((d) => d.rating === star)?.n || 0,
-  }));
-  const moodCounts = new Map();
-  const paceCounts = new Map();
-  for (const v of vibes.results) {
-    for (const m of J(v.moods)) moodCounts.set(m, (moodCounts.get(m) || 0) + 1);
-    if (v.pace) paceCounts.set(v.pace, (paceCounts.get(v.pace) || 0) + 1);
-  }
-  const moods = [...moodCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
-  const pace = [...paceCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
-  return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, moods, pace, reviews: reviews.results };
+  return cached(`community:${slug}`, async () => {
+    const db = await getDb();
+    const [agg, dist, vibes, reviews] = await Promise.all([
+      db.prepare(
+        `SELECT COUNT(*) AS total,
+           SUM(CASE WHEN status='want' THEN 1 ELSE 0 END) AS want,
+           SUM(CASE WHEN status='reading' THEN 1 ELSE 0 END) AS reading,
+           SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS read,
+           AVG(rating) AS avg_rating,
+           COUNT(rating) AS rating_count
+         FROM shelf WHERE book_slug=?1`
+      ).bind(slug).first(),
+      db.prepare(
+        `SELECT rating, COUNT(*) AS n FROM shelf
+         WHERE book_slug=?1 AND rating IS NOT NULL GROUP BY rating`
+      ).bind(slug).all(),
+      db.prepare(
+        `SELECT moods, pace FROM shelf
+         WHERE book_slug=?1 AND (moods IS NOT NULL OR pace IS NOT NULL)`
+      ).bind(slug).all(),
+      db.prepare(
+        `SELECT s.rating, s.review, s.status, s.spoiler, s.updated_at, u.id AS user_id, u.name, u.photo_url, u.slug
+         FROM shelf s JOIN users u ON u.id=s.user_id
+         WHERE s.book_slug=?1 AND s.review IS NOT NULL AND s.review != ''
+         ORDER BY s.updated_at DESC LIMIT 20`
+      ).bind(slug).all(),
+    ]);
+    const distribution = [5, 4, 3, 2, 1].map((star) => ({
+      star,
+      n: dist.results.find((d) => d.rating === star)?.n || 0,
+    }));
+    const moodCounts = new Map();
+    const paceCounts = new Map();
+    for (const v of vibes.results) {
+      for (const m of J(v.moods)) moodCounts.set(m, (moodCounts.get(m) || 0) + 1);
+      if (v.pace) paceCounts.set(v.pace, (paceCounts.get(v.pace) || 0) + 1);
+    }
+    const moods = [...moodCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+    const pace = [...paceCounts.entries()].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+    return { ...agg, avg_rating: agg.avg_rating ? Number(agg.avg_rating.toFixed(1)) : null, distribution, moods, pace, reviews: reviews.results };
+  }, 60);
 }
 
 // Latest community activity — only public-worthy events (finished books,
@@ -993,59 +1018,71 @@ function badgesFor(r) {
   return badges;
 }
 
-export async function getLeaderboard({ limit = 20, year, minBooks, genre } = {}) {
-  const db = await getDb();
-  const [base, shelfBooks] = await Promise.all([
-    db.prepare(
-      `SELECT u.id, u.name, u.photo_url, u.slug,
-         COALESCE(sh.reads, 0) AS reads,
-         COALESCE(sh.ratings, 0) AS ratings,
-         COALESCE(sh.reviews, 0) AS reviews,
-         COALESCE(d.n, 0) AS discussions,
-         COALESCE(p.n, 0) AS posts
-       FROM users u
-       LEFT JOIN (
-         SELECT user_id,
-           SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS reads,
-           SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
-           SUM(CASE WHEN review IS NOT NULL AND review != '' THEN 1 ELSE 0 END) AS reviews
-         FROM shelf GROUP BY user_id
-       ) sh ON sh.user_id = u.id
-       LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussions GROUP BY user_id) d ON d.user_id = u.id
-       LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussion_posts GROUP BY user_id) p ON p.user_id = u.id
-       WHERE COALESCE(sh.reads,0)+COALESCE(sh.ratings,0)+COALESCE(sh.reviews,0)+COALESCE(d.n,0)+COALESCE(p.n,0) > 0
-       LIMIT 500`
-    ).all(),
-    // Per-book read history (for "favorite genre" + "books read in year Y") —
-    // aggregated in JS below since the dataset is small enough that a second
-    // SQL pass per stat would be more complex than it's worth.
-    db.prepare(`SELECT user_id, finished_at, book_slug FROM shelf WHERE status = 'read'`).all(),
-  ]);
-  const categoryBySlug = await getBooksBySlug(shelfBooks.results.map((r) => r.book_slug), "en", "slug, category");
+// The heavy part (two full `shelf`/`users` scans + per-user aggregation) is
+// independent of the caller's limit/year/minBooks/genre — those are just
+// filters applied after. Cached as one shared "all ranked readers" list so
+// every leaderboard view/filter combo reuses the same computed data instead
+// of re-scanning `shelf` per request.
+async function getRankedReaders() {
+  return cached("leaderboard:ranked", async () => {
+    const db = await getDb();
+    const [base, shelfBooks] = await Promise.all([
+      db.prepare(
+        `SELECT u.id, u.name, u.photo_url, u.slug,
+           COALESCE(sh.reads, 0) AS reads,
+           COALESCE(sh.ratings, 0) AS ratings,
+           COALESCE(sh.reviews, 0) AS reviews,
+           COALESCE(d.n, 0) AS discussions,
+           COALESCE(p.n, 0) AS posts
+         FROM users u
+         LEFT JOIN (
+           SELECT user_id,
+             SUM(CASE WHEN status='read' THEN 1 ELSE 0 END) AS reads,
+             SUM(CASE WHEN rating IS NOT NULL THEN 1 ELSE 0 END) AS ratings,
+             SUM(CASE WHEN review IS NOT NULL AND review != '' THEN 1 ELSE 0 END) AS reviews
+           FROM shelf GROUP BY user_id
+         ) sh ON sh.user_id = u.id
+         LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussions GROUP BY user_id) d ON d.user_id = u.id
+         LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM discussion_posts GROUP BY user_id) p ON p.user_id = u.id
+         WHERE COALESCE(sh.reads,0)+COALESCE(sh.ratings,0)+COALESCE(sh.reviews,0)+COALESCE(d.n,0)+COALESCE(p.n,0) > 0
+         LIMIT 500`
+      ).all(),
+      // Per-book read history (for "favorite genre" + "books read in year Y") —
+      // aggregated in JS below since the dataset is small enough that a second
+      // SQL pass per stat would be more complex than it's worth.
+      db.prepare(`SELECT user_id, finished_at, book_slug FROM shelf WHERE status = 'read'`).all(),
+    ]);
+    const categoryBySlug = await getBooksBySlug(shelfBooks.results.map((r) => r.book_slug), "en", "slug, category");
 
-  const perUser = new Map();
-  for (const row of shelfBooks.results) {
-    const agg = perUser.get(row.user_id) || { years: {}, genres: {} };
-    if (row.finished_at) {
-      const y = new Date(row.finished_at).getFullYear();
-      if (!Number.isNaN(y)) agg.years[y] = (agg.years[y] || 0) + 1;
+    const perUser = new Map();
+    for (const row of shelfBooks.results) {
+      const agg = perUser.get(row.user_id) || { years: {}, genres: {} };
+      if (row.finished_at) {
+        const y = new Date(row.finished_at).getFullYear();
+        if (!Number.isNaN(y)) agg.years[y] = (agg.years[y] || 0) + 1;
+      }
+      const category = categoryBySlug.get(row.book_slug)?.category;
+      if (category) agg.genres[category] = (agg.genres[category] || 0) + 1;
+      perUser.set(row.user_id, agg);
     }
-    const category = categoryBySlug.get(row.book_slug)?.category;
-    if (category) agg.genres[category] = (agg.genres[category] || 0) + 1;
-    perUser.set(row.user_id, agg);
-  }
 
-  let readers = base.results.map((r) => {
-    const agg = perUser.get(r.id) || { years: {}, genres: {} };
-    const favoriteGenre = Object.entries(agg.genres).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-    const points = pointsFor(r);
-    return {
-      ...r, points, level: levelFor(points), favoriteGenre,
-      yearCounts: agg.years,
-      genreCounts: agg.genres,
-      badges: badgesFor(r),
-    };
-  });
+    const readers = base.results.map((r) => {
+      const agg = perUser.get(r.id) || { years: {}, genres: {} };
+      const favoriteGenre = Object.entries(agg.genres).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+      const points = pointsFor(r);
+      return {
+        ...r, points, level: levelFor(points), favoriteGenre,
+        yearCounts: agg.years,
+        genreCounts: agg.genres,
+        badges: badgesFor(r),
+      };
+    });
+    return readers.sort((a, b) => b.points - a.points);
+  }, 300);
+}
+
+export async function getLeaderboard({ limit = 20, year, minBooks, genre } = {}) {
+  let readers = await getRankedReaders();
 
   if (minBooks) {
     const n = Number(minBooks);
@@ -1053,19 +1090,21 @@ export async function getLeaderboard({ limit = 20, year, minBooks, genre } = {})
   }
   if (genre) readers = readers.filter((r) => (r.genreCounts[genre] || 0) > 0);
 
-  return readers.sort((a, b) => b.points - a.points).slice(0, limit);
+  return readers.slice(0, limit);
 }
 
 // Ranked by follower count, not activity — a separate "who the community
 // looks up to" view alongside the activity-based Bookworm Ranking.
 export async function getPopularReaders(limit = 20) {
-  const db = await getDb();
-  const { results } = await db.prepare(
-    `SELECT u.id, u.name, u.photo_url, u.slug, COUNT(f.user_id) AS followers
-     FROM users u JOIN follows f ON f.target_type = 'reader' AND f.target_id = u.id
-     GROUP BY u.id ORDER BY followers DESC LIMIT ?1`
-  ).bind(limit).all();
-  return results;
+  return cached(`popular-readers:${limit}`, async () => {
+    const db = await getDb();
+    const { results } = await db.prepare(
+      `SELECT u.id, u.name, u.photo_url, u.slug, COUNT(f.user_id) AS followers
+       FROM users u JOIN follows f ON f.target_type = 'reader' AND f.target_id = u.id
+       GROUP BY u.id ORDER BY followers DESC LIMIT ?1`
+    ).bind(limit).all();
+    return results;
+  }, 300);
 }
 
 export async function getUserPreferences(uid) {

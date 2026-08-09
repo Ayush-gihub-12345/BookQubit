@@ -75,7 +75,7 @@ export default function ComicsBrowser({ comics }) {
 
       <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
         {filtered.map((c) => (
-          <Link key={c.id} href={`/comics/${c.slug}`} className="card group block overflow-hidden">
+          <Link key={c.id} href={`/comics/${c.slug}`} prefetch={false} className="card group block overflow-hidden">
             <div className="relative aspect-[2/3] overflow-hidden bg-black/5 dark:bg-white/5">
               <BookCover title={c.title} author={c.publisher} cover_url={c.cover_url}
                 imgClassName="transition duration-500 group-hover:scale-105" />

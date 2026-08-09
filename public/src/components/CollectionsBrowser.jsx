@@ -31,7 +31,7 @@ export default function CollectionsBrowser({ collections }) {
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((c) => (
-          <Link key={c.name} href={`/collections/${encodeURIComponent(c.name)}`} className="card relative overflow-hidden p-8">
+          <Link key={c.name} href={`/collections/${encodeURIComponent(c.name)}`} prefetch={false} className="card relative overflow-hidden p-8">
             <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-brand-500/10" />
             <h2 className="text-xl font-bold">{c.name}</h2>
             <p className="text-muted mt-1 text-sm">{c.count} {c.count === 1 ? "book" : "books"}</p>

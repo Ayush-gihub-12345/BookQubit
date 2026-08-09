@@ -5,7 +5,7 @@ import Translated from "./Translated";
 
 export default function BookCard({ book }) {
   return (
-    <Link href={`/books/${encodeURIComponent(book.slug)}`} className="card group block overflow-hidden">
+    <Link href={`/books/${encodeURIComponent(book.slug)}`} prefetch={false} className="card group block overflow-hidden">
       <div className="relative aspect-[2/3] overflow-hidden bg-black/5 dark:bg-white/5">
         <BookCover title={book.title} author={book.author} cover_url={book.cover_url}
           imgClassName="transition duration-500 group-hover:scale-105" />

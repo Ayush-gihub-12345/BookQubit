@@ -394,17 +394,51 @@ export async function getCatalogDb() {
   return env.CATALOG_DB;
 }
 
-// Read-through KV cache. Degrades gracefully to a direct D1 query if the
-// CACHE binding is missing (e.g. local `next dev`) — and, just as
-// importantly, if KV itself errors (a real one hit in production: the free
-// tier's daily kv.put() write quota got exceeded once enough functions
-// started caching distinct per-book/per-query keys). Before this, an
-// unhandled put()/get() rejection here propagated straight up through
-// getBook/queryBooks/etc., which broke the whole page's data-fetching and
-// left it stuck on its loading skeleton forever — caching must never be
-// able to take the actual page down; worst case it just falls back to an
-// uncached read for that request.
+// In-process L1 cache, shared by every request the current Worker isolate
+// handles (no network round-trip, no quota). This is the primary defense
+// against D1 read blowups now — verified live via the D1 dashboard that
+// KV's free-tier write quota (1,000 puts/day) was getting exhausted by the
+// sheer number of distinct filter/sort/page cache keys `/books` can
+// produce, and once kv.put() starts failing, the old KV-only cached()
+// silently degraded to an *uncached* D1 read on every request, which is
+// what let a handful of hot queries read tens of millions of rows/day with
+// almost no real visitors. An in-memory hit never touches KV or D1, so it
+// keeps working even while KV's quota is blown. Capped and LRU-ish evicted
+// so it can't grow unbounded in a long-lived isolate.
+const MEM_MAX = 400;
+const memCache = new Map();
+function memGet(key) {
+  const entry = memCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.exp) {
+    memCache.delete(key);
+    return undefined;
+  }
+  return entry.value;
+}
+function memSet(key, value, ttlSeconds) {
+  if (!memCache.has(key) && memCache.size >= MEM_MAX) {
+    memCache.delete(memCache.keys().next().value); // evict oldest
+  }
+  memCache.set(key, { value, exp: Date.now() + ttlSeconds * 1000 });
+}
+
+// Read-through cache: in-memory first (fast, free, no quota), then KV as a
+// slower cross-isolate/cross-cold-start fallback. Degrades gracefully if
+// the CACHE binding is missing (e.g. local `next dev`) or if KV itself
+// errors — a real failure mode hit in production, the free tier's daily
+// kv.put() write quota exceeded once enough functions started caching
+// distinct per-book/per-query keys. Before this, an unhandled put()/get()
+// rejection here propagated straight up through getBook/queryBooks/etc.,
+// which broke the whole page's data-fetching and left it stuck on its
+// loading skeleton forever — caching must never be able to take the actual
+// page down; worst case it just falls back to an uncached read for that
+// one request, and the in-memory layer means that's now rare even when KV
+// is unavailable.
 export async function cached(key, fn, ttl = 300) {
+  const memHit = memGet(key);
+  if (memHit !== undefined) return memHit;
+
   let kv;
   try {
     const { env } = await getCloudflareContext({ async: true });
@@ -412,22 +446,30 @@ export async function cached(key, fn, ttl = 300) {
   } catch {
     /* no bindings available */
   }
-  if (!kv) return fn();
 
-  let hit = null;
-  try {
-    hit = await kv.get(key, "json");
-  } catch {
-    /* KV read failed — fall through to a fresh read below */
+  if (kv) {
+    let hit = null;
+    try {
+      hit = await kv.get(key, "json");
+    } catch {
+      /* KV read failed — fall through to a fresh read below */
+    }
+    if (hit !== null) {
+      memSet(key, hit, ttl);
+      return hit;
+    }
   }
-  if (hit !== null) return hit;
 
   const value = await fn();
-  try {
-    await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
-  } catch {
-    /* KV write failed (e.g. daily quota exceeded) — the page still gets
-       its data, it just won't be cached for next time until KV recovers. */
+  memSet(key, value, ttl);
+  if (kv) {
+    try {
+      await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
+    } catch {
+      /* KV write failed (e.g. daily quota exceeded) — the page still gets
+         its data, and the in-memory cache still covers repeat requests on
+         this isolate even though this key won't survive a cold start. */
+    }
   }
   return value;
 }
@@ -435,6 +477,7 @@ export async function cached(key, fn, ttl = 300) {
 // Force a cached() key to be recomputed on next read — used after admin
 // writes so edits (e.g. site settings) show up immediately, not after TTL.
 export async function invalidate(key) {
+  memCache.delete(key);
   try {
     const { env } = await getCloudflareContext({ async: true });
     if (env.CACHE) await env.CACHE.delete(key);
