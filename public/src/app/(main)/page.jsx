@@ -219,8 +219,8 @@ export default async function Home() {
       {authors.length > 0 && (
         <Section title="Featured Authors" subtitle="Our most influential writers and thinkers" href="/authors">
           <HScrollRow>
-            {authors.map((a) => (
-              <Link key={a.id} href={`/authors/${a.slug}`} className="card w-44 p-5 text-center">
+            {authors.slice(0, 12).map((a) => (
+              <Link key={a.id} href={`/authors/${a.slug}`} prefetch={false} className="card w-44 p-5 text-center">
                 {a.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={a.image_url} alt={a.name} className="mx-auto h-20 w-20 rounded-full object-cover" loading="lazy" />
@@ -241,7 +241,7 @@ export default async function Home() {
         <Section title="Explore Publishers" subtitle="Renowned publishing houses from around the world" href="/publications">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {pubs.slice(0, 4).map((p) => (
-              <Link key={p.id} href={`/publications/${p.slug}`} className="card p-5 text-center">
+              <Link key={p.id} href={`/publications/${p.slug}`} prefetch={false} className="card p-5 text-center">
                 {p.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.logo_url} alt={p.name} className="mx-auto h-14 w-14 rounded-xl object-cover" loading="lazy" />
@@ -260,8 +260,8 @@ export default async function Home() {
       {comics.length > 0 && (
         <Section title="Explore Comics" subtitle="Legendary issues and timeless adventures" href="/comics">
           <HScrollRow>
-            {comics.map((c) => (
-              <Link key={c.id} href={`/comics/${c.slug}`} className="card group w-40 overflow-hidden sm:w-44">
+            {comics.slice(0, 12).map((c) => (
+              <Link key={c.id} href={`/comics/${c.slug}`} prefetch={false} className="card group w-40 overflow-hidden sm:w-44">
                 <div className="aspect-[2/3] overflow-hidden bg-black/5">
                   <BookCover title={c.title} author={c.publisher} cover_url={c.cover_url}
                     imgClassName="transition duration-500 group-hover:scale-105" />
