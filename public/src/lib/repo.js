@@ -1317,7 +1317,18 @@ export async function getPlatformStats() {
       ).bind(books, authors).run().catch(() => {});
     }
     return { books, authors, reviews: reviews.n, readers: readers.n };
-  }, 10800);
+    // Short TTL on purpose. This used to sit at 3 hours because getting these
+    // numbers meant COUNT(*) scans over the whole catalog — expensive enough
+    // that a stale figure was the lesser evil. Now books/authors are a single
+    // maintained row and the other two are tiny user-database lookups, so the
+    // whole call is a handful of rows and the stat bar can track the import in
+    // near-real time instead of lagging hours behind.
+    //
+    // Not left completely uncached: the footer renders this on EVERY page, and
+    // crawlers are effectively all of this site's traffic — a minute of
+    // caching collapses a whole crawl pass into one read while still looking
+    // live to a person watching books land.
+  }, 60);
 }
 
 // Starting a discussion requires a book or author to be picked first — the
