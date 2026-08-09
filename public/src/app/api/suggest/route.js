@@ -7,7 +7,14 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") || "").trim();
   const lang = searchParams.get("lang") || "en";
-  if (q.length < 2) return NextResponse.json({ books: [], authors: [], publishers: [], categories: [], tags: [] });
+  // Enforced here too, not just in SearchBar — this endpoint is public, and
+  // the query behind it is an unindexable 5-column LIKE '%term%' that scans
+  // the books table. A short term is both the least useful and the most
+  // expensive, so it must be refused server-side regardless of caller.
+  const MIN_QUERY_CHARS = 4;
+  if (q.length < MIN_QUERY_CHARS) {
+    return NextResponse.json({ books: [], authors: [], publishers: [], categories: [], tags: [] });
+  }
 
   const s = q.toLowerCase();
   const [books, authors, pubs, f] = await Promise.all([

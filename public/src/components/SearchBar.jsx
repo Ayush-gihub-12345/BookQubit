@@ -9,6 +9,22 @@ import { readLocalCache, writeLocalCache } from "@/lib/localCache";
 // but it should still reflect a book imported minutes ago, not hours.
 const SUGGEST_CACHE_MS = 5 * 60 * 1000;
 
+// Suggestions only start once there are enough characters to be selective,
+// and only after typing actually pauses.
+//
+// Both numbers exist to cut database work. The suggest query is a 5-column
+// `LIKE '%term%'`, which no index can serve — SQLite scans until it finds
+// enough matches, so a broad or non-matching term reads the whole books
+// table. At 2 characters firing every 220ms, typing one word produced a
+// scan per keystroke ("ka", "kaf", "kafk", "kafka") and most of those
+// prefixes are the expensive, low-selectivity kind. Measured live: ~1,900
+// rows read per search, 48 rows scanned for every 1 returned.
+//
+// 4 characters skips the broadest prefixes entirely; a 500ms pause means a
+// normal typist issues ONE query for a word instead of several.
+const MIN_QUERY_CHARS = 4;
+const TYPING_PAUSE_MS = 500;
+
 const RECENT_KEY = "bq_recent";
 const readRecent = () => {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
@@ -60,7 +76,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
   const onChange = (value) => {
     setQ(value); setActive(-1);
     clearTimeout(timer.current);
-    if (value.trim().length < 2) { setRes(null); return; }
+    if (value.trim().length < MIN_QUERY_CHARS) { setRes(null); setLoading(false); return; }
     setLoading(true);
     timer.current = setTimeout(async () => {
       const cacheKey = `suggest:${lang}:${value.trim().toLowerCase()}`;
@@ -73,7 +89,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
         setRes(json);
       } catch { setRes(null); }
       setLoading(false);
-    }, 220);
+    }, TYPING_PAUSE_MS);
   };
 
   const go = (href, label) => {
