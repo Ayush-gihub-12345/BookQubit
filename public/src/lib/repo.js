@@ -173,12 +173,17 @@ export async function queryBooks(lang, opts = {}) {
     }, 300);
 
   let rows = await runRows(lang, binds);
+  // Same defensive guard as relatedBooks — the browse page is the most
+  // visited route on the site, so a malformed cache entry must degrade to
+  // "no results" rather than an error boundary.
+  if (!Array.isArray(rows)) rows = [];
 
   // Empty language falls back to English rows with the same filters.
   if (!rows.length && lang !== "en") {
     const enBinds = [...binds];
     enBinds[0] = "en";
     rows = await runRows("en", enBinds);
+    if (!Array.isArray(rows)) rows = [];
   }
 
   const hasMore = rows.length > perPage;
@@ -393,7 +398,11 @@ export async function relatedBooks(book, lang, limit = 4) {
     }, 3600),
     getSiteSettings(),
   ]);
-  return rows.map((r) => mapBook(r, amazon_assoc_tag));
+  // Defensive: a cached value of an unexpected shape must never crash a book
+  // page. CACHE_VERSION already prevents the stale-shape case that caused it
+  // once, but rendering an empty "related books" strip is always preferable
+  // to taking the whole page down with "map is not a function".
+  return Array.isArray(rows) ? rows.map((r) => mapBook(r, amazon_assoc_tag)) : [];
 }
 
 // Facet counts computed entirely in SQL (GROUP BY / json_each) — no matter
@@ -1328,15 +1337,12 @@ export async function updateSiteSettings(patch) {
 // rows today, and they grow only when a real person acts), so a scan there
 // costs almost nothing — not worth maintaining a counter for.
 export async function getPlatformStats() {
-  // Key is versioned (":v2") deliberately. The previous version of this
-  // function cached under "platform:stats" with a 3-hour TTL, and a KV entry
-  // keeps its original expiry no matter what TTL a later caller passes — so
-  // on deploy the new 60-second logic would have kept serving that stale
-  // 3-hour entry for up to 3 more hours, and the stat bar would have looked
-  // frozen (confirmed live: KV held books:5240 while the real counter was
-  // already at 5336). A new key sidesteps the old entry entirely instead of
-  // needing a manual KV purge. Bump the suffix again if the shape changes.
-  return cached("platform:stats:v2", async () => {
+  // No per-key version needed here — cached() namespaces every key with a
+  // global CACHE_VERSION, so the old 3-hour "platform:stats" entry (which
+  // kept its original expiry regardless of the shorter TTL passed here, and
+  // was confirmed live serving books:5240 while the real counter was at
+  // 5336) is already unreachable.
+  return cached("platform:stats", async () => {
     const [db, catalogDb] = await Promise.all([getDb(), getCatalogDb()]);
     const [counts, reviews, readers] = await Promise.all([
       catalogDb.prepare("SELECT books, authors FROM catalog_counts WHERE id = 1").first(),
@@ -1363,18 +1369,12 @@ export async function getPlatformStats() {
       ).bind(books, authors).run().catch(() => {});
     }
     return { books, authors, reviews: reviews.n, readers: readers.n };
-    // Short TTL on purpose. This used to sit at 3 hours because getting these
-    // numbers meant COUNT(*) scans over the whole catalog — expensive enough
-    // that a stale figure was the lesser evil. Now books/authors are a single
-    // maintained row and the other two are tiny user-database lookups, so the
-    // whole call is a handful of rows and the stat bar can track the import in
-    // near-real time instead of lagging hours behind.
-    //
-    // Not left completely uncached: the footer renders this on EVERY page, and
-    // crawlers are effectively all of this site's traffic — a minute of
-    // caching collapses a whole crawl pass into one read while still looking
-    // live to a person watching books land.
-  }, 60);
+    // 30-second window: a visitor landing on the site reads this once, every
+    // page they view in the next 30s reuses it, and a reload after that reads
+    // the single counter row again. That's the whole cost — one row, not a
+    // scan — so the number tracks the import almost live without the footer
+    // (which renders on EVERY page) turning into repeated database work.
+  }, 30);
 }
 
 // Starting a discussion requires a book or author to be picked first — the

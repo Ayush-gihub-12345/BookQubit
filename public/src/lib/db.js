@@ -435,6 +435,20 @@ export async function getCatalogDb() {
 // almost no real visitors. An in-memory hit never touches KV or D1, so it
 // keeps working even while KV's quota is blown. Capped and LRU-ish evicted
 // so it can't grow unbounded in a long-lived isolate.
+// Namespace for every cache key. BUMP THIS whenever a cached value's SHAPE
+// changes, even if the key itself stays the same.
+//
+// This exists because of a real production failure: relatedBooks() used to
+// cache a raw D1 result ({ results: [...] }) and was later changed to cache a
+// plain array, under the SAME key. KV entries outlive a deploy, so the new
+// code read an old-shaped object and did `rows.map(...)` on it — "map is not
+// a function" — which surfaced as an unexplained "Something went wrong"
+// Server Component error on pages that had been visited before the deploy,
+// and healed on its own only when the stale entry expired. A version prefix
+// makes every old entry unreachable the moment it's bumped, so a shape change
+// can never be read back by code that expects the new shape.
+const CACHE_VERSION = "v2";
+
 const MEM_MAX = 400;
 const memCache = new Map();
 function memGet(key) {
@@ -453,63 +467,40 @@ function memSet(key, value, ttlSeconds) {
   memCache.set(key, { value, exp: Date.now() + ttlSeconds * 1000 });
 }
 
-// Read-through cache: in-memory first (fast, free, no quota), then KV as a
-// slower cross-isolate/cross-cold-start fallback. Degrades gracefully if
-// the CACHE binding is missing (e.g. local `next dev`) or if KV itself
-// errors — a real failure mode hit in production, the free tier's daily
-// kv.put() write quota exceeded once enough functions started caching
-// distinct per-book/per-query keys. Before this, an unhandled put()/get()
-// rejection here propagated straight up through getBook/queryBooks/etc.,
-// which broke the whole page's data-fetching and left it stuck on its
-// loading skeleton forever — caching must never be able to take the actual
-// page down; worst case it just falls back to an uncached read for that
-// one request, and the in-memory layer means that's now rare even when KV
-// is unavailable.
+// In-memory only. KV is deliberately NOT used here any more.
+//
+// Every problem this cache has caused in production came from KV, not from
+// caching itself: the free tier's 1,000-writes/day quota was being exhausted
+// (only ~26 keys were ever actually persisting), a failed put() silently
+// degraded hot queries to uncached full scans, and — worst — KV entries
+// outlive deploys, so a cached value written by old code was read back by new
+// code expecting a different shape and crashed the render.
+//
+// An in-process Map has none of that: no quota, no network hop, no cost, and
+// it dies with the isolate, so a deploy can never serve a stale shape. The
+// tradeoff is honest and small — a cold isolate re-runs the query once, and
+// the queries behind it are now cheap enough (single-row reads and indexed
+// lookups) that this is fine. Client-side caching (localStorage + the Next
+// router cache) covers repeat visits from the same reader.
 export async function cached(key, fn, ttl = 300) {
-  const memHit = memGet(key);
+  const vkey = `${CACHE_VERSION}:${key}`;
+  const memHit = memGet(vkey);
   if (memHit !== undefined) return memHit;
 
-  let kv;
-  try {
-    const { env } = await getCloudflareContext({ async: true });
-    kv = env.CACHE;
-  } catch {
-    /* no bindings available */
-  }
-
-  if (kv) {
-    let hit = null;
-    try {
-      hit = await kv.get(key, "json");
-    } catch {
-      /* KV read failed — fall through to a fresh read below */
-    }
-    if (hit !== null) {
-      memSet(key, hit, ttl);
-      return hit;
-    }
-  }
-
   const value = await fn();
-  memSet(key, value, ttl);
-  if (kv) {
-    try {
-      await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
-    } catch {
-      /* KV write failed (e.g. daily quota exceeded) — the page still gets
-         its data, and the in-memory cache still covers repeat requests on
-         this isolate even though this key won't survive a cold start. */
-    }
-  }
+  memSet(vkey, value, ttl);
   return value;
 }
 
 // Force a cached() key to be recomputed on next read — used after admin
 // writes so edits (e.g. site settings) show up immediately, not after TTL.
+// Note: this only clears the CURRENT isolate's copy. With KV gone there is no
+// shared cache to purge, so another isolate can still serve its own entry for
+// up to that key's TTL. That's acceptable because the values it's used on
+// (site settings) are short-lived and low-stakes; it is NOT a guarantee of
+// instant global consistency.
 export async function invalidate(key) {
-  memCache.delete(key);
-  try {
-    const { env } = await getCloudflareContext({ async: true });
-    if (env.CACHE) await env.CACHE.delete(key);
-  } catch { /* no bindings available, nothing to invalidate */ }
+  // Same version prefix cached() writes under, or this deletes a key that was
+  // never written and the stale value survives.
+  memCache.delete(`${CACHE_VERSION}:${key}`);
 }
