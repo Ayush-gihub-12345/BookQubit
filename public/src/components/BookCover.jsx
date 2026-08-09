@@ -18,6 +18,20 @@ const GRADIENTS = [
 
 const hash = (s = "") => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
+// Open Library serves three fixed sizes per cover: -S, -M (~180px) and -L
+// (~500px+). The import stores the -L URL, but grid/list cards render these
+// at roughly 150-200px wide, so every card was downloading an image several
+// times larger than it displays — Lighthouse flagged ~1,561 KiB (desktop) /
+// 496 KiB (mobile) of wasted image bytes on the homepage alone.
+//
+// Only the hero keeps -L, since that one IS displayed large (and is the LCP
+// element). Anything else steps down to -M. Untouched if the URL isn't an
+// Open Library cover, so custom/admin-set covers are never rewritten.
+function sizedCover(url, priority) {
+  if (priority || !url) return url;
+  return url.replace(/^(https:\/\/covers\.openlibrary\.org\/b\/[a-z]+\/[^/]+)-L\.jpg$/i, "$1-M.jpg");
+}
+
 export default function BookCover({ title, author, cover_url, className = "", imgClassName = "", priority = false }) {
   const [broken, setBroken] = useState(false);
 
@@ -25,10 +39,17 @@ export default function BookCover({ title, author, cover_url, className = "", im
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={cover_url}
+        src={sizedCover(cover_url, priority)}
         alt={`Cover of ${title}${author ? ` by ${author}` : ""}`}
         loading={priority ? "eager" : "lazy"}
-        decoding="async"
+        // The hero cover is the homepage's Largest Contentful Paint element.
+        // `eager` only stops it being deferred — it still queues behind
+        // everything discovered earlier, which is what Lighthouse reports as
+        // "LCP request discovery". fetchPriority moves it to the front.
+        // Deliberately not set elsewhere: prioritising everything prioritises
+        // nothing, and grid covers should stay lazy and low priority.
+        fetchPriority={priority ? "high" : undefined}
+        decoding={priority ? "sync" : "async"}
         onError={() => setBroken(true)}
         className={`h-full w-full object-cover ${imgClassName}`}
       />

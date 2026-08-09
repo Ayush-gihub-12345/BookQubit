@@ -1,5 +1,31 @@
 import Script from "next/script";
+import { Inter, Sora } from "next/font/google";
 import "./globals.css";
+
+// Downloaded at build time and served from our own origin, instead of the
+// runtime <link> to fonts.googleapis.com that used to live in <head>.
+//
+// That link was render-blocking AND cross-origin, so a mobile visitor paid
+// DNS + TLS + CSS download to googleapis.com and only THEN discovered the
+// font files on a second origin (gstatic.com) — all before first paint.
+// Lighthouse measured it as the largest single blocker on mobile
+// (render-blocking requests ~1,030 ms, with LCP at 8.3s).
+//
+// next/font inlines the @font-face rules and serves the files locally, so
+// there is no blocking round-trip and no extra origins. `display: "swap"`
+// keeps text readable in a fallback face while they load.
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+  display: "swap",
+});
+const sora = Sora({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-sora",
+  display: "swap",
+});
 import { getLang, RTL } from "@/lib/lang";
 import { getTheme } from "@/lib/theme";
 import { ToastProvider } from "@/components/Toast";
@@ -22,14 +48,20 @@ export default async function RootLayout({ children }) {
   const [lang, theme] = await Promise.all([getLang(), getTheme()]);
 
   return (
-    <html lang={lang} dir={RTL.includes(lang) ? "rtl" : "ltr"} data-theme={theme}>
+    <html
+      lang={lang}
+      dir={RTL.includes(lang) ? "rtl" : "ltr"}
+      data-theme={theme}
+      className={`${inter.variable} ${sora.variable}`}
+    >
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap"
-          rel="stylesheet"
-        />
+        {/* No font <link> — next/font inlines @font-face and serves the files
+            from this origin, so the googleapis/gstatic preconnects are gone
+            too (they warmed connections we no longer make).
+            Preconnect to the cover CDN instead: every card image comes from
+            there, so paying that handshake early is a real win. */}
+        <link rel="preconnect" href="https://covers.openlibrary.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://covers.openlibrary.org" />
         <link rel="alternate" type="application/rss+xml" title="BookQubit — New Releases" href="/feed.xml" />
       </head>
       <body className="flex min-h-screen flex-col antialiased">

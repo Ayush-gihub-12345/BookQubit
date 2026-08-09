@@ -195,7 +195,13 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       <div className="h-0.5 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700" />
       {/* Row 1 */}
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
-        <Link href="/" prefetch={false} className="flex shrink-0 items-center gap-2">
+        {/* aria-label because the visible "BookQubit" text beside the mark is
+            `hidden` below the sm breakpoint and LogoMark is aria-hidden — so
+            on a phone this link had no accessible name at all, which is what
+            Lighthouse reported as "links do not have a discernible name" on
+            mobile only. The label also covers the icon-only rendering for
+            screen-reader users on any width. */}
+        <Link href="/" prefetch={false} aria-label="BookQubit — home" className="flex shrink-0 items-center gap-2">
           <LogoMark size={36} />
           <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
             Book<span className="text-brand-600">Qubit</span>
