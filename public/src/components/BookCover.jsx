@@ -28,7 +28,19 @@ export default function BookCover({ title, author, cover_url, className = "", im
         src={cover_url}
         alt={`Cover of ${title}${author ? ` by ${author}` : ""}`}
         loading={priority ? "eager" : "lazy"}
-        decoding="async"
+        // The hero cover is the Largest Contentful Paint element on the
+        // homepage. `eager` alone only stops it being deferred — it still
+        // queues behind everything else the browser found first, which is
+        // what Lighthouse reports as "LCP request discovery" (flagged on
+        // both the mobile and desktop runs, with mobile LCP at 8.3s).
+        // fetchPriority="high" moves it to the front of the network queue.
+        // Deliberately not set on non-priority covers: marking everything
+        // high priority is the same as marking nothing.
+        fetchPriority={priority ? "high" : undefined}
+        // Sync decoding for the LCP image so it can paint the moment it
+        // lands rather than waiting for an async decode slot; async
+        // everywhere else keeps long grids off the main thread.
+        decoding={priority ? "sync" : "async"}
         onError={() => setBroken(true)}
         className={`h-full w-full object-cover ${imgClassName}`}
       />
