@@ -34,7 +34,10 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   const [params, setParams] = useState(initialFilters);
   const [books, setBooks] = useState(initialData.books);
   const [total, setTotal] = useState(initialData.total);
-  const [pages, setPages] = useState(initialData.pages);
+  // Comes straight from the query fetching one row past the page size, so
+  // it reflects what's actually in the database right now — unlike a page
+  // count derived from the deliberately long-cached total.
+  const [hasMore, setHasMore] = useState(initialData.hasMore);
   const [page, setPage] = useState(initialData.page || 1);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -55,7 +58,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     const applyResult = (json) => {
       setBooks(json.books);
       setTotal(json.total);
-      setPages(json.pages);
+      setHasMore(json.hasMore);
       setPage(1);
       setLoading(false);
       const url = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)));
@@ -85,6 +88,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     try {
       const json = await fetch(`/api/books?${qs}`).then((r) => r.json());
       setBooks((prev) => [...prev, ...json.books]);
+      setHasMore(json.hasMore);
       setPage(nextPage);
     } finally { setLoadingMore(false); }
   };
@@ -133,7 +137,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </h1>
           <p className="text-muted mt-1 text-sm">
             {total.toLocaleString()} {total === 1 ? "book" : "books"}
-            {pages > 1 && ` · showing ${books.length}`}
+            {(hasMore || books.length < total) && ` · showing ${books.length}`}
             {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-600"><span className="spinner" /> updating</span>}
           </p>
         </div>
@@ -312,7 +316,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             </div>
           )}
 
-          {page < pages && (
+          {hasMore && (
             <div className="mt-10 flex flex-col items-center gap-2">
               <button onClick={loadMore} disabled={loadingMore} className="btn-primary !px-8">
                 {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}

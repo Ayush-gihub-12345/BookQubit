@@ -132,51 +132,84 @@ export async function queryBooks(lang, opts = {}) {
   };
   const orderBy = ORDER[sort] || ORDER.default;
   const wsql = where.join(" AND ");
-  // Different editions of the same work (different ISBN -> different import
-  // slug) were landing as separate rows — e.g. 3 near-identical
-  // "Winnie-the-Pooh" cards. Collapse to one row per (title, author) via the
-  // lowest id (first imported edition) both for the page of results and for
-  // the count that drives pagination, so page counts stay consistent with
-  // what's actually shown. COLLATE NOCASE (not LOWER()) so this can use
-  // idx_books_dedup — verified live with EXPLAIN QUERY PLAN that LOWER()
-  // wrapping bypasses the index entirely and forces a full scan.
-  const dedupSql = `SELECT MIN(id) AS id FROM books WHERE ${wsql} GROUP BY title COLLATE NOCASE, author COLLATE NOCASE`;
 
-  // A GROUP BY still has to touch every row matching the filters no matter
-  // how well-indexed it is, so the real fix for repeat cost is caching the
-  // whole result — this page's D1 reads happen once per TTL window instead
-  // of once per request. Verified live via Cloudflare's D1 dashboard: this
-  // uncached query alone was reading tens of millions of rows/day with the
-  // continuous import chain and crawler traffic hitting it constantly, far
-  // past the free tier's 5M-rows/day budget, despite very little real
-  // human traffic. Keyed on every filter/sort/page combination.
-  const cacheKey = `query:${lang}:${JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort, page, perPage })}`;
-  const { rows, count } = await cached(cacheKey, async () => {
-    let [cnt, r] = await Promise.all([
-      db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...binds).first(),
-      db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-        .bind(...binds, perPage, (page - 1) * perPage).all(),
-    ]);
+  // This used to wrap everything in
+  //   SELECT MIN(id) FROM books WHERE ... GROUP BY title, author
+  // to collapse duplicate editions of the same work, and then used that
+  // subquery TWICE per request (once for COUNT, once for `id IN (...)`).
+  // A GROUP BY can't stop early, so both passes scanned every matching row.
+  // Measured live on Cloudflare's D1 dashboard: this single query was 81%
+  // of all database runtime — 24 calls reading 125,000 rows in two minutes,
+  // from one person browsing.
+  //
+  // It was also unnecessary. The duplicates it defended against are a data
+  // problem, and the data is now clean: import-time dedup (title+author vs
+  // the titles DB) stops new ones, and the 23 stale rows that predated that
+  // were deleted, verified 0 remaining out of 5,233. So the filtering is
+  // now plain indexed WHERE clauses that stop at LIMIT.
+  //
+  // If duplicates ever reappear, fix them at the source (import dedup +
+  // a cleanup pass) rather than reintroducing a full scan on every read.
+  // Two different keys on purpose. Sorting reorders rows but can never
+  // change how MANY there are, so the count is keyed WITHOUT `sort` — one
+  // cached total serves every sort order of the same filter set instead of
+  // recomputing an identical number for each.
+  const countKey = JSON.stringify({ q, category, collection, tag, format, country, minRating, mood });
+  const rowsKey = JSON.stringify({ ...JSON.parse(countKey), sort });
 
-    // Empty language falls back to English rows with the same filters.
-    if (!cnt.n && lang !== "en") {
-      const enBinds = [...binds];
-      enBinds[0] = "en";
-      [cnt, r] = await Promise.all([
-        db.prepare(`SELECT COUNT(*) AS n FROM (${dedupSql})`).bind(...enBinds).first(),
-        db.prepare(`SELECT * FROM books WHERE id IN (${dedupSql}) ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-          .bind(...enBinds, perPage, (page - 1) * perPage).all(),
-      ]);
-    }
-    return { rows: r.results, count: cnt.n };
-  }, 300);
+  // `effLang` (not the requested `lang`) keys the cache, so the English
+  // fallback below can't collide with the original language's entry — with
+  // a shared key the fallback would just re-read the cached empty result
+  // and the page would stay blank forever.
+  //
+  // COUNT(*) is the one part that still has to walk every matching row —
+  // SQLite has no stored row count, so there's no cheaper exact answer.
+  // It's kept only because the UI prints a real "N books" total; a long TTL
+  // means it runs about once an hour per filter set rather than on every
+  // request, and it's no longer needed to drive pagination at all (see
+  // `hasMore` below).
+  const runCount = (effLang, b) =>
+    cached(`count:${effLang}:${countKey}`, async () => {
+      const r = await db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...b).first();
+      return r?.n || 0;
+    }, 3600);
+
+  // Fetches ONE row more than the page needs. If that extra row comes back,
+  // there's another page — which is all the "Load more" button ever needed
+  // to know. This is why the total no longer gates pagination: a stale or
+  // slightly-off cached count can't hide real results or show a dead
+  // button, because "is there more" is answered by the rows themselves.
+  // Cost per view stays flat at perPage+1 rows (33), no matter how large
+  // the catalog grows.
+  const runRows = (effLang, b) =>
+    cached(`rows:${effLang}:${rowsKey}:${page}:${perPage}`, async () => {
+      const r = await db
+        .prepare(`SELECT * FROM books WHERE ${wsql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
+        .bind(...b, perPage + 1, (page - 1) * perPage).all();
+      return r.results;
+    }, 300);
+
+  let [count, rows] = await Promise.all([runCount(lang, binds), runRows(lang, binds)]);
+
+  // Empty language falls back to English rows with the same filters.
+  if (!rows.length && lang !== "en") {
+    const enBinds = [...binds];
+    enBinds[0] = "en";
+    [count, rows] = await Promise.all([runCount("en", enBinds), runRows("en", enBinds)]);
+  }
+
+  const hasMore = rows.length > perPage;
+  const pageRows = hasMore ? rows.slice(0, perPage) : rows;
 
   const { amazon_assoc_tag } = await getSiteSettings();
   return {
-    books: rows.map((r) => mapBook(r, amazon_assoc_tag)),
+    books: pageRows.map((r) => mapBook(r, amazon_assoc_tag)),
     total: count,
     page: Number(page),
+    // Kept for any caller still reading it, but `hasMore` is the accurate
+    // signal — this is derived from a deliberately long-cached count.
     pages: Math.max(1, Math.ceil(count / perPage)),
+    hasMore,
   };
 }
 
