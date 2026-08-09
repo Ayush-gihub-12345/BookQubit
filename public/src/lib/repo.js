@@ -150,37 +150,20 @@ export async function queryBooks(lang, opts = {}) {
   //
   // If duplicates ever reappear, fix them at the source (import dedup +
   // a cleanup pass) rather than reintroducing a full scan on every read.
-  // Two different keys on purpose. Sorting reorders rows but can never
-  // change how MANY there are, so the count is keyed WITHOUT `sort` — one
-  // cached total serves every sort order of the same filter set instead of
-  // recomputing an identical number for each.
-  const countKey = JSON.stringify({ q, category, collection, tag, format, country, minRating, mood });
-  const rowsKey = JSON.stringify({ ...JSON.parse(countKey), sort });
-
-  // `effLang` (not the requested `lang`) keys the cache, so the English
-  // fallback below can't collide with the original language's entry — with
-  // a shared key the fallback would just re-read the cached empty result
-  // and the page would stay blank forever.
-  //
-  // COUNT(*) is the one part that still has to walk every matching row —
-  // SQLite has no stored row count, so there's no cheaper exact answer.
-  // It's kept only because the UI prints a real "N books" total; a long TTL
-  // means it runs about once an hour per filter set rather than on every
-  // request, and it's no longer needed to drive pagination at all (see
-  // `hasMore` below).
-  const runCount = (effLang, b) =>
-    cached(`count:${effLang}:${countKey}`, async () => {
-      const r = await db.prepare(`SELECT COUNT(*) AS n FROM books WHERE ${wsql}`).bind(...b).first();
-      return r?.n || 0;
-    }, 3600);
+  // No COUNT(*) anywhere in this path, by design. SQLite stores no row
+  // count, so an exact total means walking every matching row — it was
+  // measured at 81% of all D1 runtime, purely to print a number. The UI now
+  // says "showing 32 of many" instead, and pagination is driven by the rows
+  // themselves (below), so nothing here scales with catalog size.
+  const rowsKey = JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort });
 
   // Fetches ONE row more than the page needs. If that extra row comes back,
-  // there's another page — which is all the "Load more" button ever needed
-  // to know. This is why the total no longer gates pagination: a stale or
-  // slightly-off cached count can't hide real results or show a dead
-  // button, because "is there more" is answered by the rows themselves.
-  // Cost per view stays flat at perPage+1 rows (33), no matter how large
-  // the catalog grows.
+  // there's another page — which is all "Load more" ever needed to know.
+  // Cost per view stays flat at perPage+1 rows (33) no matter how large the
+  // catalog grows. `effLang` (not the requested `lang`) keys the cache so
+  // the English fallback below can't collide with the original language's
+  // entry — with a shared key the fallback would re-read the cached empty
+  // result and the page would stay blank forever.
   const runRows = (effLang, b) =>
     cached(`rows:${effLang}:${rowsKey}:${page}:${perPage}`, async () => {
       const r = await db
@@ -189,13 +172,13 @@ export async function queryBooks(lang, opts = {}) {
       return r.results;
     }, 300);
 
-  let [count, rows] = await Promise.all([runCount(lang, binds), runRows(lang, binds)]);
+  let rows = await runRows(lang, binds);
 
   // Empty language falls back to English rows with the same filters.
   if (!rows.length && lang !== "en") {
     const enBinds = [...binds];
     enBinds[0] = "en";
-    [count, rows] = await Promise.all([runCount("en", enBinds), runRows("en", enBinds)]);
+    rows = await runRows("en", enBinds);
   }
 
   const hasMore = rows.length > perPage;
@@ -204,12 +187,10 @@ export async function queryBooks(lang, opts = {}) {
   const { amazon_assoc_tag } = await getSiteSettings();
   return {
     books: pageRows.map((r) => mapBook(r, amazon_assoc_tag)),
-    total: count,
     page: Number(page),
-    // Kept for any caller still reading it, but `hasMore` is the accurate
-    // signal — this is derived from a deliberately long-cached count.
-    pages: Math.max(1, Math.ceil(count / perPage)),
     hasMore,
+    // `total` is intentionally absent — callers should render a count-free
+    // label ("showing N of many") and use `hasMore` for pagination.
   };
 }
 
@@ -1300,16 +1281,42 @@ export async function updateSiteSettings(patch) {
 }
 
 // Platform-wide trust stats for the footer trust bar.
+// Books/authors come from `catalog_counts` — a single maintained row, read
+// in ONE row lookup instead of three full-table COUNT(*) scans. The import
+// worker increments it as rows land (see upsertBatch in the cron worker),
+// so the number stays live without anything ever counting on read.
+//
+// Reviews/readers still count: they live in the small user database (a few
+// rows today, and they grow only when a real person acts), so a scan there
+// costs almost nothing — not worth maintaining a counter for.
 export async function getPlatformStats() {
   return cached("platform:stats", async () => {
     const [db, catalogDb] = await Promise.all([getDb(), getCatalogDb()]);
-    const [books, authors, reviews, readers] = await Promise.all([
-      catalogDb.prepare("SELECT COUNT(DISTINCT slug) AS n FROM books").first(),
-      catalogDb.prepare("SELECT COUNT(*) AS n FROM authors").first(),
+    const [counts, reviews, readers] = await Promise.all([
+      catalogDb.prepare("SELECT books, authors FROM catalog_counts WHERE id = 1").first(),
       db.prepare("SELECT COUNT(*) AS n FROM shelf WHERE review IS NOT NULL AND review != ''").first(),
       db.prepare("SELECT COUNT(*) AS n FROM users").first(),
     ]);
-    return { books: books.n, authors: authors.n, reviews: reviews.n, readers: readers.n };
+
+    // Falls back to real counts if the row hasn't been seeded yet (fresh
+    // environment, or the table was just created) — better a one-off scan
+    // than a stat bar reading zero.
+    let books = counts?.books ?? 0;
+    let authors = counts?.authors ?? 0;
+    if (!books && !authors) {
+      const [b, a] = await Promise.all([
+        catalogDb.prepare("SELECT COUNT(*) AS n FROM books").first(),
+        catalogDb.prepare("SELECT COUNT(*) AS n FROM authors").first(),
+      ]);
+      books = b?.n || 0;
+      authors = a?.n || 0;
+      await catalogDb.prepare(
+        `INSERT INTO catalog_counts (id, books, authors, publications)
+         VALUES (1, ?1, ?2, (SELECT COUNT(*) FROM publications))
+         ON CONFLICT(id) DO UPDATE SET books = ?1, authors = ?2`
+      ).bind(books, authors).run().catch(() => {});
+    }
+    return { books, authors, reviews: reviews.n, readers: readers.n };
   }, 10800);
 }
 

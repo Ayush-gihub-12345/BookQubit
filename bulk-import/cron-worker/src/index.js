@@ -830,6 +830,22 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
               .bind(r.lang || "en", r.name)
           ));
         }
+
+        // Keep the running totals in `catalog_counts` in step with what just
+        // landed. The site's stat bar reads that single row instead of
+        // running COUNT(*) over books/authors/publications — those counts
+        // scan every row, and SQLite has no stored row count, so the only
+        // way to make them O(1) is to maintain the number on write.
+        // Whitelisted rather than interpolating `table` straight into SQL.
+        const COUNT_COLUMN = { books: "books", authors: "authors", publications: "publications" };
+        const column = COUNT_COLUMN[table];
+        if (column) {
+          // Never let a stats update break an import that already succeeded —
+          // the row is re-seedable from the real tables at any time.
+          await db.prepare(
+            `UPDATE catalog_counts SET ${column} = ${column} + ?1 WHERE id = 1`
+          ).bind(newlyInserted.length).run().catch(() => {});
+        }
       }
     }
     return insertedCount;

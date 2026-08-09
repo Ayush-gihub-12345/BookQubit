@@ -33,10 +33,10 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   const { page: _ignoredPage, ...initialFilters } = initialParams;
   const [params, setParams] = useState(initialFilters);
   const [books, setBooks] = useState(initialData.books);
-  const [total, setTotal] = useState(initialData.total);
-  // Comes straight from the query fetching one row past the page size, so
-  // it reflects what's actually in the database right now — unlike a page
-  // count derived from the deliberately long-cached total.
+  // No exact total: getting one meant a COUNT(*) that walked every matching
+  // row on a query users hit constantly. `hasMore` comes from the query
+  // fetching one row past the page size, so it's exact about the only thing
+  // that matters here — whether another page exists.
   const [hasMore, setHasMore] = useState(initialData.hasMore);
   const [page, setPage] = useState(initialData.page || 1);
   const [loading, setLoading] = useState(false);
@@ -57,7 +57,6 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     );
     const applyResult = (json) => {
       setBooks(json.books);
-      setTotal(json.total);
       setHasMore(json.hasMore);
       setPage(1);
       setLoading(false);
@@ -136,8 +135,9 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             {q ? `Results for “${q}”` : category || collection || (tag && `#${tag}`) || "All Books"}
           </h1>
           <p className="text-muted mt-1 text-sm">
-            {total.toLocaleString()} {total === 1 ? "book" : "books"}
-            {(hasMore || books.length < total) && ` · showing ${books.length}`}
+            {hasMore
+              ? `Showing ${books.length} of many`
+              : `${books.length} ${books.length === 1 ? "book" : "books"}`}
             {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-600"><span className="spinner" /> updating</span>}
           </p>
         </div>
@@ -322,7 +322,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
                 {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}
                 {loadingMore ? "Loading…" : "Load More"}
               </button>
-              <p className="text-muted text-xs">{books.length} of {total.toLocaleString()} loaded</p>
+              <p className="text-muted text-xs">{books.length} loaded</p>
             </div>
           )}
         </div>

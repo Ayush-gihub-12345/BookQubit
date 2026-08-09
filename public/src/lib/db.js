@@ -318,6 +318,20 @@ CREATE TABLE IF NOT EXISTS ol_fetch_state (
   query_index INTEGER DEFAULT 0,
   offset_val INTEGER DEFAULT 0
 );
+
+-- Running totals for the site's stat bar, maintained on write by the import
+-- worker (see upsertBatch in bulk-import/cron-worker) instead of counted on
+-- read. SQLite stores no row count, so COUNT(*) over books/authors/
+-- publications scans every row every time — at catalog scale that was one
+-- of the larger recurring read costs for three numbers that change slowly.
+-- Single row (id=1). Safe to re-seed from the real tables at any time:
+--   UPDATE catalog_counts SET books=(SELECT COUNT(*) FROM books), ...
+CREATE TABLE IF NOT EXISTS catalog_counts (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  books INTEGER DEFAULT 0,
+  authors INTEGER DEFAULT 0,
+  publications INTEGER DEFAULT 0
+);
 `;
 
 // Additive column migrations for tables that may pre-date these columns.

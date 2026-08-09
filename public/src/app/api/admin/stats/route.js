@@ -2,79 +2,42 @@ import { NextResponse } from "next/server";
 import { getDb, getCatalogDb } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
-function fillMonths(rows, key = "n") {
-  const months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - (5 - i));
-    return { month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleDateString(undefined, { month: "short" }), [key]: 0 };
-  });
-  for (const r of rows) {
-    const m = months.find((x) => x.month === r.month);
-    if (m) m[key] = r.n;
-  }
-  return months;
-}
-
+// Deliberately small. This used to run 19 queries per dashboard load,
+// including four COUNT(*) scans over the catalog plus GROUP BYs for
+// top-countries / by-language / six-month signup and read histograms —
+// analytics nobody was acting on, recomputed every time the page opened.
+//
+// Now: catalog totals come from the single maintained `catalog_counts` row
+// (the import worker increments it on write, so nothing counts on read),
+// and the rest are small indexed lookups against the user database, which
+// only grows when a real person does something.
 export async function GET() {
   if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const [db, catalogDb] = await Promise.all([getDb(), getCatalogDb()]);
 
-  const [
-    books, authors, publications, comics, topRated, topCountries, byLanguage, countryCount, langCount,
-  ] = await Promise.all([
-    catalogDb.prepare("SELECT COUNT(*) AS n FROM books").first(),
-    catalogDb.prepare("SELECT COUNT(*) AS n FROM authors").first(),
-    catalogDb.prepare("SELECT COUNT(*) AS n FROM publications").first(),
-    catalogDb.prepare("SELECT COUNT(*) AS n FROM comics").first(),
-    catalogDb.prepare("SELECT title, author, rating FROM books WHERE lang='en' AND rating IS NOT NULL ORDER BY rating DESC LIMIT 5").all(),
-    catalogDb.prepare(
-      `SELECT country, COUNT(*) AS n FROM books WHERE lang='en' AND country IS NOT NULL AND country != ''
-       GROUP BY country ORDER BY n DESC LIMIT 8`
-    ).all(),
-    catalogDb.prepare("SELECT lang, COUNT(*) AS n FROM books GROUP BY lang ORDER BY n DESC").all(),
-    catalogDb.prepare("SELECT COUNT(DISTINCT country) AS n FROM books WHERE lang='en' AND country IS NOT NULL AND country != ''").first(),
-    catalogDb.prepare("SELECT COUNT(DISTINCT lang) AS n FROM books").first(),
-  ]);
-
-  const [
-    users, reviews, discussions, mostActive, newUsers, signupsByMonth, readsByMonth,
-    pendingReports, pendingContact, pendingRequests,
-  ] = await Promise.all([
-    db.prepare("SELECT COUNT(*) AS n FROM users").first(),
-    db.prepare("SELECT COUNT(*) AS n FROM shelf WHERE review IS NOT NULL AND review != ''").first(),
-    db.prepare("SELECT COUNT(*) AS n FROM discussions").first(),
-    db.prepare(
-      `SELECT u.name, u.photo_url, COUNT(*) AS n FROM shelf s JOIN users u ON u.id=s.user_id
-       GROUP BY u.id ORDER BY n DESC LIMIT 5`
-    ).all(),
-    db.prepare("SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now','-7 days')").first(),
-    db.prepare(
-      `SELECT strftime('%Y-%m', created_at) AS month, COUNT(*) AS n FROM users
-       WHERE created_at >= datetime('now','-6 months') GROUP BY month`
-    ).all(),
-    db.prepare(
-      `SELECT strftime('%Y-%m', COALESCE(finished_at, updated_at)) AS month, COUNT(*) AS n FROM shelf
-       WHERE status='read' AND COALESCE(finished_at, updated_at) >= datetime('now','-6 months') GROUP BY month`
-    ).all(),
-    db.prepare("SELECT COUNT(*) AS n FROM reports WHERE resolved=0").first(),
-    db.prepare("SELECT COUNT(*) AS n FROM contact_messages WHERE resolved=0").first(),
-    db.prepare("SELECT COUNT(*) AS n FROM book_requests WHERE status='pending'").first(),
-  ]);
+  const [catalog, comics, users, reviews, discussions, pendingReports, pendingContact, pendingRequests] =
+    await Promise.all([
+      catalogDb.prepare("SELECT books, authors, publications FROM catalog_counts WHERE id = 1").first(),
+      // Comics is a tiny, hand-curated table — not worth a maintained counter.
+      catalogDb.prepare("SELECT COUNT(*) AS n FROM comics").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM users").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM shelf WHERE review IS NOT NULL AND review != ''").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM discussions").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM reports WHERE resolved=0").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM contact_messages WHERE resolved=0").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM book_requests WHERE status='pending'").first(),
+    ]);
 
   return NextResponse.json({
     counts: {
-      books: books.n, authors: authors.n, publications: publications.n, comics: comics.n,
-      users: users.n, reviews: reviews.n, discussions: discussions.n,
+      books: catalog?.books ?? 0,
+      authors: catalog?.authors ?? 0,
+      publications: catalog?.publications ?? 0,
+      comics: comics?.n ?? 0,
+      users: users.n,
+      reviews: reviews.n,
+      discussions: discussions.n,
     },
-    newUsers7d: newUsers.n,
-    topRated: topRated.results,
-    mostActive: mostActive.results,
-    signupsByMonth: fillMonths(signupsByMonth.results),
-    readsByMonth: fillMonths(readsByMonth.results),
-    topCountries: topCountries.results,
-    byLanguage: byLanguage.results,
-    globalReach: { countries: countryCount.n, languages: langCount.n },
     pending: { reports: pendingReports.n, contact: pendingContact.n, requests: pendingRequests.n },
   });
 }
