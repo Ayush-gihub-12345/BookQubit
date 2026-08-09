@@ -217,6 +217,14 @@ CREATE INDEX IF NOT EXISTS idx_books_author ON books(lang, author);
 -- in repo.js for the full before/after numbers.
 CREATE INDEX IF NOT EXISTS idx_books_cat_rating ON books(lang, category, rating DESC);
 CREATE INDEX IF NOT EXISTS idx_books_author_rating ON books(lang, author, rating DESC);
+-- For getBookAlternates (hreflang links), which runs on every book page and
+-- matches on isbn OR title. With neither column indexed that OR had
+-- to scan the whole table — measured at 5,298 rows read per book page, 47%
+-- of all database runtime. With both indexed SQLite switches to a
+-- MULTI-INDEX OR plan (verified via EXPLAIN QUERY PLAN) and reads 2 rows.
+-- Both sides of the OR need their own index; indexing only one still scans.
+CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn);
+CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
 
 CREATE TABLE IF NOT EXISTS authors (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

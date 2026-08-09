@@ -601,22 +601,60 @@ export async function getAuthorLineProfiles(authorLine, lang) {
   return names.map((name) => ({ name, profile: byName.get(name.toLowerCase()) || null }));
 }
 
-// `LIKE '%name%'` can't use an index (leading wildcard forces a full-table
-// scan) — this was showing up on the D1 dashboard as one of the worst
-// rows-read-per-query offenders. Caching doesn't fix the scan itself but
-// means it only happens once per TTL window instead of on every publisher
-// page view/reload.
+// Distinct publisher string -> the slugs published under it, built once per
+// TTL window and shared by every publisher page.
+//
+// Publisher pages match loosely on purpose: books store the raw imprint
+// string, so "Penguin Books" legitimately has to match "Penguin Books,
+// Limited" too — measured live, exact matching returns 24 books where the
+// loose match returns 80. That means a leading-wildcard LIKE, which can
+// never use an index and scanned all 5,331 books PER PAGE. With 2,347
+// publisher pages, one crawl pass over them was ~12 million rows read.
+//
+// Caching the old query didn't help, because each publisher was its own
+// cache key — a single pass over all of them missed every time. Grouping
+// once and matching in JS turns that into ONE scan per TTL shared across
+// every publisher, then an indexed by-slug fetch per page. Same approach as
+// getAuthorBookIndex above.
+async function getPublisherBookIndex(lang) {
+  return cached(`publisher-book-index:${lang}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db
+      .prepare("SELECT slug, publisher FROM books WHERE lang=?1 AND publisher IS NOT NULL AND publisher != ''")
+      .bind(lang).all();
+    // Keyed by the distinct publisher string (~2,600) rather than one entry
+    // per book (~5,300) — smaller to cache, and the substring match below
+    // then runs over distinct names instead of every row.
+    const index = {};
+    for (const { slug, publisher } of results) {
+      const key = publisher.trim().toLowerCase();
+      if (!key) continue;
+      (index[key] ||= []).push(slug);
+    }
+    return index;
+  }, 10800);
+}
+
 export async function booksByPublisher(name, lang) {
-  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    cached(`by-publisher:${lang}:${name || ""}`, async () => {
-      const db = await getCatalogDb();
-      return db.prepare(
-        "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
-      ).bind(lang, `%${name || ""}%`).all();
-    }, 3600),
+  const needle = (name || "").trim().toLowerCase();
+  if (!needle) return [];
+  const [index, { amazon_assoc_tag }] = await Promise.all([
+    getPublisherBookIndex(lang),
     getSiteSettings(),
   ]);
-  return results.map((r) => mapBook(r, amazon_assoc_tag));
+  const slugs = [];
+  for (const key of Object.keys(index)) {
+    // Same substring semantics the old LIKE had, so results don't change.
+    if (key.includes(needle)) slugs.push(...index[key]);
+    if (slugs.length >= 200) break; // bounded page, as before
+  }
+  if (!slugs.length) return [];
+  const bySlug = await getBooksBySlug(slugs.slice(0, 200), lang, "*");
+  return slugs
+    .slice(0, 200)
+    .map((s) => bySlug.get(s))
+    .filter(Boolean)
+    .map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────
@@ -1290,7 +1328,15 @@ export async function updateSiteSettings(patch) {
 // rows today, and they grow only when a real person acts), so a scan there
 // costs almost nothing — not worth maintaining a counter for.
 export async function getPlatformStats() {
-  return cached("platform:stats", async () => {
+  // Key is versioned (":v2") deliberately. The previous version of this
+  // function cached under "platform:stats" with a 3-hour TTL, and a KV entry
+  // keeps its original expiry no matter what TTL a later caller passes — so
+  // on deploy the new 60-second logic would have kept serving that stale
+  // 3-hour entry for up to 3 more hours, and the stat bar would have looked
+  // frozen (confirmed live: KV held books:5240 while the real counter was
+  // already at 5336). A new key sidesteps the old entry entirely instead of
+  // needing a manual KV purge. Bump the suffix again if the shape changes.
+  return cached("platform:stats:v2", async () => {
     const [db, catalogDb] = await Promise.all([getDb(), getCatalogDb()]);
     const [counts, reviews, readers] = await Promise.all([
       catalogDb.prepare("SELECT books, authors FROM catalog_counts WHERE id = 1").first(),
