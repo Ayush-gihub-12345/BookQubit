@@ -1,5 +1,5 @@
 import PublishersBrowser from "@/components/PublishersBrowser";
-import { listPublications } from "@/lib/repo";
+import { queryPublishers, getPublisherTypes } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
 export const dynamic = "force-dynamic";
@@ -9,16 +9,20 @@ export const metadata = {
   alternates: { canonical: "/publications" },
 };
 
+// Same fix as /authors — only the first page is fetched server-side;
+// PublishersBrowser fetches the rest from /api/publishers.
 export default async function PublicationsPage() {
-  const pubs = await listPublications(await getLang());
-  // Same trim as /authors: PublishersBrowser only ever renders these fields
-  // (notable_authors/imprints/website/about are used on the publisher detail
-  // page, not this list), so shipping them here just inflates every load.
-  const lite = pubs.map((p) => ({
-    id: p.id, slug: p.slug, name: p.name, type: p.type,
-    headquarters: p.headquarters, logo_url: p.logo_url,
-    description: p.description ? p.description.slice(0, 200) : p.description,
-    founded: p.founded,
-  }));
-  return <PublishersBrowser publications={lite} />;
+  const lang = await getLang();
+  const [initial, types] = await Promise.all([
+    queryPublishers(lang, { sort: "name", page: 1, perPage: 60 }),
+    getPublisherTypes(lang),
+  ]);
+  return (
+    <PublishersBrowser
+      lang={lang}
+      initialPublications={initial.publications}
+      initialHasMore={initial.hasMore}
+      types={types}
+    />
+  );
 }

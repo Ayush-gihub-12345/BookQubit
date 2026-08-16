@@ -542,6 +542,86 @@ export async function listAuthors(lang) {
 export const listPublications = (lang) => listEntity("publications", lang, ["notable_authors", "imprints"]);
 export const listComics = (lang) => listEntity("comics", lang, ["characters", "creators"]);
 
+// Server-side search/filter/sort/page over the cached full authors list.
+// This exists because shipping the whole ~3,900-row list to the browser for
+// client-side filtering (the original /authors design) broke the page
+// outright: verified live that React's streaming SSR was emitting content
+// for that page's Suspense boundary but never emitting the matching reveal
+// script (found via the raw HTML: an `id="S:1"` div holding the real page
+// content, a `$RC("B:0","S:0")` reveal call for a DIFFERENT boundary, and no
+// reveal call for this one anywhere in the response) — the page rendered
+// completely blank, at every screen size, every time, reproducibly. That
+// correlates directly with payload size: ~1MB for /authors (all rows
+// embedded as hydration props) vs ~211KB for /books (already paginated).
+//
+// listAuthors() itself is untouched and still fully cached (3h) — this adds
+// zero DB reads, it just filters/sorts/slices that in-memory array per
+// request instead of serializing all of it to every visitor.
+export async function queryAuthors(lang, { q, country, sort, page = 1, perPage = 60 } = {}) {
+  const all = await listAuthors(lang);
+  let list = all;
+  if (country) list = list.filter((a) => a.country === country);
+  if (q) {
+    const term = q.trim().toLowerCase();
+    list = list.filter((a) => a.name.toLowerCase().includes(term));
+  }
+  const sorted = [...list];
+  if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
+  else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+  else if (sort === "birth") sorted.sort((a, b) => (b.birth_year || 0) - (a.birth_year || 0));
+  else sorted.sort((a, b) => a.name.localeCompare(b.name)); // default: name A-Z
+
+  const start = (Number(page) - 1) * perPage;
+  const pageItems = sorted.slice(start, start + perPage).map((a) => ({
+    id: a.id, slug: a.slug, name: a.name, country: a.country,
+    birth_year: a.birth_year, image_url: a.image_url,
+    bio: a.bio ? a.bio.slice(0, 200) : a.bio,
+  }));
+  return { authors: pageItems, hasMore: start + perPage < sorted.length };
+}
+
+// Country -> author count for the filter pill row, from the same cached
+// list, unaffected by the current search/filter (matches the pills' old
+// client-side behavior of always reflecting the full catalog).
+export async function getAuthorCountries(lang) {
+  const all = await listAuthors(lang);
+  const counts = new Map();
+  for (const a of all) if (a.country) counts.set(a.country, (counts.get(a.country) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14).map(([name, count]) => ({ name, count }));
+}
+
+// Same fix, same reasoning, for /publications.
+export async function queryPublishers(lang, { q, type, sort, page = 1, perPage = 60 } = {}) {
+  const all = await listPublications(lang);
+  let list = all;
+  if (type) list = list.filter((p) => p.type === type);
+  if (q) {
+    const term = q.trim().toLowerCase();
+    list = list.filter((p) => p.name.toLowerCase().includes(term));
+  }
+  const sorted = [...list];
+  if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
+  else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+  else if (sort === "founded") sorted.sort((a, b) => (Number(a.founded) || 9999) - (Number(b.founded) || 9999));
+  else sorted.sort((a, b) => a.name.localeCompare(b.name));
+
+  const start = (Number(page) - 1) * perPage;
+  const pageItems = sorted.slice(start, start + perPage).map((p) => ({
+    id: p.id, slug: p.slug, name: p.name, type: p.type,
+    headquarters: p.headquarters, logo_url: p.logo_url,
+    description: p.description ? p.description.slice(0, 200) : p.description,
+    founded: p.founded,
+  }));
+  return { publications: pageItems, hasMore: start + perPage < sorted.length };
+}
+
+export async function getPublisherTypes(lang) {
+  const all = await listPublications(lang);
+  const counts = new Map();
+  for (const p of all) if (p.type) counts.set(p.type, (counts.get(p.type) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
+}
+
 export async function getAuthor(slug, lang) {
   return (await listAuthors(lang)).find((a) => a.slug === decodeURIComponent(slug)) || null;
 }
