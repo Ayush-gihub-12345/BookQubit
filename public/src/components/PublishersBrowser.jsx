@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
@@ -12,10 +12,15 @@ const SORTS = [
   { value: "founded", label: "Oldest Founded" },
 ];
 
+// Caps how many cards mount at once — the catalog is now 2,300+ publishers;
+// search/filter/sort still run over the full in-memory list.
+const PAGE_SIZE = 60;
+
 export default function PublishersBrowser({ publications }) {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [sort, setSort] = useState("name");
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
   const types = useMemo(() => {
     const counts = new Map();
@@ -37,6 +42,10 @@ export default function PublishersBrowser({ publications }) {
     else if (sort === "founded") sorted.sort((a, b) => (Number(a.founded) || 9999) - (Number(b.founded) || 9999));
     return sorted;
   }, [publications, q, type, sort]);
+
+  useEffect(() => { setVisible(PAGE_SIZE); }, [q, type, sort]);
+
+  const shown = filtered.slice(0, visible);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -74,7 +83,7 @@ export default function PublishersBrowser({ publications }) {
       )}
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((p) => (
+        {shown.map((p) => (
           <Link key={p.id} href={`/publications/${p.slug}`} prefetch={false} className="card p-5">
             <div className="flex items-center gap-4">
               {p.logo_url && (
@@ -96,6 +105,15 @@ export default function PublishersBrowser({ publications }) {
           <Icon name="search" size={40} className="text-muted mx-auto" />
           <p className="mt-4 text-lg font-semibold">No publishers found</p>
           <p className="text-muted mt-1 text-sm">Try a different search or clear filters.</p>
+        </div>
+      )}
+
+      {visible < filtered.length && (
+        <div className="mt-10 flex flex-col items-center gap-2">
+          <button onClick={() => setVisible((v) => v + PAGE_SIZE)} className="btn-primary !px-8">
+            <Icon name="chevronDown" size={14} /> Load More
+          </button>
+          <p className="text-muted text-xs">{shown.length} of {filtered.length} shown</p>
         </div>
       )}
     </div>

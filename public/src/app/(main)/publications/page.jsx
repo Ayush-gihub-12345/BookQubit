@@ -11,5 +11,14 @@ export const metadata = {
 
 export default async function PublicationsPage() {
   const pubs = await listPublications(await getLang());
-  return <PublishersBrowser publications={pubs} />;
+  // Same trim as /authors: PublishersBrowser only ever renders these fields
+  // (notable_authors/imprints/website/about are used on the publisher detail
+  // page, not this list), so shipping them here just inflates every load.
+  const lite = pubs.map((p) => ({
+    id: p.id, slug: p.slug, name: p.name, type: p.type,
+    headquarters: p.headquarters, logo_url: p.logo_url,
+    description: p.description ? p.description.slice(0, 200) : p.description,
+    founded: p.founded,
+  }));
+  return <PublishersBrowser publications={lite} />;
 }
