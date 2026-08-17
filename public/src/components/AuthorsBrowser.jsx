@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
@@ -12,42 +12,72 @@ const SORTS = [
   { value: "birth", label: "Birth Year" },
 ];
 
-// Client-side search + country filter + sort over the full authors list —
-// the catalog here is small enough (hundreds, not the books-scale
-// thousands) that fetching once and filtering/sorting in-browser is
-// instant, no per-keystroke network round-trip needed.
-export default function AuthorsBrowser({ authors }) {
+const PER_PAGE = 60;
+// Author search is a cheap in-memory filter server-side (no DB read — see
+// queryAuthors in repo.js), so this only needs to avoid a network call per
+// keystroke, not protect a database. Much lighter than the book search's
+// 4-char/500ms rule, which exists to guard an actual SQL scan.
+const SEARCH_DEBOUNCE_MS = 250;
+
+// API-driven: fetches one page at a time from /api/authors instead of
+// receiving the whole catalog and filtering in the browser. The catalog
+// outgrew "fetch once, filter client-side" — verified live that shipping
+// the full ~3,900-row list as hydration props broke the page's server
+// render outright (React's streaming reveal script for that page's content
+// never got emitted, leaving the page blank at any screen size). See
+// queryAuthors() in repo.js for the full story.
+export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, countries }) {
   const [q, setQ] = useState("");
   const [country, setCountry] = useState("");
   const [sort, setSort] = useState("name");
+  const [authors, setAuthors] = useState(initialAuthors);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const firstRun = useRef(true);
+  const reqId = useRef(0);
+  const debounceRef = useRef(null);
 
-  const countries = useMemo(() => {
-    const counts = new Map();
-    authors.forEach((a) => { if (a.country) counts.set(a.country, (counts.get(a.country) || 0) + 1); });
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
-  }, [authors]);
-
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    const list = authors.filter((a) => {
-      if (country && a.country !== country) return false;
-      if (term && !a.name.toLowerCase().includes(term)) return false;
-      return true;
+  const fetchPage = async (targetPage, replace) => {
+    const id = ++reqId.current;
+    const qs = new URLSearchParams({
+      lang, sort, perPage: String(PER_PAGE), page: String(targetPage),
+      ...(q.trim() ? { q: q.trim() } : {}),
+      ...(country ? { country } : {}),
     });
-    const sorted = [...list];
-    if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name));
-    else if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
-    else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
-    else if (sort === "birth") sorted.sort((a, b) => (b.birth_year || 0) - (a.birth_year || 0));
-    return sorted;
-  }, [authors, q, country, sort]);
+    const json = await fetch(`/api/authors?${qs}`).then((r) => r.json());
+    if (id !== reqId.current) return; // a newer request superseded this one
+    setAuthors((prev) => (replace ? json.authors : [...prev, ...json.authors]));
+    setHasMore(json.hasMore);
+    setPage(targetPage);
+  };
+
+  // Filter/search/sort change -> debounce, then replace the list from page 1.
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    clearTimeout(debounceRef.current);
+    setLoading(true);
+    debounceRef.current = setTimeout(() => {
+      fetchPage(1, true).finally(() => setLoading(false));
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, country, sort]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try { await fetchPage(page + 1, false); } finally { setLoadingMore(false); }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Authors</h1>
-          <p className="text-muted mt-1 text-sm">{filtered.length} of {authors.length} authors</p>
+          <p className="text-muted mt-1 text-sm">
+            {authors.length}{hasMore ? "+" : ""} authors{country ? ` in ${country}` : ""}{q.trim() ? ` matching "${q.trim()}"` : ""}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full sm:w-64">
@@ -63,7 +93,7 @@ export default function AuthorsBrowser({ authors }) {
 
       {countries.length > 0 && (
         <div className="hscroll mt-5">
-          {countries.map(([name, count]) => (
+          {countries.map(({ name, count }) => (
             <button key={name} onClick={() => setCountry(country === name ? "" : name)}
               className={`pill whitespace-nowrap ${country === name ? "!bg-brand-600 !text-white" : ""}`}>
               {name} <span className="ml-1 opacity-60">{count}</span>
@@ -77,31 +107,49 @@ export default function AuthorsBrowser({ authors }) {
         </div>
       )}
 
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((a) => (
-          <Link key={a.id} href={`/authors/${a.slug}`} prefetch={false} className="card flex gap-4 p-5">
-            {a.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={a.image_url} alt={a.name} className="h-20 w-20 rounded-full object-cover" loading="lazy" />
-            ) : (
-              <div className="tint-brand grid h-20 w-20 shrink-0 place-items-center rounded-full text-2xl font-bold text-brand-600">
-                {a.name[0]}
+      {loading ? (
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="card h-28 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {authors.map((a) => (
+            <Link key={a.id} href={`/authors/${a.slug}`} prefetch={false} className="card flex gap-4 p-5">
+              {a.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={a.image_url} alt={a.name} className="h-20 w-20 rounded-full object-cover" loading="lazy" />
+              ) : (
+                <div className="tint-brand grid h-20 w-20 shrink-0 place-items-center rounded-full text-2xl font-bold text-brand-600">
+                  {a.name[0]}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h2 className="font-semibold">{a.name}</h2>
+                <p className="text-muted text-xs">{[a.country, a.birth_year].filter(Boolean).join(" · ")}</p>
+                <p className="text-muted mt-1 line-clamp-2 text-sm">{a.bio}</p>
               </div>
-            )}
-            <div className="min-w-0">
-              <h2 className="font-semibold">{a.name}</h2>
-              <p className="text-muted text-xs">{[a.country, a.birth_year].filter(Boolean).join(" · ")}</p>
-              <p className="text-muted mt-1 line-clamp-2 text-sm">{a.bio}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
-      {!filtered.length && (
+      {!loading && !authors.length && (
         <div className="py-24 text-center">
           <Icon name="search" size={40} className="text-muted mx-auto" />
           <p className="mt-4 text-lg font-semibold">No authors found</p>
           <p className="text-muted mt-1 text-sm">Try a different search or clear filters.</p>
+        </div>
+      )}
+
+      {!loading && hasMore && (
+        <div className="mt-10 flex flex-col items-center gap-2">
+          <button onClick={loadMore} disabled={loadingMore} className="btn-primary !px-8">
+            {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}
+            {loadingMore ? "Loading…" : "Load More"}
+          </button>
+          <p className="text-muted text-xs">{authors.length} loaded</p>
         </div>
       )}
     </div>

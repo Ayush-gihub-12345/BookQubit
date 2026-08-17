@@ -98,10 +98,46 @@ export async function queryBooks(lang, opts = {}) {
   const binds = [lang];
   if (category) { where.push("category = ?"); binds.push(category); }
   if (collection) { where.push("collection = ?"); binds.push(collection); }
-  if (format) { where.push("format LIKE ?"); binds.push(`%${format}%`); }
+  // Same problem/fix as `tag` below, but `format` is messy free text, not a
+  // JSON array — "Paperback" has to keep matching "Mass Market Paperback"
+  // and "paperback" (that's what the old LIKE gave us), so this needs
+  // substring matching over the index's distinct keys, same as
+  // getPublisherBookIndex, not an exact lookup like the tag index.
+  // Measured live: `format LIKE '%Paperback%'` stops early for a common
+  // format (107 rows) but still scans the whole language for a rare one
+  // (5,957 rows) — same shape as every other leading-wildcard filter fixed
+  // this session.
+  if (format) {
+    const formatIndex = await getFormatBookIndex(lang);
+    const needle = format.trim().toLowerCase();
+    const ids = [];
+    for (const key of Object.keys(formatIndex)) {
+      if (key.includes(needle)) ids.push(...formatIndex[key]);
+    }
+    if (!ids.length) return { books: [], page: Number(page), hasMore: false };
+    where.push(`id IN (${ids.filter(Number.isInteger).join(",")})`);
+  }
   if (country) { where.push("country = ?"); binds.push(country); }
   if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
-  if (tag) { where.push("tags LIKE ?"); binds.push(`%"${tag}"%`); }
+  // `tags LIKE '%"Fiction"%'` was 39.9% of ALL database runtime on its own
+  // (measured live: 1.86M rows read / 413 calls) — a leading wildcard can
+  // never use an index, so it scanned every book in the language on every
+  // tag-filtered browse. Confirmed empirically that adding an index on
+  // `tags` does nothing for this: EXPLAIN QUERY PLAN still only used
+  // idx_books_lang with the index present. Same fix as booksByAuthor/
+  // booksByPublisher below — one shared tag->ids index built via json_each,
+  // reused by every tag-filtered request instead of scanned per request.
+  if (tag) {
+    const tagIndex = await getTagBookIndex(lang);
+    const ids = tagIndex[tag.trim().toLowerCase()] || [];
+    if (!ids.length) return { books: [], page: Number(page), hasMore: false };
+    // Inlined, not bound: `ids` are integers straight from this catalog's
+    // own `id` column (never user input), and a popular tag like "Fiction"
+    // has 1,500+ matches — comfortably past D1/SQLite's bound-parameter
+    // ceiling if passed as `IN (?,?,?...)`. Number.isInteger is a defensive
+    // check against ever inlining anything that isn't a plain integer.
+    where.push(`id IN (${ids.filter(Number.isInteger).join(",")})`);
+  }
   // Mood/pace come from what readers actually felt while reading (shelf.moods,
   // a different D1 database) — so this is resolved as two steps: find the
   // matching book_slugs there first, then filter the catalog query on them.
@@ -506,6 +542,86 @@ export async function listAuthors(lang) {
 export const listPublications = (lang) => listEntity("publications", lang, ["notable_authors", "imprints"]);
 export const listComics = (lang) => listEntity("comics", lang, ["characters", "creators"]);
 
+// Server-side search/filter/sort/page over the cached full authors list.
+// This exists because shipping the whole ~3,900-row list to the browser for
+// client-side filtering (the original /authors design) broke the page
+// outright: verified live that React's streaming SSR was emitting content
+// for that page's Suspense boundary but never emitting the matching reveal
+// script (found via the raw HTML: an `id="S:1"` div holding the real page
+// content, a `$RC("B:0","S:0")` reveal call for a DIFFERENT boundary, and no
+// reveal call for this one anywhere in the response) — the page rendered
+// completely blank, at every screen size, every time, reproducibly. That
+// correlates directly with payload size: ~1MB for /authors (all rows
+// embedded as hydration props) vs ~211KB for /books (already paginated).
+//
+// listAuthors() itself is untouched and still fully cached (3h) — this adds
+// zero DB reads, it just filters/sorts/slices that in-memory array per
+// request instead of serializing all of it to every visitor.
+export async function queryAuthors(lang, { q, country, sort, page = 1, perPage = 60 } = {}) {
+  const all = await listAuthors(lang);
+  let list = all;
+  if (country) list = list.filter((a) => a.country === country);
+  if (q) {
+    const term = q.trim().toLowerCase();
+    list = list.filter((a) => a.name.toLowerCase().includes(term));
+  }
+  const sorted = [...list];
+  if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
+  else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+  else if (sort === "birth") sorted.sort((a, b) => (b.birth_year || 0) - (a.birth_year || 0));
+  else sorted.sort((a, b) => a.name.localeCompare(b.name)); // default: name A-Z
+
+  const start = (Number(page) - 1) * perPage;
+  const pageItems = sorted.slice(start, start + perPage).map((a) => ({
+    id: a.id, slug: a.slug, name: a.name, country: a.country,
+    birth_year: a.birth_year, image_url: a.image_url,
+    bio: a.bio ? a.bio.slice(0, 200) : a.bio,
+  }));
+  return { authors: pageItems, hasMore: start + perPage < sorted.length };
+}
+
+// Country -> author count for the filter pill row, from the same cached
+// list, unaffected by the current search/filter (matches the pills' old
+// client-side behavior of always reflecting the full catalog).
+export async function getAuthorCountries(lang) {
+  const all = await listAuthors(lang);
+  const counts = new Map();
+  for (const a of all) if (a.country) counts.set(a.country, (counts.get(a.country) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14).map(([name, count]) => ({ name, count }));
+}
+
+// Same fix, same reasoning, for /publications.
+export async function queryPublishers(lang, { q, type, sort, page = 1, perPage = 60 } = {}) {
+  const all = await listPublications(lang);
+  let list = all;
+  if (type) list = list.filter((p) => p.type === type);
+  if (q) {
+    const term = q.trim().toLowerCase();
+    list = list.filter((p) => p.name.toLowerCase().includes(term));
+  }
+  const sorted = [...list];
+  if (sort === "name-desc") sorted.sort((a, b) => b.name.localeCompare(a.name));
+  else if (sort === "recent") sorted.sort((a, b) => b.id - a.id);
+  else if (sort === "founded") sorted.sort((a, b) => (Number(a.founded) || 9999) - (Number(b.founded) || 9999));
+  else sorted.sort((a, b) => a.name.localeCompare(b.name));
+
+  const start = (Number(page) - 1) * perPage;
+  const pageItems = sorted.slice(start, start + perPage).map((p) => ({
+    id: p.id, slug: p.slug, name: p.name, type: p.type,
+    headquarters: p.headquarters, logo_url: p.logo_url,
+    description: p.description ? p.description.slice(0, 200) : p.description,
+    founded: p.founded,
+  }));
+  return { publications: pageItems, hasMore: start + perPage < sorted.length };
+}
+
+export async function getPublisherTypes(lang) {
+  const all = await listPublications(lang);
+  const counts = new Map();
+  for (const p of all) if (p.type) counts.set(p.type, (counts.get(p.type) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
+}
+
 export async function getAuthor(slug, lang) {
   return (await listAuthors(lang)).find((a) => a.slug === decodeURIComponent(slug)) || null;
 }
@@ -601,22 +717,105 @@ export async function getAuthorLineProfiles(authorLine, lang) {
   return names.map((name) => ({ name, profile: byName.get(name.toLowerCase()) || null }));
 }
 
-// `LIKE '%name%'` can't use an index (leading wildcard forces a full-table
-// scan) — this was showing up on the D1 dashboard as one of the worst
-// rows-read-per-query offenders. Caching doesn't fix the scan itself but
-// means it only happens once per TTL window instead of on every publisher
-// page view/reload.
+// Distinct publisher string -> the slugs published under it, built once per
+// TTL and shared by every publisher page. Same reasoning as
+// getAuthorBookIndex above: `LIKE '%name%'` can't use an index (measured
+// live: 3.02M rows read / 507 calls, 22.78% of all DB runtime, confirmed
+// via EXPLAIN QUERY PLAN that even a dedicated index on `publisher` doesn't
+// change the plan), and caching the old per-publisher query didn't help
+// because each publisher was its own cache key — a single crawl pass over
+// 2,300+ publisher pages missed every time. One scan shared across all of
+// them, then an indexed by-slug fetch per page.
+//
+// Loose matching is preserved on purpose: books store the raw imprint
+// string, so "Penguin Books" legitimately has to match "Penguin Books,
+// Limited" too (verified live: exact match returns 24 books, loose match
+// returns 80 for the same publisher).
+async function getPublisherBookIndex(lang) {
+  return cached(`publisher-book-index:${lang}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db
+      .prepare("SELECT slug, publisher FROM books WHERE lang=?1 AND publisher IS NOT NULL AND publisher != ''")
+      .bind(lang).all();
+    const index = {};
+    for (const { slug, publisher } of results) {
+      const key = publisher.trim().toLowerCase();
+      if (!key) continue;
+      (index[key] ||= []).push(slug);
+    }
+    return index;
+  }, 10800);
+}
+
 export async function booksByPublisher(name, lang) {
-  const [{ results }, { amazon_assoc_tag }] = await Promise.all([
-    cached(`by-publisher:${lang}:${name || ""}`, async () => {
-      const db = await getCatalogDb();
-      return db.prepare(
-        "SELECT * FROM books WHERE lang=?1 AND publisher LIKE ? ORDER BY id"
-      ).bind(lang, `%${name || ""}%`).all();
-    }, 3600),
+  const needle = (name || "").trim().toLowerCase();
+  if (!needle) return [];
+  const [index, { amazon_assoc_tag }] = await Promise.all([
+    getPublisherBookIndex(lang),
     getSiteSettings(),
   ]);
-  return results.map((r) => mapBook(r, amazon_assoc_tag));
+  const slugs = [];
+  for (const key of Object.keys(index)) {
+    // Same substring semantics the old LIKE had, so results don't change.
+    if (key.includes(needle)) slugs.push(...index[key]);
+    if (slugs.length >= 200) break; // bounded page, same cap as booksByAuthor
+  }
+  if (!slugs.length) return [];
+  const bounded = slugs.slice(0, 200);
+  const bySlug = await getBooksBySlug(bounded, lang, "*");
+  return bounded
+    .map((s) => bySlug.get(s))
+    .filter(Boolean)
+    .map((r) => mapBook(r, amazon_assoc_tag));
+}
+
+// Distinct tag -> book ids for the whole catalog, built once per TTL and
+// shared by every tag-filtered browse request (see the `tag` branch in
+// queryBooks above). `json_each` here is a single scan of the tags column
+// across the whole language — the same cost class as the facets() tag-count
+// query already running on the site — done once and cached, instead of a
+// LIKE scan on every request.
+async function getTagBookIndex(lang) {
+  return cached(`tag-book-index:${lang}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db
+      .prepare(
+        `SELECT books.id AS id, json_each.value AS tag
+         FROM books, json_each(books.tags)
+         WHERE books.lang=?1`
+      )
+      .bind(lang).all();
+    const index = {};
+    for (const { id, tag } of results) {
+      const key = String(tag).trim().toLowerCase();
+      if (!key) continue;
+      (index[key] ||= []).push(id);
+    }
+    return index;
+  }, 10800);
+}
+
+// Distinct format string -> book ids, built once per TTL and shared by
+// every format-filtered browse request (see the `format` branch in
+// queryBooks above). Same shape as getPublisherBookIndex: `format` is messy
+// free text ("Paperback", "Mass Market Paperback", "paperback"), so matching
+// stays a substring check over these keys in JS rather than an exact
+// lookup — one full scan of the format column per TTL, instead of a LIKE
+// scan on every request.
+async function getFormatBookIndex(lang) {
+  return cached(`format-book-index:${lang}`, async () => {
+    const db = await getCatalogDb();
+    const { results } = await db
+      .prepare("SELECT id, format FROM books WHERE lang=?1 AND format IS NOT NULL AND format != ''")
+      .bind(lang).all();
+    const index = {};
+    for (const { id, format } of results) {
+      const key = format.trim().toLowerCase();
+      if (!key) continue;
+      (index[key] ||= []).push(id);
+    }
+    return index;
+  }, 10800);
 }
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────

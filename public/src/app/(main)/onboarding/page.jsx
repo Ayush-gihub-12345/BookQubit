@@ -61,7 +61,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (step !== 2 || allAuthors.length) return;
-    fetch("/api/authors").then((r) => r.json()).then((d) => setAllAuthors(d.authors || [])).catch(() => {});
+    fetch("/api/authors-for-onboarding").then((r) => r.json()).then((d) => setAllAuthors(d.authors || [])).catch(() => {});
   }, [step, allAuthors.length]);
 
   // Seed the "rate books" grid with books matching chosen genres, so there's
