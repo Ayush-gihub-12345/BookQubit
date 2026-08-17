@@ -23,6 +23,7 @@ export class TransliterationEngine {
       exceptionsUsed: 0,
       methods: {},
     };
+    this.verbose = options.verbose !== undefined ? options.verbose : true;
   }
 
   /**
@@ -64,13 +65,31 @@ export class TransliterationEngine {
     // Step 4: English → Indic scripts (phonetic)
     else if (source === 'en' && needsTransliteration(target)) {
       try {
-        result = romanizeIndic(text, target, false);
-        method = 'romanize-indic';
-        this._log(`🔤 Using romanizeIndic for "${text}" → ${target}`);
+        // Try romanizeIndic first
+        const indicResult = romanizeIndic(text, target, false);
+        // Check if romanizeIndic actually did something
+        if (indicResult && indicResult !== text) {
+          result = indicResult;
+          method = 'romanize-indic';
+          this._log(`🔤 Using romanizeIndic for "${text}" → ${target}`);
+        } else {
+          // If romanizeIndic returned same text, use sindresorhus as fallback
+          this._log(`⚠️ romanizeIndic returned unchanged text for "${text}"`);
+          result = transliterate(text);
+          method = 'sindresorhus-fallback';
+          this._log(`🔄 Using sindresorhus fallback: "${result}"`);
+        }
       } catch (err) {
         this._log(`⚠️ romanizeIndic failed: ${err.message}`);
-        result = transliterate(text);
-        method = 'fallback';
+        try {
+          result = transliterate(text);
+          method = 'sindresorhus-fallback';
+          this._log(`🔄 Using sindresorhus fallback: "${result}"`);
+        } catch (fallbackErr) {
+          this._log(`⚠️ Fallback also failed: ${fallbackErr.message}`);
+          result = text;
+          method = 'original';
+        }
       }
     }
     // Step 5: Japanese → Latin
@@ -112,9 +131,16 @@ export class TransliterationEngine {
     // Step 8: Latin → other scripts
     else if (source === 'latin' && needsTransliteration(target)) {
       try {
-        result = romanizeIndic(text, target, false);
-        method = 'romanize-indic';
-        this._log(`🔤 Using romanizeIndic for "${text}" → ${target}`);
+        const indicResult = romanizeIndic(text, target, false);
+        if (indicResult && indicResult !== text) {
+          result = indicResult;
+          method = 'romanize-indic';
+          this._log(`🔤 Using romanizeIndic for "${text}" → ${target}`);
+        } else {
+          result = transliterate(text);
+          method = 'sindresorhus-fallback';
+          this._log(`🔄 Using sindresorhus fallback: "${result}"`);
+        }
       } catch (err) {
         this._log(`⚠️ romanizeIndic failed: ${err.message}`);
         result = transliterate(text);
@@ -197,7 +223,7 @@ export class TransliterationEngine {
     return {
       size: this.cache.size,
       limit: this.cacheLimit,
-      keys: Array.from(this.cache.keys()).slice(0, 10), // Show first 10
+      keys: Array.from(this.cache.keys()).slice(0, 10),
     };
   }
 
