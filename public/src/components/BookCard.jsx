@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Rating from "./Rating";
 import BookCover from "./BookCover";
-import Translated from "./Translated";
+import TitleTransliterated from "./TitleTransliterated";
 
 export default function BookCard({ book }) {
   return (
@@ -16,7 +16,7 @@ export default function BookCard({ book }) {
         )}
       </div>
       <div className="p-4">
-        <Translated as="h3" className="line-clamp-1 font-semibold group-hover:text-brand-600" text={book.title} />
+        <TitleTransliterated as="h3" className="line-clamp-1 font-semibold group-hover:text-brand-600" text={book.title} />
         <p className="mt-0.5 line-clamp-1 text-sm text-muted">{book.author}</p>
         <div className="mt-2"><Rating value={book.rating} /></div>
       </div>
