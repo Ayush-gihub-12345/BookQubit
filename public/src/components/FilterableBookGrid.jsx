@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import BookCard from "./BookCard";
+import BookCard from "./discovery/books_discovery/BookCard";
 import Icon from "./Icon";
 
 const SORTS = [

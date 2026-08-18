@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import AuthButton from "./AuthButton";
-import SearchBar from "./SearchBar";
-import Icon from "./Icon";
-import { LogoMark } from "./Logo";
+import AuthButton from "../AuthButton";
+import SearchBar from "../SearchBar";
+import Icon from "../Icon";
+import { LogoMark } from "../Logo";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 
 function Dropdown({ button, children, width = "w-48" }) {

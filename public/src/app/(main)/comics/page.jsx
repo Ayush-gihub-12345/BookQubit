@@ -1,4 +1,4 @@
-import ComicsBrowser from "@/components/ComicsBrowser";
+import ComicsBrowser from "@/components/discovery/comics_discovery/ComicsBrowser";
 import { listComics } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 

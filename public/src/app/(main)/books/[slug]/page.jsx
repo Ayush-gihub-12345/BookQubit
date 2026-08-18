@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import BookCard from "@/components/BookCard";
+import BookCard from "@/components/discovery/books_discovery/BookCard";
 import Rating from "@/components/Rating";
 import Section from "@/components/Section";
 import ShelfControls from "@/components/ShelfControls";
