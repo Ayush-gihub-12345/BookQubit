@@ -116,20 +116,46 @@ export default function LoginPage() {
           <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
         </div>
 
-        <form onSubmit={submit} className="space-y-3">
-          <input type="email" required placeholder="Email" value={email}
-            onChange={(e) => setEmail(e.target.value)} className="input" />
-          <input type="password" required minLength={6} placeholder="Password" value={password}
-            onChange={(e) => setPassword(e.target.value)} className="input" />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <button type="submit" disabled={busy} className="btn-primary w-full">
-            {busy ? "…" : mode === "signin" ? "Sign in" : "Sign up"}
-          </button>
-        </form>
+        {/* Signing up specifically shows a skeleton instead of just graying the
+            button out — createUserWithEmailAndPassword is the one path here
+            that does real account-creation work (the sign-in path is a
+            single fast lookup), so it's the one worth a heavier loading
+            treatment rather than a plain spinner. */}
+        {busy && mode === "signup" ? (
+          <div className="space-y-3" aria-live="polite" aria-busy="true">
+            <div className="h-11 animate-pulse rounded-xl bg-black/5 dark:bg-white/10" />
+            <div className="h-11 animate-pulse rounded-xl bg-black/5 dark:bg-white/10" />
+            <div className="h-4 w-40 animate-pulse rounded bg-black/5 dark:bg-white/10" />
+            <div className="h-11 animate-pulse rounded-xl bg-gradient-to-r from-amber-500/30 to-orange-500/30" />
+            <p className="text-muted text-center text-xs">Creating your account…</p>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            <input type="email" required placeholder="Email" value={email}
+              onChange={(e) => setEmail(e.target.value)} className="input" />
+            <input type="password" required minLength={6} placeholder="Password" value={password}
+              onChange={(e) => setPassword(e.target.value)} className="input" />
+            {/* Fixed-height row (present even when empty) so an error appearing
+                doesn't push the button — and everything below it — down. */}
+            <p className="min-h-[1.25rem] text-sm text-red-500">{error}</p>
+            <button
+              type="submit"
+              disabled={busy}
+              className={
+                mode === "signup"
+                  ? "btn-primary w-full !bg-gradient-to-r !from-amber-500 !to-orange-500 !shadow-orange-600/25"
+                  : "btn-primary w-full"
+              }
+            >
+              {busy ? "…" : mode === "signin" ? "Sign in" : "Sign up"}
+            </button>
+          </form>
+        )}
 
         <button
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-sm text-brand-600 hover:underline"
+          disabled={busy}
+          className="mt-4 w-full text-center text-sm text-brand-600 hover:underline disabled:opacity-50"
         >
           {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>
