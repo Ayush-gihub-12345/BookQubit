@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Logo from "./Logo";
-import NewsletterForm from "./NewsletterForm";
-import SocialIcon from "./SocialIcon";
+import Logo from "../Logo";
+import NewsletterForm from "../NewsletterForm";
+import SocialIcon from "../SocialIcon";
 import { getPlatformStats, getSiteSettings } from "@/lib/repo";
 import { t } from "@/lib/i18n";
 

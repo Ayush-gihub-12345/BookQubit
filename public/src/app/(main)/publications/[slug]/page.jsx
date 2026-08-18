@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import BookCard from "@/components/BookCard";
+import BookCard from "@/components/discovery/books_discovery/BookCard";
 import Section from "@/components/Section";
 import { getPublication, booksByPublisher } from "@/lib/repo";
 import { getLang } from "@/lib/lang";

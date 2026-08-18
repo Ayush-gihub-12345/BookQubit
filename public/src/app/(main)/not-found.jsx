@@ -1,5 +1,5 @@
 import Link from "next/link";
-import BookCard from "@/components/BookCard";
+import BookCard from "@/components/discovery/books_discovery/BookCard";
 import SearchBar from "@/components/SearchBar";
 import Icon from "@/components/Icon";
 import { listBooks } from "@/lib/repo";

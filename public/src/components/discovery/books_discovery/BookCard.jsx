@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Rating from "./Rating";
-import BookCover from "./BookCover";
-import TitleTransliterated from "./TitleTransliterated";
+import Rating from "../../Rating";
+import BookCover from "../../BookCover";
+import TitleTransliterated from "../../TitleTransliterated";
 
 export default function BookCard({ book }) {
   return (

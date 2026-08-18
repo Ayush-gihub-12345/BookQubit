@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BookCard from "./BookCard";
-import BookCover from "./BookCover";
-import Rating from "./Rating";
-import Icon from "./Icon";
+import BookCover from "../../BookCover";
+import Rating from "../../Rating";
+import Icon from "../../Icon";
 import { readLocalCache, writeLocalCache } from "@/lib/localCache";
 
 // How long a given filter/sort combination's result is trusted from the

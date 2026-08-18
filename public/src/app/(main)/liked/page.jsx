@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
-import BookCard from "@/components/BookCard";
+import BookCard from "@/components/discovery/books_discovery/BookCard";
 import Icon from "@/components/Icon";
 
 export default function LikedBooksPage() {

@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import Rating from "./Rating";
-import BookCover from "./BookCover";
-import Icon from "./Icon";
-import SortDropdown from "./SortDropdown";
+import Rating from "../../Rating";
+import BookCover from "../../BookCover";
+import Icon from "../../Icon";
+import SortDropdown from "../../SortDropdown";
 
 const SORTS = [
   { value: "title", label: "Title A–Z" },

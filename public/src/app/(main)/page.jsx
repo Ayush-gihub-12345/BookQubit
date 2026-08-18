@@ -1,5 +1,5 @@
 import Link from "next/link";
-import BookCard from "@/components/BookCard";
+import BookCard from "@/components/discovery/books_discovery/BookCard";
 import Section from "@/components/Section";
 import HeroSlider from "@/components/HeroSlider";
 import Rating from "@/components/Rating";

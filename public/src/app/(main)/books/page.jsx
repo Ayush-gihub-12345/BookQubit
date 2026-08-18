@@ -1,4 +1,4 @@
-import BooksBrowser from "@/components/BooksBrowser";
+import BooksBrowser from "@/components/discovery/books_discovery/BooksBrowser";
 import { queryBooks, facets, getMoodCounts } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
