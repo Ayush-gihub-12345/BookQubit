@@ -1,4 +1,5 @@
 import { getDb, getCatalogDb, cached, invalidate } from "./db";
+import { sendEmail, verificationEmailHtml } from "./email";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -48,6 +49,74 @@ export async function upsertUser(uid, name, photo) {
     `INSERT INTO users (id, name, photo_url, slug) VALUES (?1, ?2, ?3, ?4)
      ON CONFLICT(id) DO UPDATE SET name=?2, photo_url=?3, slug=COALESCE(slug, ?4)`
   ).bind(uid, name, photo || null, slug).run();
+}
+
+// ── Email verification (email/password sign-ups only) ──────────────────────
+// Google sign-in is skipped entirely — Google has already verified that
+// address, and Firebase's own `user.emailVerified` reflects that. This is
+// only for accounts created with signInWithEmailAndPassword.
+
+const CODE_TTL_MINUTES = 10;
+const MAX_ATTEMPTS = 5;
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Generates a fresh 6-digit code, stores only its hash (never the code
+// itself — reading this table, e.g. a DB export or a compromised admin
+// session, must never hand out a usable code), and emails it. Safe to call
+// again for the same user (e.g. "resend code") — replaces any prior row.
+export async function createEmailVerification(uid, email) {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const codeHash = await sha256Hex(code);
+  const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60_000).toISOString();
+
+  const db = await getDb();
+  await db.prepare(
+    `INSERT INTO email_verifications (user_id, email, code_hash, attempts, expires_at)
+     VALUES (?1, ?2, ?3, 0, ?4)
+     ON CONFLICT(user_id) DO UPDATE SET email=?2, code_hash=?3, attempts=0, expires_at=?4, created_at=CURRENT_TIMESTAMP`
+  ).bind(uid, email, codeHash, expiresAt).run();
+
+  const result = await sendEmail({
+    to: email,
+    subject: "Your BookQubit verification code",
+    html: verificationEmailHtml(code),
+  });
+  return result; // { ok: true } or { ok: false, error }
+}
+
+// Checks the submitted code against the stored hash. Wrong guesses count
+// against MAX_ATTEMPTS regardless of reason (wrong code, expired, or no
+// pending code at all) so this can't be used to brute-force the 6-digit
+// space — 5 tries per issued code, then the user has to request a new one.
+export async function verifyEmailCode(uid, submittedCode) {
+  const db = await getDb();
+  const row = await db.prepare("SELECT * FROM email_verifications WHERE user_id=?1").bind(uid).first();
+  if (!row) return { ok: false, error: "No verification code pending. Request a new one." };
+  if (row.attempts >= MAX_ATTEMPTS) return { ok: false, error: "Too many attempts. Request a new code." };
+  if (new Date(row.expires_at) < new Date()) return { ok: false, error: "Code expired. Request a new one." };
+
+  const hash = await sha256Hex(String(submittedCode || "").trim());
+  if (hash !== row.code_hash) {
+    await db.prepare("UPDATE email_verifications SET attempts = attempts + 1 WHERE user_id=?1").bind(uid).run();
+    return { ok: false, error: "Incorrect code." };
+  }
+
+  await db.batch([
+    db.prepare("UPDATE users SET email_verified = 1 WHERE id=?1").bind(uid),
+    db.prepare("DELETE FROM email_verifications WHERE user_id=?1").bind(uid),
+  ]);
+  return { ok: true };
+}
+
+// Google sign-in path — Firebase already verified the address, this just
+// keeps our own `users.email_verified` column in sync with that fact.
+export async function markEmailVerified(uid) {
+  const db = await getDb();
+  await db.prepare("UPDATE users SET email_verified = 1 WHERE id=?1").bind(uid).run();
 }
 
 // `assocTag` comes from site_settings (admin-editable, takes effect

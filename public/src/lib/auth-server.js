@@ -15,5 +15,11 @@ export async function verifyUser(idToken) {
   const data = await res.json();
   const u = data.users?.[0];
   if (!u) return null;
-  return { uid: u.localId, name: u.displayName || u.email?.split("@")[0] || "Reader", photo: u.photoUrl || null };
+  return {
+    uid: u.localId, name: u.displayName || u.email?.split("@")[0] || "Reader", photo: u.photoUrl || null,
+    // Trusted server-side from the verified token — never take an email
+    // address from the request body for anything that sends mail, or a
+    // signed-in user could direct a verification code at any address.
+    email: u.email || null,
+  };
 }

@@ -166,6 +166,21 @@ CREATE TABLE IF NOT EXISTS book_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_requests_status ON book_requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_user ON book_requests(user_id);
+
+-- One row per outstanding 6-digit email verification code (sent right
+-- after email/password sign-up — Google sign-in skips this entirely, since
+-- Google has already verified that address). The code itself is never
+-- stored in plain text: only its SHA-256 hash, so reading this table (a DB
+-- export, a bug, a compromised admin session) never hands out a usable
+-- code. attempts caps brute-forcing a 6-digit space before expiry.
+CREATE TABLE IF NOT EXISTS email_verifications (
+  user_id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 // The large, mostly-static reference catalog — kept in its own D1 database
@@ -345,6 +360,10 @@ const MIGRATIONS = [
   "ALTER TABLE discussions ADD COLUMN author_slug TEXT",
   "ALTER TABLE discussions ADD COLUMN tags TEXT",
   "ALTER TABLE users ADD COLUMN slug TEXT",
+  // Google sign-ins are seeded as already-verified (see upsertUser in
+  // repo.js) — only email/password accounts start at 0 and go through
+  // email_verifications.
+  "ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0",
 ];
 
 const CATALOG_MIGRATIONS = [

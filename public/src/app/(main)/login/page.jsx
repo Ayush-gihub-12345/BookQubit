@@ -31,6 +31,26 @@ export default function LoginPage() {
     );
   }
 
+  // Firebase's default project setting is "one account per email address" —
+  // it refuses to silently create a second, disconnected account for an
+  // email that already exists under a different sign-in method, and throws
+  // one of these two codes instead. Without this, the raw Firebase error
+  // ("An account already exists with the same email address but different
+  // sign-in credentials.") reaches the user unexplained. This does NOT
+  // implement account linking (that needs re-authenticating with the
+  // original provider, then linkWithCredential) — it just tells the reader
+  // which method actually owns the account, so "I signed up with Google,
+  // why can't I use a password" resolves itself without a support message.
+  const friendlyAuthError = (e) => {
+    if (e.code === "auth/account-exists-with-different-credential") {
+      return "This email is already registered with a password. Use \"Sign in\" below instead of Google.";
+    }
+    if (e.code === "auth/email-already-in-use") {
+      return "This email already has an account. Try signing in — if you originally used Google, use \"Continue with Google\" instead.";
+    }
+    return e.message.replace("Firebase: ", "");
+  };
+
   // New accounts (and anyone who never finished it) land on the guided
   // profile setup; everyone else goes straight to their dashboard.
   const routeAfterAuth = async (uid) => {
@@ -47,8 +67,16 @@ export default function LoginPage() {
     setBusy(true); setError("");
     try {
       const cred = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
+      // Google has already verified this address — sync our own
+      // users.email_verified flag to match, so nothing downstream needs to
+      // special-case which provider a reader signed in with.
+      const token = await cred.user.getIdToken();
+      fetch("/api/auth/mark-verified", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken: token }),
+      }).catch(() => {}); // best-effort — never block sign-in on this
       await routeAfterAuth(cred.user.uid);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) { setError(friendlyAuthError(e)); } finally { setBusy(false); }
   };
 
   const submit = async (e) => {
@@ -60,10 +88,12 @@ export default function LoginPage() {
         const cred = await signInWithEmailAndPassword(auth, email, password);
         await routeAfterAuth(cred.user.uid);
       } else {
+        // New email/password accounts go through /verify-email before
+        // onboarding — that page sends the code itself on mount.
         await createUserWithEmailAndPassword(auth, email, password);
-        router.push("/onboarding");
+        router.push("/verify-email");
       }
-    } catch (e) { setError(e.message.replace("Firebase: ", "")); } finally { setBusy(false); }
+    } catch (e) { setError(friendlyAuthError(e)); } finally { setBusy(false); }
   };
 
   return (
