@@ -27,7 +27,17 @@ export default async function CollectionPage({ params }) {
   // `hasMore` instead of a total — queryBooks no longer runs a COUNT(*),
   // since an exact number cost a full scan of every matching row on a
   // query readers hit constantly.
-  const { books, hasMore } = await queryBooks(await getLang(), { collection, perPage: PAGE_SIZE });
+  const { books: rawBooks, hasMore } = await queryBooks(await getLang(), { collection, perPage: PAGE_SIZE });
+  // Trimmed to only what FilterableBookGrid/BookCard render — same fix,
+  // same reason as /books: queryBooks()/mapBook() return every catalog
+  // column, and shipping the full-fat objects (up to 100 of them here,
+  // PAGE_SIZE) as hydration props for a Client Component was enough to
+  // break this page's server render outright on this runtime, the same way
+  // it did on /authors, /publications, and /books.
+  const books = rawBooks.map((b) => ({
+    id: b.id, slug: b.slug, title: b.title, author: b.author, cover_url: b.cover_url,
+    rating: b.rating, category: b.category, format: b.format, published: b.published,
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
