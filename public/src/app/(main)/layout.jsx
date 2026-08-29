@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ConditionalFooter from "@/components/ConditionalFooter";
+import TitleTransliterationEnhancer from "@/components/TitleTransliterationEnhancer";
 import { getLang, LANGUAGES } from "@/lib/lang";
 import { getTheme, THEMES } from "@/lib/theme";
 import { t } from "@/lib/i18n";
@@ -17,6 +18,10 @@ export default async function PublicLayout({ children }) {
 
   return (
     <>
+      {/* One instance for the whole route group, not one per book title —
+          see TitleTransliterationEnhancer.jsx for why that distinction is
+          load-bearing on this runtime, not just a style preference. */}
+      <TitleTransliterationEnhancer />
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
       <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels} />
       <main id="main-content" className="flex-1">{children}</main>

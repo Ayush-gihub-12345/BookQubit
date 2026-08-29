@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
-import TitleTransliterated from "./TitleTransliterated";
 import Icon from "./Icon";
 
 export default function HeroSlider({ books, labels }) {
@@ -44,7 +43,9 @@ export default function HeroSlider({ books, labels }) {
         <div>
           {b.category && <span className="pill">{b.category}</span>}
           <h2 className="mt-3 text-2xl font-extrabold sm:text-4xl">
-            <Link href={`/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600"><TitleTransliterated text={b.title} /></Link>
+            <Link href={`/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600">
+              <span data-translit-title={b.title}>{b.title}</span>
+            </Link>
           </h2>
           <p className="text-muted mt-1">by <span className="font-medium text-brand-600">{b.author}</span></p>
 

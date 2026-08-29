@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Rating from "./Rating";
 import BookCover from "./BookCover";
-import TitleTransliterated from "./TitleTransliterated";
 
 export default function BookCard({ book }) {
   return (
@@ -16,7 +15,12 @@ export default function BookCard({ book }) {
         )}
       </div>
       <div className="p-4">
-        <TitleTransliterated as="h3" className="line-clamp-1 font-semibold group-hover:text-brand-600" text={book.title} />
+        {/* Plain English text server-side; TitleTransliterationEnhancer
+            (mounted once in the layout, not once per card) swaps this to
+            the visitor's script on mount — see that file for why. */}
+        <h3 data-translit-title={book.title} className="line-clamp-1 font-semibold group-hover:text-brand-600">
+          {book.title}
+        </h3>
         <p className="mt-0.5 line-clamp-1 text-sm text-muted">{book.author}</p>
         <div className="mt-2"><Rating value={book.rating} /></div>
       </div>

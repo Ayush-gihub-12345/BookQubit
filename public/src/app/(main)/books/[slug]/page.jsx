@@ -9,7 +9,6 @@ import Icon from "@/components/Icon";
 import ReportIssueButton from "@/components/ReportIssueButton";
 import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
-import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName } from "@/lib/repo";
@@ -185,7 +184,7 @@ export default async function BookPage({ params }) {
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold sm:text-4xl"><TitleTransliterated text={book.title} /></h1>
+            <h1 data-translit-title={book.title} className="text-3xl font-bold sm:text-4xl">{book.title}</h1>
             <p className="text-muted mt-2 text-lg">
               by{" "}
               {/* One link per co-author. Anyone with a real profile goes to

@@ -1,10 +1,26 @@
-"use client";
-
-import { useState } from "react";
-
 // Renders the real cover image, or a designed placeholder "cover" with the
 // book's title and author on a gradient picked deterministically from the title.
-// Falls back to the placeholder automatically if the real image URL 404s.
+//
+// Deliberately a Server Component, not a Client Component. It used to be
+// "use client" with a useState onError handler that swapped to the gradient
+// placeholder if the real image URL 404'd at runtime. That handler is gone
+// now — not by oversight, but because this component is instantiated once
+// per book card, and this codebase renders dozens of cards per page
+// (homepage sections, browse grids, comparison pickers, etc. — 18 files use
+// it). Every "use client" instance embedded in server-rendered output
+// becomes its own separately-streamed segment in React's Flight protocol,
+// and verified live: on this Cloudflare Workers/OpenNext runtime, a page
+// with dozens of these segments fails to flush most of their reveal
+// scripts, leaving the whole page's content permanently stuck behind a
+// hidden Suspense boundary — visitors saw a blank page. Confirmed via the
+// raw HTML (multiple `<div hidden id="S:N">` blocks with no matching
+// `$RC(...)` reveal call) and via measuring visible content in the browser
+// (0 of 46 book cards actually rendered on the homepage).
+// The tradeoff: a cover URL that 404s at runtime now shows a broken-image
+// icon instead of silently falling back to the gradient placeholder. Given
+// the alternative was the entire homepage rendering blank for every
+// visitor, that's a straightforward trade — and the placeholder still
+// covers the far more common case, a book with no cover_url at all.
 const GRADIENTS = [
   "linear-gradient(135deg,#1e3a5f,#4a7ba6)",
   "linear-gradient(135deg,#5f1e3a,#a64a6b)",
@@ -33,9 +49,7 @@ function sizedCover(url, priority) {
 }
 
 export default function BookCover({ title, author, cover_url, className = "", imgClassName = "", priority = false }) {
-  const [broken, setBroken] = useState(false);
-
-  if (cover_url && !broken) {
+  if (cover_url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -50,7 +64,6 @@ export default function BookCover({ title, author, cover_url, className = "", im
         // nothing, and grid covers should stay lazy and low priority.
         fetchPriority={priority ? "high" : undefined}
         decoding={priority ? "sync" : "async"}
-        onError={() => setBroken(true)}
         className={`h-full w-full object-cover ${imgClassName}`}
       />
     );
