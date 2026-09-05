@@ -181,6 +181,18 @@ CREATE TABLE IF NOT EXISTS email_verifications (
   expires_at TEXT NOT NULL,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Durable backing store for cached() (see the cache section at the bottom of
+-- this file). One row per cache key; a hit costs a single indexed row read,
+-- versus re-running an aggregate that can scan the entire books table. This
+-- replaced KV, whose free-tier 1,000-writes/day cap was being exhausted daily
+-- and silently turning every cached() call back into an uncached D1 read.
+CREATE TABLE IF NOT EXISTS app_cache (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_app_cache_expires ON app_cache(expires_at);
 `;
 
 // The large, mostly-static reference catalog — kept in its own D1 database
@@ -435,31 +447,69 @@ export async function getCatalogDb() {
   return env.CATALOG_DB;
 }
 
-// In-process L1 cache, shared by every request the current Worker isolate
-// handles (no network round-trip, no quota). This is the primary defense
-// against D1 read blowups now — verified live via the D1 dashboard that
-// KV's free-tier write quota (1,000 puts/day) was getting exhausted by the
-// sheer number of distinct filter/sort/page cache keys `/books` can
-// produce, and once kv.put() starts failing, the old KV-only cached()
-// silently degraded to an *uncached* D1 read on every request, which is
-// what let a handful of hot queries read tens of millions of rows/day with
-// almost no real visitors. An in-memory hit never touches KV or D1, so it
-// keeps working even while KV's quota is blown. Capped and LRU-ish evicted
-// so it can't grow unbounded in a long-lived isolate.
+// ---------------------------------------------------------------------------
+// Read-through cache — three tiers, no KV.
+//
+//   L1  in-isolate memory   free, instant, dies with the isolate
+//   L2  Cloudflare Cache API  free, unmetered, per-colo, survives cold starts
+//   L3  D1 `app_cache` table  global, durable, 1 indexed row read per hit
+//
+// KV used to be L2 and was removed deliberately. Verified from the D1
+// dashboard's query analytics: the free tier's 1,000-puts/day KV write cap
+// was being exhausted every day by the sheer number of distinct cache keys
+// this site produces (per-lang, per-filter, per-sort, per-page, per-book).
+// Once kv.put() starts failing, every cached() call silently degrades into
+// an *uncached* D1 read — which is exactly how a handful of aggregate
+// queries came to read millions of rows/day with almost no real visitors
+// (`SELECT ... COUNT(*) ... json_each(books.tags)` alone: 2.83M rows across
+// 297 calls, against a 3-hour TTL that should have allowed ~8), exhausting
+// D1's daily row-read quota and taking the whole site down with
+// "Something went wrong" until midnight UTC.
+//
+// The Cache API has no such write quota, so L2 no longer stops working
+// partway through the day. L3 makes a cross-colo cold start cost one row
+// read instead of a full-table aggregate.
+//
+// Two further properties matter as much as the tiering:
+//
+//  * Stale-while-revalidate. Entries are stored with a logical expiry and a
+//    much longer hard retention. Past the logical expiry the stale value is
+//    served immediately and refreshed in the background, so an expiring key
+//    never lets a burst of traffic through to the expensive query at once —
+//    and if the underlying query is failing (D1 over quota), the site keeps
+//    serving the last known-good data instead of erroring.
+//  * Single-flight. Concurrent misses on the same key share one computation
+//    rather than each running the same full scan.
+// ---------------------------------------------------------------------------
+
 // Namespace for every cache key, prefixed on both read and write. BUMP THIS
 // whenever a cached value's SHAPE changes, even if the key string itself is
 // unchanged.
 //
 // This exists because of a real production incident: a cached value's shape
-// changed (an object became an array) under the same key, and KV entries
+// changed (an object became an array) under the same key, and cache entries
 // outlive a deploy — the newly-deployed code read back an old-shaped value
-// from a still-warm KV entry and threw ("X.map is not a function"),
-// surfacing as an unexplained Server Component error on pages visited
-// before the deploy. A version bump makes every old entry unreachable
-// instantly on both the KV and in-memory layers, instead of relying on
-// remembering to pick a brand-new key string by hand every time a function
-// here changes its return shape.
-const CACHE_VERSION = "v1";
+// from a still-warm entry and threw ("X.map is not a function"), surfacing
+// as an unexplained Server Component error on pages visited before the
+// deploy. A version bump makes every old entry unreachable instantly across
+// all three tiers, instead of relying on remembering to pick a brand-new key
+// string by hand every time a function here changes its return shape.
+// (v2: storage layer moved off KV, so old KV-era entries are moot anyway.)
+const CACHE_VERSION = "v2";
+
+// How long an entry is physically retained beyond its logical TTL, to be
+// available as a stale-while-revalidate fallback. A day means a query that
+// starts failing (or a D1 quota wall) degrades to slightly-old data rather
+// than an error page.
+const STALE_GRACE_SECONDS = 86400;
+
+// Size ceilings differ by tier. The Cache API stores large responses without
+// trouble, so L2 takes anything up to a generous cap — this matters for the
+// genuinely big entries (the sitemap's 40,000 book slugs is a couple of MB,
+// and that's precisely the read worth not repeating). D1 keeps a tighter
+// bound so one cache row can't dominate the database.
+const MAX_EDGE_BYTES = 8_000_000;
+const MAX_ROW_BYTES = 900_000;
 
 const MEM_MAX = 400;
 const memCache = new Map();
@@ -470,65 +520,212 @@ function memGet(key) {
     memCache.delete(key);
     return undefined;
   }
+  // Re-insert so Map iteration order tracks recency — makes the eviction
+  // below true LRU rather than "oldest inserted", which used to evict a
+  // constantly-hit key just because it was written first.
+  memCache.delete(key);
+  memCache.set(key, entry);
   return entry.value;
 }
 function memSet(key, value, ttlSeconds) {
-  if (!memCache.has(key) && memCache.size >= MEM_MAX) {
-    memCache.delete(memCache.keys().next().value); // evict oldest
-  }
+  if (memCache.has(key)) memCache.delete(key);
+  else if (memCache.size >= MEM_MAX) memCache.delete(memCache.keys().next().value);
   memCache.set(key, { value, exp: Date.now() + ttlSeconds * 1000 });
 }
 
-// Read-through cache: in-memory first (fast, free, no quota), then KV as a
-// slower cross-isolate/cross-cold-start fallback. Degrades gracefully if
-// the CACHE binding is missing (e.g. local `next dev`) or if KV itself
-// errors — a real failure mode hit in production, the free tier's daily
-// kv.put() write quota exceeded once enough functions started caching
-// distinct per-book/per-query keys. Before this, an unhandled put()/get()
-// rejection here propagated straight up through getBook/queryBooks/etc.,
-// which broke the whole page's data-fetching and left it stuck on its
-// loading skeleton forever — caching must never be able to take the actual
-// page down; worst case it just falls back to an uncached read for that
-// one request, and the in-memory layer means that's now rare even when KV
-// is unavailable.
+// In-flight computations, keyed by cache key: concurrent misses await the
+// same promise instead of each running the query.
+const inflight = new Map();
+
+// Envelope stored in L2/L3 — the logical expiry travels with the value so a
+// stale entry can be recognized as stale (and served as such) rather than
+// just vanishing when its TTL lapses.
+const envelope = (value, ttl) => JSON.stringify({ v: value, e: Date.now() + ttl * 1000 });
+const unwrap = (env) =>
+  env && typeof env === "object" && "v" in env
+    ? { value: env.v, stale: Date.now() > (env.e || 0) }
+    : undefined;
+
+const edgeCache = () => (typeof caches !== "undefined" ? caches.default : undefined);
+
+// Cache API entries are keyed by URL, and Cloudflare only stores entries
+// whose hostname is on this zone — a made-up hostname is silently dropped,
+// which would leave L2 permanently empty and be very easy to mistake for
+// "the cache is working". So keys live on the site's own origin under a
+// path prefix that maps to no real route.
+const CACHE_URL_BASE =
+  (process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop").replace(/\/$/, "") +
+  "/__cache/";
+
+// Anything keyed to a specific reader stays out of the edge tier: entries
+// there live at a URL on the public zone, and a per-user recommendation set
+// shouldn't be reachable by anyone who can construct that URL. Those keys
+// still get L1 + the durable D1 tier, neither of which is addressable.
+const USER_SCOPED = /^v\d+:(recommendations|shelf|user|notifications):/;
+
+// Hashed so the path is fixed-length and opaque rather than echoing the
+// internal key structure back out on a public URL.
+async function edgeKey(vkey) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(vkey));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return new Request(CACHE_URL_BASE + hex);
+}
+
+async function edgeGet(vkey) {
+  const c = edgeCache();
+  if (!c || USER_SCOPED.test(vkey)) return undefined;
+  try {
+    const res = await c.match(await edgeKey(vkey));
+    if (!res) return undefined;
+    return unwrap(await res.json());
+  } catch {
+    return undefined;
+  }
+}
+
+async function edgePut(vkey, body, ttl) {
+  const c = edgeCache();
+  if (!c || USER_SCOPED.test(vkey)) return;
+  try {
+    await c.put(
+      await edgeKey(vkey),
+      new Response(body, {
+        headers: {
+          "content-type": "application/json",
+          "cache-control": `max-age=${ttl + STALE_GRACE_SECONDS}`,
+        },
+      })
+    );
+  } catch {
+    /* edge cache unavailable — the other tiers still apply */
+  }
+}
+
+async function rowGet(vkey) {
+  try {
+    const db = await getDb();
+    const row = await db
+      .prepare("SELECT value, expires_at FROM app_cache WHERE key = ?1")
+      .bind(vkey)
+      .first();
+    if (!row) return undefined;
+    return { value: JSON.parse(row.value), stale: Date.now() > row.expires_at };
+  } catch {
+    // Includes the case that matters most: D1 itself is refusing reads
+    // (quota). Returning undefined lets the caller fall through rather than
+    // turning a cache lookup into a page-level failure.
+    return undefined;
+  }
+}
+
+async function rowPut(vkey, body, ttl) {
+  try {
+    const db = await getDb();
+    await db
+      .prepare(
+        `INSERT INTO app_cache (key, value, expires_at) VALUES (?1, ?2, ?3)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at`
+      )
+      .bind(vkey, body, Date.now() + ttl * 1000)
+      .run();
+    // Occasional sweep so abandoned keys can't accumulate forever. Cheap at
+    // 1-in-200 writes, and never on the request's critical path in practice.
+    if (Math.random() < 0.005) {
+      await db
+        .prepare("DELETE FROM app_cache WHERE expires_at < ?1")
+        .bind(Date.now() - STALE_GRACE_SECONDS * 1000)
+        .run();
+    }
+  } catch {
+    /* durable tier unavailable — L1/L2 still apply */
+  }
+}
+
+// Run background work through waitUntil when a request context exists, so it
+// isn't cancelled the moment the response is returned.
+async function background(promise) {
+  try {
+    const { ctx } = await getCloudflareContext({ async: true });
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(promise);
+      return;
+    }
+  } catch {
+    /* no request context (build, local dev) */
+  }
+  promise.catch(() => {});
+}
+
+async function store(vkey, value, ttl) {
+  const body = envelope(value, ttl);
+  if (body.length <= MAX_EDGE_BYTES) await edgePut(vkey, body, ttl);
+  if (body.length <= MAX_ROW_BYTES) await rowPut(vkey, body, ttl);
+}
+
 export async function cached(key, fn, ttl = 300) {
   const vkey = `${CACHE_VERSION}:${key}`;
+
   const memHit = memGet(vkey);
   if (memHit !== undefined) return memHit;
 
-  let kv;
+  const pending = inflight.get(vkey);
+  if (pending) return pending;
+
+  // Serve a stale value now, refresh it behind the response. Awaits the
+  // waitUntil registration (not the refresh itself) — ctx.waitUntil has to
+  // be called while the request is still open, and returning first would
+  // race the refresh against the response being sent.
+  const revalidate = async (stale) => {
+    await background(
+      (async () => {
+        try {
+          const fresh = await fn();
+          memSet(vkey, fresh, ttl);
+          await store(vkey, fresh, ttl);
+        } catch {
+          /* keep serving the stale value until the source recovers */
+        }
+      })()
+    );
+    // Short L1 TTL so the refreshed value is picked up promptly, while still
+    // collapsing the burst of requests arriving right now.
+    memSet(vkey, stale, Math.min(ttl, 60));
+    return stale;
+  };
+
+  const work = (async () => {
+    const edgeHit = await edgeGet(vkey);
+    if (edgeHit) {
+      if (!edgeHit.stale) {
+        memSet(vkey, edgeHit.value, ttl);
+        return edgeHit.value;
+      }
+      return revalidate(edgeHit.value);
+    }
+
+    const rowHit = await rowGet(vkey);
+    if (rowHit) {
+      if (!rowHit.stale) {
+        memSet(vkey, rowHit.value, ttl);
+        // Re-seed this colo's edge cache so the next hit here skips D1.
+        await background(edgePut(vkey, envelope(rowHit.value, ttl), ttl));
+        return rowHit.value;
+      }
+      return revalidate(rowHit.value);
+    }
+
+    const value = await fn();
+    memSet(vkey, value, ttl);
+    await background(store(vkey, value, ttl));
+    return value;
+  })();
+
+  inflight.set(vkey, work);
   try {
-    const { env } = await getCloudflareContext({ async: true });
-    kv = env.CACHE;
-  } catch {
-    /* no bindings available */
+    return await work;
+  } finally {
+    inflight.delete(vkey);
   }
-
-  if (kv) {
-    let hit = null;
-    try {
-      hit = await kv.get(vkey, "json");
-    } catch {
-      /* KV read failed — fall through to a fresh read below */
-    }
-    if (hit !== null) {
-      memSet(vkey, hit, ttl);
-      return hit;
-    }
-  }
-
-  const value = await fn();
-  memSet(vkey, value, ttl);
-  if (kv) {
-    try {
-      await kv.put(vkey, JSON.stringify(value), { expirationTtl: ttl });
-    } catch {
-      /* KV write failed (e.g. daily quota exceeded) — the page still gets
-         its data, and the in-memory cache still covers repeat requests on
-         this isolate even though this key won't survive a cold start. */
-    }
-  }
-  return value;
 }
 
 // Force a cached() key to be recomputed on next read — used after admin
@@ -538,8 +735,16 @@ export async function invalidate(key) {
   // deletes a key that was never written and the stale value survives.
   const vkey = `${CACHE_VERSION}:${key}`;
   memCache.delete(vkey);
+  inflight.delete(vkey);
+
+  const c = edgeCache();
+  if (c) {
+    try {
+      await c.delete(await edgeKey(vkey));
+    } catch { /* nothing cached at the edge */ }
+  }
   try {
-    const { env } = await getCloudflareContext({ async: true });
-    if (env.CACHE) await env.CACHE.delete(vkey);
+    const db = await getDb();
+    await db.prepare("DELETE FROM app_cache WHERE key = ?1").bind(vkey).run();
   } catch { /* no bindings available, nothing to invalidate */ }
 }

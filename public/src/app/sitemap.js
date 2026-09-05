@@ -1,14 +1,22 @@
 import { getBookSlugsPage, listAuthors, listPublications, listComics, getComparisonSuggestions } from "@/lib/repo";
+import { cached } from "@/lib/db";
 
 // Without this, Next.js can statically freeze this route at build time
 // (since nothing here uses fetch(), which is what its default caching
 // heuristics look for) — meaning newly imported books would never appear
 // in the sitemap until the next deploy, no matter how often the cron
-// worker adds to the catalog. Forcing dynamic means every crawl gets a
-// live query straight from D1 — getBookSlugsPage() itself isn't cached at
-// all, so new books show up on the very next crawl, not on some fixed
-// interval.
+// worker adds to the catalog. Forcing dynamic means the sitemap tracks the
+// catalog as it grows, rather than being frozen at deploy time.
 export const dynamic = "force-dynamic";
+
+// ...but "dynamic" originally also meant *uncached*: every single crawler
+// fetch of /sitemap.xml re-ran a 40,000-row scan of the books table. Nothing
+// on the site triggers this — crawlers do, on their own schedule, which is
+// why the D1 read volume kept climbing with no visitors to explain it.
+// A 6-hour cache still puts newly imported books in the sitemap the same day
+// (the import cron only runs daily anyway), and cached() serves a stale copy
+// while refreshing behind the response, so a crawl never waits on the scan.
+const SITEMAP_TTL = 21600;
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
 
@@ -29,7 +37,7 @@ const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
 // failure mode for no crawl benefit.
 export default async function sitemap() {
   const [books, authors, pubs, comics, comparisons] = await Promise.all([
-    getBookSlugsPage("en", { page: 1, perPage: 40000 }),
+    cached("sitemap:book-slugs:en", () => getBookSlugsPage("en", { page: 1, perPage: 40000 }), SITEMAP_TTL),
     listAuthors("en"),
     listPublications("en"),
     listComics("en"),

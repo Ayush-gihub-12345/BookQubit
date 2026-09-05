@@ -564,15 +564,25 @@ export async function getMoodCounts() {
   }, 10800);
 }
 
-async function listEntity(table, lang, jsonCols) {
+// `columns` is deliberately explicit rather than `SELECT *` for the large
+// tables. These lists are whole-table reads, so every column comes along for
+// all ~3,900 rows — and the long-text ones (bio, description, about) made
+// the cached result roughly 1MB, which is over cached()'s max entry size.
+// The entry then never persisted to the durable/edge tiers, so every isolate
+// cold start re-ran the full scan: the exact reason this query showed up in
+// the D1 dashboard with hundreds of calls/day against a 3-hour TTL. Trimming
+// to the columns list consumers actually read keeps the entry cacheable.
+// Detail pages don't use these lists at all any more — see getAuthor() /
+// getPublication() below, which fetch their one row by index instead.
+async function listEntity(table, lang, jsonCols, columns = "*") {
   return cached(`${table}:${lang}`, async () => {
     const db = await getCatalogDb();
     let { results } = await db
-      .prepare(`SELECT * FROM ${table} WHERE lang=?1 ORDER BY id`)
+      .prepare(`SELECT ${columns} FROM ${table} WHERE lang=?1 ORDER BY id`)
       .bind(lang).all();
     if (!results.length && lang !== "en") {
       ({ results } = await db
-        .prepare(`SELECT * FROM ${table} WHERE lang='en' ORDER BY id`).all());
+        .prepare(`SELECT ${columns} FROM ${table} WHERE lang='en' ORDER BY id`).all());
     }
     return results.map((r) => {
       const out = { ...r };
@@ -581,6 +591,14 @@ async function listEntity(table, lang, jsonCols) {
     });
   }, 10800);
 }
+
+// Columns each list's consumers actually read. `bio`/`description` are
+// truncated in SQL to the same 200 chars queryAuthors/queryPublishers
+// already trimmed them to before rendering.
+const AUTHOR_LIST_COLUMNS =
+  "id, slug, name, country, birth_year, image_url, genres, substr(bio, 1, 200) AS bio";
+const PUBLICATION_LIST_COLUMNS =
+  "id, slug, name, type, headquarters, logo_url, founded, substr(description, 1, 200) AS description";
 
 // listEntity("authors", ...) returns every row in the authors table, including
 // stub profiles created during import for an author whose book didn't end up
@@ -602,7 +620,7 @@ async function listEntity(table, lang, jsonCols) {
 export async function listAuthors(lang) {
   return cached(`authors-with-books:${lang}`, async () => {
     const [authors, bookAuthorNames] = await Promise.all([
-      listEntity("authors", lang, ["genres"]),
+      listEntity("authors", lang, ["genres"], AUTHOR_LIST_COLUMNS),
       (async () => {
         const db = await getCatalogDb();
         const { results } = await db
@@ -621,7 +639,8 @@ export async function listAuthors(lang) {
     return authors.filter((a) => bookAuthorNames.has(a.name.trim().toLowerCase()));
   }, 10800);
 }
-export const listPublications = (lang) => listEntity("publications", lang, ["notable_authors", "imprints"]);
+export const listPublications = (lang) =>
+  listEntity("publications", lang, [], PUBLICATION_LIST_COLUMNS);
 export const listComics = (lang) => listEntity("comics", lang, ["characters", "creators"]);
 
 // Server-side search/filter/sort/page over the cached full authors list.
@@ -704,12 +723,32 @@ export async function getPublisherTypes(lang) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
 }
 
-export async function getAuthor(slug, lang) {
-  return (await listAuthors(lang)).find((a) => a.slug === decodeURIComponent(slug)) || null;
+// Detail pages fetch their single row by the UNIQUE(slug, lang) index. These
+// used to scan the whole cached list to find one entry, which meant a cold
+// cache on any author/publisher page paid for a full-table read of ~3,900
+// rows to render one profile — and, because the list carries every column,
+// it also had to materialize every bio in memory to do it. Now: one indexed
+// row, and the full untruncated row at that (the shared list only carries
+// the trimmed columns, so the detail page must not read from it).
+async function getEntityBySlug(table, slug, lang, jsonCols) {
+  const decoded = decodeURIComponent(slug);
+  return cached(`${table}-row:${lang}:${decoded}`, async () => {
+    const db = await getCatalogDb();
+    const row =
+      (await db.prepare(`SELECT * FROM ${table} WHERE slug=?1 AND lang=?2`).bind(decoded, lang).first()) ||
+      (lang !== "en"
+        ? await db.prepare(`SELECT * FROM ${table} WHERE slug=?1 AND lang='en'`).bind(decoded).first()
+        : null);
+    if (!row) return null;
+    const out = { ...row };
+    jsonCols.forEach((c) => (out[c] = J(row[c])));
+    return out;
+  }, 10800);
 }
-export async function getPublication(slug, lang) {
-  return (await listPublications(lang)).find((p) => p.slug === decodeURIComponent(slug)) || null;
-}
+
+export const getAuthor = (slug, lang) => getEntityBySlug("authors", slug, lang, ["genres"]);
+export const getPublication = (slug, lang) =>
+  getEntityBySlug("publications", slug, lang, ["notable_authors", "imprints"]);
 
 // Cross-linking helpers: a book's `author`/`publisher` columns are plain
 // text (a book can list multiple authors as "A, B, C"), so pages that want
