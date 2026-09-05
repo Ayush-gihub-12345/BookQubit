@@ -301,17 +301,30 @@ export async function queryBooks(lang, opts = {}) {
 
 // Direct indexed lookup (UNIQUE(slug, lang)) — never scans the catalog,
 // so this stays fast whether there are dozens of books or millions.
+// This was the single highest-traffic uncached D1 read on the whole site —
+// every book-page view, with no TTL at all. Caches the raw row (not the
+// mapBook()-applied result), then applies mapBook() with a fresh
+// getSiteSettings() read after the cache lookup — same pattern already used
+// by getRecentlyAdded/getFeaturedBooks above — so an admin's Amazon
+// associate-tag change still shows on the very next request instead of
+// waiting out the TTL. 300s: books essentially never change post-import, so
+// this is a conservative floor chosen to still collapse a burst of hits on
+// a trending book, not a freshness requirement.
 export async function getBook(slug, lang) {
   const decoded = decodeURIComponent(slug);
   const db = await getCatalogDb();
   const [row, { amazon_assoc_tag }] = await Promise.all([
-    db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first(),
+    cached(`book-row:${lang}:${decoded}`, () =>
+      db.prepare("SELECT * FROM books WHERE slug=?1 AND lang=?2 LIMIT 1").bind(decoded, lang).first()
+    , 300),
     getSiteSettings(),
   ]);
   if (row) return mapBook(row, amazon_assoc_tag);
   // Localized-slug support: the slug may belong to another language's row
   // (e.g. a Devanagari slug opened while the UI language is English).
-  const fallback = await db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first();
+  const fallback = await cached(`book-row-fallback:${decoded}`, () =>
+    db.prepare("SELECT * FROM books WHERE slug=?1 LIMIT 1").bind(decoded).first()
+  , 300);
   return fallback ? mapBook(fallback, amazon_assoc_tag) : null;
 }
 
@@ -757,20 +770,27 @@ async function getAuthorBookIndex(lang) {
 // Every book an author worked on, whether they're the sole author or one
 // of several. Bounded so a prolific/ambiguous name can't render a
 // thousand-card page.
+// Only the inner index lookup was cached before — this outer function
+// re-ran getBooksBySlug's batched slug SELECT on every single author-page
+// view, even though the slug list itself is stable for as long as the
+// (already-cached) author index is. TTL matches that index's 3h, since a
+// stale result here can never outlive the data it's derived from. Caches
+// the raw rows array, applying mapBook() with a fresh getSiteSettings()
+// after the cache lookup — same reasoning as getBook above.
 export async function booksByAuthor(name, lang) {
   const key = (name || "").trim().toLowerCase();
   if (!key) return [];
-  const [index, { amazon_assoc_tag }] = await Promise.all([
-    getAuthorBookIndex(lang),
+  const [rows, { amazon_assoc_tag }] = await Promise.all([
+    cached(`books-by-author:${lang}:${key}`, async () => {
+      const index = await getAuthorBookIndex(lang);
+      const slugs = (index[key] || []).slice(0, 200);
+      if (!slugs.length) return [];
+      const bySlug = await getBooksBySlug(slugs, lang, "*");
+      return slugs.map((s) => bySlug.get(s)).filter(Boolean);
+    }, 10800),
     getSiteSettings(),
   ]);
-  const slugs = (index[key] || []).slice(0, 200);
-  if (!slugs.length) return [];
-  const bySlug = await getBooksBySlug(slugs, lang, "*");
-  return slugs
-    .map((s) => bySlug.get(s))
-    .filter(Boolean)
-    .map((r) => mapBook(r, amazon_assoc_tag));
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // Resolves each individual name in a book's ", "-joined author line to its
@@ -819,23 +839,25 @@ async function getPublisherBookIndex(lang) {
 export async function booksByPublisher(name, lang) {
   const needle = (name || "").trim().toLowerCase();
   if (!needle) return [];
-  const [index, { amazon_assoc_tag }] = await Promise.all([
-    getPublisherBookIndex(lang),
+  // Same fix as booksByAuthor above: the outer function was uncached, only
+  // the index lookup was. TTL matches the publisher index's 3h.
+  const [rows, { amazon_assoc_tag }] = await Promise.all([
+    cached(`books-by-publisher:${lang}:${needle}`, async () => {
+      const index = await getPublisherBookIndex(lang);
+      const slugs = [];
+      for (const key of Object.keys(index)) {
+        // Same substring semantics the old LIKE had, so results don't change.
+        if (key.includes(needle)) slugs.push(...index[key]);
+        if (slugs.length >= 200) break; // bounded page, same cap as booksByAuthor
+      }
+      if (!slugs.length) return [];
+      const bounded = slugs.slice(0, 200);
+      const bySlug = await getBooksBySlug(bounded, lang, "*");
+      return bounded.map((s) => bySlug.get(s)).filter(Boolean);
+    }, 10800),
     getSiteSettings(),
   ]);
-  const slugs = [];
-  for (const key of Object.keys(index)) {
-    // Same substring semantics the old LIKE had, so results don't change.
-    if (key.includes(needle)) slugs.push(...index[key]);
-    if (slugs.length >= 200) break; // bounded page, same cap as booksByAuthor
-  }
-  if (!slugs.length) return [];
-  const bounded = slugs.slice(0, 200);
-  const bySlug = await getBooksBySlug(bounded, lang, "*");
-  return bounded
-    .map((s) => bySlug.get(s))
-    .filter(Boolean)
-    .map((r) => mapBook(r, amazon_assoc_tag));
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
 // Distinct tag -> book ids for the whole catalog, built once per TTL and
@@ -1636,7 +1658,29 @@ export async function addDiscussionPost(discussionId, userId, body) {
 //     Clear books is very likely to want a 3rd)
 // Every returned book carries a `reason` so the UI can show *why* it was
 // picked, not just present it as an opaque black box.
+// The most expensive uncached read on the site: a per-user shelf scan plus
+// an indexed-but-still-500-row books scan, on every ForYou.jsx render and
+// every /api/recommendations call, with no TTL at all. Personalized, so a
+// single shared cache entry doesn't fit — cached per-user instead.
+// `limit` is deliberately NOT part of the cache key: the expensive part
+// (the scan + scoring) is computed once at a generous internal cap
+// (INTERNAL_CAP, well above the real caller's clamped max of 30 — see
+// api/recommendations/route.js), and the caller's actual `limit` is applied
+// by slicing the cached array afterward. Without this, two callers asking
+// for different limits (or the same caller with a changed limit) would
+// either miss the cache or silently truncate results below what they asked
+// for. 300s TTL: personalized data should still refresh reasonably often
+// within a session, not just once a day.
+const RECS_INTERNAL_CAP = 50;
+
 export async function getRecommendations(uid, lang, limit = 12) {
+  const { picks, basis } = await cached(`recommendations:${uid}:${lang}`, () =>
+    computeRecommendations(uid, lang, RECS_INTERNAL_CAP)
+  , 300);
+  return { picks: picks.slice(0, limit), basis };
+}
+
+async function computeRecommendations(uid, lang, limit) {
   const db = await getDb();
   const catalogDb = await getCatalogDb();
 

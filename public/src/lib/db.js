@@ -446,6 +446,21 @@ export async function getCatalogDb() {
 // almost no real visitors. An in-memory hit never touches KV or D1, so it
 // keeps working even while KV's quota is blown. Capped and LRU-ish evicted
 // so it can't grow unbounded in a long-lived isolate.
+// Namespace for every cache key, prefixed on both read and write. BUMP THIS
+// whenever a cached value's SHAPE changes, even if the key string itself is
+// unchanged.
+//
+// This exists because of a real production incident: a cached value's shape
+// changed (an object became an array) under the same key, and KV entries
+// outlive a deploy — the newly-deployed code read back an old-shaped value
+// from a still-warm KV entry and threw ("X.map is not a function"),
+// surfacing as an unexplained Server Component error on pages visited
+// before the deploy. A version bump makes every old entry unreachable
+// instantly on both the KV and in-memory layers, instead of relying on
+// remembering to pick a brand-new key string by hand every time a function
+// here changes its return shape.
+const CACHE_VERSION = "v1";
+
 const MEM_MAX = 400;
 const memCache = new Map();
 function memGet(key) {
@@ -477,7 +492,8 @@ function memSet(key, value, ttlSeconds) {
 // one request, and the in-memory layer means that's now rare even when KV
 // is unavailable.
 export async function cached(key, fn, ttl = 300) {
-  const memHit = memGet(key);
+  const vkey = `${CACHE_VERSION}:${key}`;
+  const memHit = memGet(vkey);
   if (memHit !== undefined) return memHit;
 
   let kv;
@@ -491,21 +507,21 @@ export async function cached(key, fn, ttl = 300) {
   if (kv) {
     let hit = null;
     try {
-      hit = await kv.get(key, "json");
+      hit = await kv.get(vkey, "json");
     } catch {
       /* KV read failed — fall through to a fresh read below */
     }
     if (hit !== null) {
-      memSet(key, hit, ttl);
+      memSet(vkey, hit, ttl);
       return hit;
     }
   }
 
   const value = await fn();
-  memSet(key, value, ttl);
+  memSet(vkey, value, ttl);
   if (kv) {
     try {
-      await kv.put(key, JSON.stringify(value), { expirationTtl: ttl });
+      await kv.put(vkey, JSON.stringify(value), { expirationTtl: ttl });
     } catch {
       /* KV write failed (e.g. daily quota exceeded) — the page still gets
          its data, and the in-memory cache still covers repeat requests on
@@ -518,9 +534,12 @@ export async function cached(key, fn, ttl = 300) {
 // Force a cached() key to be recomputed on next read — used after admin
 // writes so edits (e.g. site settings) show up immediately, not after TTL.
 export async function invalidate(key) {
-  memCache.delete(key);
+  // Must apply the same version prefix cached() writes under, or this
+  // deletes a key that was never written and the stale value survives.
+  const vkey = `${CACHE_VERSION}:${key}`;
+  memCache.delete(vkey);
   try {
     const { env } = await getCloudflareContext({ async: true });
-    if (env.CACHE) await env.CACHE.delete(key);
+    if (env.CACHE) await env.CACHE.delete(vkey);
   } catch { /* no bindings available, nothing to invalidate */ }
 }
