@@ -183,8 +183,8 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 );
 
 -- Durable backing store for cached() (see the cache section at the bottom of
--- this file). One row per cache key; a hit costs a single indexed row read,
--- versus re-running an aggregate that can scan the entire books table. This
+-- this file). One row per cache key, and a hit costs a single indexed row
+-- read versus re-running an aggregate that scans the entire books table. This
 -- replaced KV, whose free-tier 1,000-writes/day cap was being exhausted daily
 -- and silently turning every cached() call back into an uncached D1 read.
 CREATE TABLE IF NOT EXISTS app_cache (
@@ -395,6 +395,19 @@ const CATALOG_MIGRATIONS = [
   "ALTER TABLE import_progress ADD COLUMN chain_running INTEGER DEFAULT 0",
 ];
 
+// Splits a schema into individual statements. Line comments are stripped
+// FIRST, because a stray ";" inside a comment would otherwise split it
+// mid-sentence and hand SQLite the rest of the prose as a statement. That is
+// not hypothetical: it happened, the whole batch is atomic so every table's
+// DDL failed with it, getDb() rejected, and every request touching the user
+// database 500'd — from one semicolon in a comment.
+const statementsOf = (sql) =>
+  sql
+    .replace(/--[^\n]*/g, "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 let schemaReady;
 let catalogSchemaReady;
 
@@ -406,7 +419,7 @@ export async function getDb() {
     );
   }
   if (!schemaReady) {
-    const statements = SCHEMA.split(";").map((s) => s.trim()).filter(Boolean);
+    const statements = statementsOf(SCHEMA);
     schemaReady = env.DB
       .batch(statements.map((s) => env.DB.prepare(s)))
       .then(() =>
@@ -432,7 +445,7 @@ export async function getCatalogDb() {
     );
   }
   if (!catalogSchemaReady) {
-    const statements = CATALOG_SCHEMA.split(";").map((s) => s.trim()).filter(Boolean);
+    const statements = statementsOf(CATALOG_SCHEMA);
     catalogSchemaReady = env.CATALOG_DB
       .batch(statements.map((s) => env.CATALOG_DB.prepare(s)))
       .then(() =>
