@@ -793,7 +793,7 @@ async function getAuthorBookIndex(lang) {
     const { results } = await db
       .prepare("SELECT slug, author FROM books WHERE lang=?1 AND author IS NOT NULL AND author != ''")
       .bind(lang).all();
-    // Plain object, not a Map — this goes through JSON in the KV cache.
+    // Plain object, not a Map — this goes through JSON in the cache.
     const index = {};
     for (const { slug, author } of results) {
       for (const part of author.split(",")) {

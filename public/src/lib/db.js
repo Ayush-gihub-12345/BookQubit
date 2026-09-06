@@ -185,8 +185,8 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 -- Durable backing store for cached() (see the cache section at the bottom of
 -- this file). One row per cache key, and a hit costs a single indexed row
 -- read versus re-running an aggregate that scans the entire books table. This
--- replaced KV, whose free-tier 1,000-writes/day cap was being exhausted daily
--- and silently turning every cached() call back into an uncached D1 read.
+-- replaced a write-metered key/value tier whose daily cap was being exhausted
+-- every day, silently turning every cached() call back into an uncached read.
 CREATE TABLE IF NOT EXISTS app_cache (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -461,27 +461,29 @@ export async function getCatalogDb() {
 }
 
 // ---------------------------------------------------------------------------
-// Read-through cache — three tiers, no KV.
+// Read-through cache — three tiers.
 //
 //   L1  in-isolate memory   free, instant, dies with the isolate
 //   L2  Cloudflare Cache API  free, unmetered, per-colo, survives cold starts
 //   L3  D1 `app_cache` table  global, durable, 1 indexed row read per hit
 //
-// KV used to be L2 and was removed deliberately. Verified from the D1
-// dashboard's query analytics: the free tier's 1,000-puts/day KV write cap
-// was being exhausted every day by the sheer number of distinct cache keys
-// this site produces (per-lang, per-filter, per-sort, per-page, per-book).
-// Once kv.put() starts failing, every cached() call silently degrades into
-// an *uncached* D1 read — which is exactly how a handful of aggregate
-// queries came to read millions of rows/day with almost no real visitors
-// (`SELECT ... COUNT(*) ... json_each(books.tags)` alone: 2.83M rows across
-// 297 calls, against a 3-hour TTL that should have allowed ~8), exhausting
-// D1's daily row-read quota and taking the whole site down with
-// "Something went wrong" until midnight UTC.
+// Every tier here is deliberately free of a daily write quota, and that is
+// the single most important property of this design — not the tiering.
 //
-// The Cache API has no such write quota, so L2 no longer stops working
-// partway through the day. L3 makes a cross-colo cold start cost one row
-// read instead of a full-table aggregate.
+// An earlier version used a write-metered key/value store as L2. The number
+// of distinct cache keys this site produces (per-lang, per-filter, per-sort,
+// per-page, per-book) exhausted that daily write cap every single day, and
+// once writes start failing, every cached() call silently degrades into an
+// *uncached* D1 read. Nothing errors; the cache simply stops existing. That
+// is how a handful of aggregate queries came to read millions of rows/day
+// with almost no real visitors (`SELECT ... COUNT(*) ... json_each(
+// books.tags)` alone: 2.83M rows across 297 calls, against a 3-hour TTL that
+// should have allowed ~8) — exhausting D1's daily row-read quota and taking
+// the whole site down until midnight UTC.
+//
+// So: do not reintroduce a cache tier with a daily write limit here, however
+// convenient its API. A cache that fails closed and loudly is fine; one that
+// fails open and silently takes production down with it.
 //
 // Two further properties matter as much as the tiering:
 //
@@ -507,7 +509,6 @@ export async function getCatalogDb() {
 // deploy. A version bump makes every old entry unreachable instantly across
 // all three tiers, instead of relying on remembering to pick a brand-new key
 // string by hand every time a function here changes its return shape.
-// (v2: storage layer moved off KV, so old KV-era entries are moot anyway.)
 const CACHE_VERSION = "v2";
 
 // How long an entry is physically retained beyond its logical TTL, to be
