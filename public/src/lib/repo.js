@@ -1588,12 +1588,29 @@ export async function getSiteSettings() {
   // most-called cached functions in the whole app (every book/author/
   // publisher fetch pulls the Amazon associate tag from it), so a short
   // default TTL here meant near-constant re-reads.
+  //
+  // Falls back to defaults instead of throwing when the settings read fails.
+  // This function is the single most widely depended-on read in the app, and
+  // it lives in the *user* database while almost everything that calls it is
+  // rendering *catalog* data. The two D1 databases have independent daily
+  // quotas, so when the user database ran out, every book/author/publisher
+  // page died too — pages whose actual content was sitting in a catalog
+  // database that still had plenty of budget, purely because they wanted an
+  // Amazon associate tag. Verified live: the footer's catalog-sourced counts
+  // rendered fine on the very same page that otherwise showed an error.
+  //
+  // A missing associate tag costs an affiliate attribution on some links.
+  // Throwing costs the entire page. Degrade, don't fail.
   return cached("site:settings", async () => {
-    const db = await getDb();
-    const { results } = await db.prepare("SELECT key, value FROM site_settings").all();
-    const map = { ...SETTINGS_DEFAULTS };
-    for (const r of results) map[r.key] = r.value;
-    return map;
+    try {
+      const db = await getDb();
+      const { results } = await db.prepare("SELECT key, value FROM site_settings").all();
+      const map = { ...SETTINGS_DEFAULTS };
+      for (const r of results) map[r.key] = r.value;
+      return map;
+    } catch {
+      return { ...SETTINGS_DEFAULTS };
+    }
   }, 10800);
 }
 

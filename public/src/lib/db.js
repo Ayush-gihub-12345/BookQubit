@@ -411,6 +411,17 @@ const statementsOf = (sql) =>
 let schemaReady;
 let catalogSchemaReady;
 
+// Schema setup retries are rate-limited per isolate. Previously a failure
+// cleared the cached promise immediately, so the very next request re-ran the
+// whole 31-statement batch. When the failure cause is the database being over
+// its read quota, that turns every inbound request into another 31 statements
+// against the database that is already in trouble — the retry becomes the
+// load. A cooldown means a struggling database gets a trickle of retries
+// rather than one per request, and recovery is still automatic.
+const SCHEMA_RETRY_COOLDOWN_MS = 30_000;
+let schemaRetryAfter = 0;
+let catalogRetryAfter = 0;
+
 export async function getDb() {
   const { env } = await getCloudflareContext({ async: true });
   if (!env?.DB) {
@@ -419,6 +430,14 @@ export async function getDb() {
     );
   }
   if (!schemaReady) {
+    if (Date.now() < schemaRetryAfter) {
+      // Still cooling down from a recent failure. Hand back the binding
+      // unmigrated rather than re-running the batch: the tables it creates
+      // already exist in any real deployment, so ordinary queries work fine,
+      // and this keeps a transient DB problem from being amplified by our
+      // own retries.
+      return env.DB;
+    }
     const statements = statementsOf(SCHEMA);
     schemaReady = env.DB
       .batch(statements.map((s) => env.DB.prepare(s)))
@@ -426,7 +445,8 @@ export async function getDb() {
         Promise.all(MIGRATIONS.map((m) => env.DB.prepare(m).run().catch(() => {})))
       )
       .catch((err) => {
-        schemaReady = undefined; // allow retry on next request
+        schemaReady = undefined; // allow retry, but not before the cooldown
+        schemaRetryAfter = Date.now() + SCHEMA_RETRY_COOLDOWN_MS;
         throw err;
       });
   }
@@ -445,6 +465,7 @@ export async function getCatalogDb() {
     );
   }
   if (!catalogSchemaReady) {
+    if (Date.now() < catalogRetryAfter) return env.CATALOG_DB; // see getDb()
     const statements = statementsOf(CATALOG_SCHEMA);
     catalogSchemaReady = env.CATALOG_DB
       .batch(statements.map((s) => env.CATALOG_DB.prepare(s)))
@@ -452,7 +473,8 @@ export async function getCatalogDb() {
         Promise.all(CATALOG_MIGRATIONS.map((m) => env.CATALOG_DB.prepare(m).run().catch(() => {})))
       )
       .catch((err) => {
-        catalogSchemaReady = undefined; // allow retry on next request
+        catalogSchemaReady = undefined; // allow retry, but not before the cooldown
+        catalogRetryAfter = Date.now() + SCHEMA_RETRY_COOLDOWN_MS;
         throw err;
       });
   }
@@ -615,9 +637,41 @@ async function edgePut(vkey, body, ttl) {
   }
 }
 
+// The cache's durable tier deliberately does NOT go through getDb(). Doing so
+// dragged the main database's whole schema batch into every cache miss —
+// including misses for catalog data that has nothing to do with that database
+// — so a problem with the user database degraded catalog pages too, and the
+// schema retries added load to a database already struggling. This grabs the
+// binding directly and ensures only the one table it needs, once per isolate.
+// If that fails, the tier switches itself off for this isolate rather than
+// retrying forever; L1 and L2 carry on unaffected.
+let appCacheReady;
+let appCacheBroken = false;
+async function cacheDb() {
+  if (appCacheBroken) return undefined;
+  const { env } = await getCloudflareContext({ async: true });
+  if (!env?.DB) return undefined;
+  if (!appCacheReady) {
+    appCacheReady = env.DB
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS app_cache (
+           key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER NOT NULL
+         )`
+      )
+      .run()
+      .catch((err) => {
+        appCacheBroken = true;
+        throw err;
+      });
+  }
+  await appCacheReady;
+  return env.DB;
+}
+
 async function rowGet(vkey) {
   try {
-    const db = await getDb();
+    const db = await cacheDb();
+    if (!db) return undefined;
     const row = await db
       .prepare("SELECT value, expires_at FROM app_cache WHERE key = ?1")
       .bind(vkey)
@@ -634,7 +688,8 @@ async function rowGet(vkey) {
 
 async function rowPut(vkey, body, ttl) {
   try {
-    const db = await getDb();
+    const db = await cacheDb();
+    if (!db) return;
     await db
       .prepare(
         `INSERT INTO app_cache (key, value, expires_at) VALUES (?1, ?2, ?3)
@@ -758,7 +813,7 @@ export async function invalidate(key) {
     } catch { /* nothing cached at the edge */ }
   }
   try {
-    const db = await getDb();
-    await db.prepare("DELETE FROM app_cache WHERE key = ?1").bind(vkey).run();
+    const db = await cacheDb();
+    if (db) await db.prepare("DELETE FROM app_cache WHERE key = ?1").bind(vkey).run();
   } catch { /* no bindings available, nothing to invalidate */ }
 }
