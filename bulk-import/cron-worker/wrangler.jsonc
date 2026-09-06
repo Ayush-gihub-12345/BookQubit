@@ -60,6 +60,14 @@
     "crons": ["* * * * *"]
   },
   "vars": {
+    // Master switch for automatic background importing. "0" = the per-minute
+    // watchdog returns immediately, touching no database at all, and any
+    // in-flight continuous chain stops at its next hop. Manual admin runs
+    // still work. Turn this to "1" only when the catalog genuinely needs to
+    // grow AND there's D1 read budget to spare — background import traffic
+    // shares the same daily quota as the live website, and exhausting it
+    // takes the site down for the rest of the UTC day.
+    "AUTO_IMPORT": "0",
     "PER_RUN_CHUNKS": "13",
     "D1_BATCH_SIZE": "100",
     "OL_PAGES_PER_RUN": "3",

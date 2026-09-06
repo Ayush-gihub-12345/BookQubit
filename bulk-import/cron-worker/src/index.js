@@ -1330,6 +1330,18 @@ export default {
   // last_run_at hasn't moved in over 2 minutes — comfortably longer than a
   // single hop ever takes — and gets restarted rather than trusted forever.
   async scheduled(event, env, ctx) {
+    // Kill switch, checked BEFORE any DB access so a disabled importer costs
+    // exactly zero catalog reads. This matters because the watchdog fires
+    // every minute and, when it starts a chain, that chain then hops
+    // continuously around the clock — reading and writing the same catalog
+    // database the website serves every page view from. With nobody on the
+    // site at all, that background traffic was still consuming the shared D1
+    // daily row-read quota, and when the quota ran out the *website* went
+    // down. Importing more books is never worth taking the site offline, so
+    // it stays off until deliberately switched on.
+    // Set AUTO_IMPORT to "1" in wrangler.jsonc vars to re-enable. Manual
+    // admin runs (/run?burst=N, ?target=N) are unaffected either way.
+    if (env.AUTO_IMPORT !== "1") return;
     ctx.waitUntil(
       (async () => {
         const row = await env.DB.prepare(
@@ -1434,7 +1446,12 @@ export default {
 
       let shouldContinue;
       if (continuous) {
-        shouldContinue = !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
+        // Also honours the AUTO_IMPORT kill switch, so a chain already in
+        // flight when the switch is turned off stops at its next hop instead
+        // of running on indefinitely — a self-chaining loop has no other
+        // natural end, and deploying alone doesn't interrupt one.
+        shouldContinue =
+          env.AUTO_IMPORT === "1" && !result.capped && newEmptyStreak < MAX_EMPTY_STREAK;
       } else if (target > 0) {
         // No fixed hop count — keep chaining until the real catalog total
         // hits the target, checked fresh from the DB each hop (not the

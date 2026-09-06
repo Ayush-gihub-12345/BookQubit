@@ -20,12 +20,6 @@
       "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
     }
   ],
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "70c79257dad043be8b1401edd5d3f6d9"
-    }
-  ],
   "services": [
     {
       "binding": "IMPORT_CRON",
