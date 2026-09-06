@@ -25,5 +25,14 @@
       "binding": "IMPORT_CRON",
       "service": "bookqubit-import-cron"
     }
-  ]
+  ],
+  "vars": {
+    // "1" re-applies SCHEMA/CATALOG_SCHEMA + migrations on database access.
+    // Keep at "0" in normal operation: applying them on every isolate cold
+    // start cost hundreds of pointless query executions per idle half-hour,
+    // re-creating tables and re-adding columns that already exist. After
+    // editing a schema in db.js: set to "1", deploy, load one page, set back
+    // to "0", deploy again. See shouldBootstrap() in src/lib/db.js.
+    "RUN_SCHEMA": "0"
+  }
 }

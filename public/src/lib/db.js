@@ -422,6 +422,28 @@ const SCHEMA_RETRY_COOLDOWN_MS = 30_000;
 let schemaRetryAfter = 0;
 let catalogRetryAfter = 0;
 
+// Whether to apply schema + migrations on database access. OFF by default.
+//
+// This used to run on every isolate cold start, which on Workers means
+// constantly: 22 CREATE TABLE statements plus 10 ALTER TABLEs against the
+// catalog database, and 31 plus 6 against the user database, every time a new
+// isolate spun up. Measured on the D1 dashboard over one idle 30-minute
+// window: the four `ALTER TABLE import_progress ADD COLUMN` migrations alone
+// accounted for 190 query executions — all of them for columns that already
+// existed, all failing, all silently caught. That was the bulk of ~1,000
+// queries in a window with essentially no visitors.
+//
+// The statements are individually cheap (they read no rows), but they are not
+// free: they consume queries, CPU, and latency on every cold start forever,
+// to re-assert a schema that has been in place for weeks.
+//
+// So schema application is now a deliberate act, not a side effect of serving
+// a request. After changing SCHEMA/CATALOG_SCHEMA/MIGRATIONS, set RUN_SCHEMA
+// to "1" in wrangler.jsonc, deploy, load any page once, then set it back to
+// "0" and deploy again. The cache's own table is exempt — see cacheDb(),
+// which creates just that one table on demand so caching works regardless.
+const shouldBootstrap = (env) => env?.RUN_SCHEMA === "1";
+
 export async function getDb() {
   const { env } = await getCloudflareContext({ async: true });
   if (!env?.DB) {
@@ -429,7 +451,7 @@ export async function getDb() {
       "D1 binding 'DB' is missing. Add it: Cloudflare dashboard → your Worker → Settings → Bindings → D1 Database, name it exactly DB."
     );
   }
-  if (!schemaReady) {
+  if (!schemaReady && shouldBootstrap(env)) {
     if (Date.now() < schemaRetryAfter) {
       // Still cooling down from a recent failure. Hand back the binding
       // unmigrated rather than re-running the batch: the tables it creates
@@ -464,7 +486,7 @@ export async function getCatalogDb() {
       "D1 binding 'CATALOG_DB' is missing. Add it: Cloudflare dashboard → your Worker → Settings → Bindings → D1 Database, name it exactly CATALOG_DB."
     );
   }
-  if (!catalogSchemaReady) {
+  if (!catalogSchemaReady && shouldBootstrap(env)) {
     if (Date.now() < catalogRetryAfter) return env.CATALOG_DB; // see getDb()
     const statements = statementsOf(CATALOG_SCHEMA);
     catalogSchemaReady = env.CATALOG_DB
