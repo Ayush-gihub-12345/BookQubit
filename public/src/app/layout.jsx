@@ -30,9 +30,10 @@ import { getLang, RTL } from "@/lib/lang";
 import { getTheme } from "@/lib/theme";
 import { ToastProvider } from "@/components/Toast";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop"),
+  metadataBase: new URL(SITE_URL),
   title: { default: "BookQubit — Discover, Summarize & Buy Great Books", template: "%s | BookQubit" },
   description:
     "Explore curated books, summaries, key insights, authors, publishers and comics — in 21 languages. Find your next great read on BookQubit.",

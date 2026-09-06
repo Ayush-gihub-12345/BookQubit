@@ -15,6 +15,7 @@ import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +88,7 @@ export default async function BookPage({ params }) {
     inLanguage: book.language || undefined,
   };
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
+  const baseUrl = SITE_URL;
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

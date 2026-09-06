@@ -1,4 +1,5 @@
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
+import { SITE_URL } from "@/lib/site";
+const BASE = SITE_URL;
 
 // Private/auth-only areas — never useful in a search index.
 const PRIVATE = ["/account", "/login", "/admin", "/liked"];
@@ -25,14 +26,35 @@ const SEO_CRAWLERS = [
   "ZoominfoBot",
   "magpie-crawler",
   "serpstatbot",
+  // Amazon's crawler. Measured live via `wrangler tail`: 10 of 13 requests in
+  // one 16-second window — roughly 48 requests/minute, on the order of 70,000
+  // a day, against a catalog whose entire free-tier budget is 5 million row
+  // reads. It was the single largest source of load on the site and the main
+  // reason the daily quota kept being exhausted with no human visitors.
+  // Blocking it does not affect Amazon affiliate links, which are ordinary
+  // outbound links and involve no crawling of this site. Remove it from this
+  // list if that trade ever stops making sense.
+  "Amzn-SearchBot",
 ];
+
+// Faceted/filtered URLs. Every combination of tag, category, sort and page is
+// a distinct URL running its own filtered query, so the crawlable space is
+// effectively unbounded — a crawler can walk it forever and never finish.
+// Observed live: `/books?tag=Hercule%20Poirot%20(Fictitious...`,
+// `/books?tag=Adoptees`, and so on, each one a fresh database query.
+//
+// Blocking these costs nothing in discoverability: every book, author,
+// publisher and comic already has its own canonical URL listed individually
+// in sitemap.xml, so search engines reach all the real content directly
+// without needing to crawl filter permutations to find it.
+const FACETED = ["/books?*", "/comics?*", "/authors?*", "/publications?*", "/collections?*"];
 
 export default function robots() {
   return {
     rules: [
       // Real search engines — full access (minus private areas), since these
       // are the ones that actually drive discovery and rankings.
-      { userAgent: "*", allow: "/", disallow: PRIVATE },
+      { userAgent: "*", allow: "/", disallow: [...PRIVATE, ...FACETED], crawlDelay: 10 },
       // Everything above gets shut out entirely.
       ...SEO_CRAWLERS.map((userAgent) => ({ userAgent, disallow: "/" })),
     ],

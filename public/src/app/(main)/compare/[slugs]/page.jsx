@@ -5,6 +5,7 @@ import { getLang } from "@/lib/lang";
 import BookCover from "@/components/BookCover";
 import Rating from "@/components/Rating";
 import Icon from "@/components/Icon";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function ComparePage({ params }) {
   if (books.length < 2) notFound();
 
   const heading = books.map((b) => b.title).join(" vs ");
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop";
+  const baseUrl = SITE_URL;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",

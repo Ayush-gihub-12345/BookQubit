@@ -1,4 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { SITE_URL } from "@/lib/site";
 
 // Two D1 databases: `catalog` holds the large, mostly-static reference data
 // (books/authors/publications/comics + the bulk-import pipeline tables), and
@@ -611,9 +612,7 @@ const edgeCache = () => (typeof caches !== "undefined" ? caches.default : undefi
 // which would leave L2 permanently empty and be very easy to mistake for
 // "the cache is working". So keys live on the site's own origin under a
 // path prefix that maps to no real route.
-const CACHE_URL_BASE =
-  (process.env.NEXT_PUBLIC_BASE_URL || "https://www.bookqubit.shop").replace(/\/$/, "") +
-  "/__cache/";
+const CACHE_URL_BASE = `${SITE_URL}/__cache/`;
 
 // Anything keyed to a specific reader stays out of the edge tier: entries
 // there live at a URL on the public zone, and a per-user recommendation set
