@@ -66,13 +66,16 @@ export default async function RootLayout({ children }) {
         <link rel="alternate" type="application/rss+xml" title="BookQubit — New Releases" href="/feed.xml" />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
-        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-2MX9WZ1SPL" strategy="afterInteractive" />
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-42XWW9D7JK" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-2MX9WZ1SPL', { send_page_view: false });
+            // send_page_view: false — GoogleAnalytics.jsx fires page_view itself
+            // on every App Router navigation (see its comment for why: gtag's
+            // own auto-pageview only fires once, on the initial full load).
+            gtag('config', 'G-42XWW9D7JK', { send_page_view: false });
           `}
         </Script>
         <GoogleAnalytics />

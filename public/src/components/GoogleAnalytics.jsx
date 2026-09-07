@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-const GA_IDS = ["G-2MX9WZ1SPL"];
+const GA_IDS = ["G-42XWW9D7JK"];
 
 // gtag's own script only fires a pageview on the initial full page load.
 // Next.js App Router navigations (clicking between book/author pages, etc.)
