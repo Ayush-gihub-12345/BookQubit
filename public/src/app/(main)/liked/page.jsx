@@ -5,8 +5,11 @@ import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import BookCard from "@/components/BookCard";
 import Icon from "@/components/Icon";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 export default function LikedBooksPage() {
+  const tr = t(useLang());
   const [user, setUser] = useState(undefined);
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,14 +27,14 @@ export default function LikedBooksPage() {
   }, []);
 
   if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">Sign-in is not configured.</div>;
-  if (user === undefined || loading) return <div className="text-muted grid min-h-[50vh] place-items-center">Loading…</div>;
+  if (user === undefined || loading) return <div className="text-muted grid min-h-[50vh] place-items-center">{tr("loading")}</div>;
 
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <Icon name="heart" size={32} className="text-muted mx-auto" />
-        <p className="mt-4 font-semibold">Sign in to see your liked books</p>
-        <Link href="/login" className="btn-primary mt-4 inline-flex">Sign in</Link>
+        <p className="mt-4 font-semibold">{tr("signInToSeeLikedBooks")}</p>
+        <Link href="/login" className="btn-primary mt-4 inline-flex">{tr("signIn")}</Link>
       </div>
     );
   }
@@ -39,7 +42,7 @@ export default function LikedBooksPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-        <Icon name="heart" size={26} filled className="text-brand-600" /> Liked Books
+        <Icon name="heart" size={26} filled className="text-brand-600" /> {tr("navLikedBooks")}
       </h1>
       <p className="text-muted mt-1 text-sm">{books.length} {books.length === 1 ? "book" : "books"} you've liked</p>
 
@@ -49,8 +52,8 @@ export default function LikedBooksPage() {
         </div>
       ) : (
         <div className="text-muted mt-10 text-center">
-          <p className="mt-2">Nothing liked yet — tap Like on any book.</p>
-          <Link href="/books" className="btn-primary mt-4 inline-flex">Browse Books</Link>
+          <p className="mt-2">{tr("nothingLikedYet")}</p>
+          <Link href="/books" className="btn-primary mt-4 inline-flex">{tr("browse")}</Link>
         </div>
       )}
     </div>

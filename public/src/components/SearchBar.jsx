@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "./Icon";
 import { readLocalCache, writeLocalCache } from "@/lib/localCache";
+import { t } from "@/lib/i18n";
 
 // Short-lived — a search suggestion list going briefly stale is harmless,
 // but it should still reflect a book imported minutes ago, not hours.
@@ -35,6 +36,7 @@ const pushRecent = (q) => {
 };
 
 export default function SearchBar({ lang, placeholder, big = false, onNavigate }) {
+  const tr = t(lang);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -143,7 +145,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
           aria-expanded={open}
         />
         {q ? (
-          <button type="button" onClick={() => { setQ(""); setRes(null); }} aria-label="Clear"
+          <button type="button" onClick={() => { setQ(""); setRes(null); }} aria-label={tr("searchClear")}
             className="text-muted absolute right-3.5 top-1/2 flex -translate-y-1/2 items-center hover:opacity-70">
             <Icon name="x" size={15} />
           </button>
@@ -171,7 +173,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
           )}
 
           {loading && <p className="text-muted px-4 py-3 text-sm">Searching…</p>}
-          {empty && !loading && <p className="text-muted px-4 py-3 text-sm">No matches for “{q}”</p>}
+          {empty && !loading && <p className="text-muted px-4 py-3 text-sm">{tr("searchNoMatches", { query: q })}</p>}
 
           {res?.books.length > 0 && (
             <div className="p-2">

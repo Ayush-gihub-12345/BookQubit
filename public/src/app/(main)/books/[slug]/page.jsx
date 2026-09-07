@@ -210,7 +210,7 @@ export default async function BookPage({ params }) {
                       prefetch={false}
                       className="font-medium text-brand-600 hover:underline"
                     >
-                      {a.name}
+                      <TitleTransliterated text={a.name} />
                     </Link>
                   </span>
                 ))}

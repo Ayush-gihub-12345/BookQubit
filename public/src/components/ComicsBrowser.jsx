@@ -7,6 +7,7 @@ import BookCover from "./BookCover";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
 import EmptyState from "./EmptyState";
+import { t } from "@/lib/i18n";
 
 const SORTS = [
   { value: "title", label: "Title A–Z" },
@@ -14,7 +15,8 @@ const SORTS = [
   { value: "recent", label: "Recently Added" },
 ];
 
-export default function ComicsBrowser({ comics }) {
+export default function ComicsBrowser({ comics, lang }) {
+  const tr = t(lang);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("title");
@@ -96,7 +98,7 @@ export default function ComicsBrowser({ comics }) {
       </div>
 
       {!filtered.length && (
-        <EmptyState title="No comics found" subtitle="Try a different search or clear filters." />
+        <EmptyState title={tr("noComicsFound")} subtitle={tr("noResultsTryAdjusting")} />
       )}
     </div>
   );

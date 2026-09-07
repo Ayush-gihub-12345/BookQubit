@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
+import EmptyState from "./EmptyState";
+import { t } from "@/lib/i18n";
 
 const SORTS = [
   { value: "name", label: "Name A–Z" },
@@ -19,6 +21,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 // whole ~2,300-row publisher list as hydration props, which was breaking
 // the page's server render outright.
 export default function PublishersBrowser({ lang, initialPublications, initialHasMore, types }) {
+  const tr = t(lang);
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [sort, setSort] = useState("name");
@@ -125,11 +128,7 @@ export default function PublishersBrowser({ lang, initialPublications, initialHa
       )}
 
       {!loading && !publications.length && (
-        <div className="py-24 text-center">
-          <Icon name="search" size={40} className="text-muted mx-auto" />
-          <p className="mt-4 text-lg font-semibold">No publishers found</p>
-          <p className="text-muted mt-1 text-sm">Try a different search or clear filters.</p>
-        </div>
+        <EmptyState title={tr("noPublishersFound")} subtitle={tr("noResultsTryAdjusting")} />
       )}
 
       {!loading && hasMore && (

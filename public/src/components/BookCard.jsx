@@ -17,7 +17,7 @@ export default function BookCard({ book, hrefBase = "/books" }) {
       </div>
       <div className="p-4">
         <TitleTransliterated as="h3" className="line-clamp-1 font-semibold group-hover:text-brand-600" text={book.title} />
-        <p className="mt-0.5 line-clamp-1 text-sm text-muted">{book.author}</p>
+        <TitleTransliterated as="p" className="mt-0.5 line-clamp-1 text-sm text-muted" text={book.author} />
         <div className="mt-2"><Rating value={book.rating} /></div>
       </div>
     </Link>

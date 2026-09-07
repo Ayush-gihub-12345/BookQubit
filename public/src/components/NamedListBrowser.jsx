@@ -17,8 +17,14 @@ export default function NamedListBrowser({
   getHref,
   title,
   subtitle,
-  searchPlaceholder = "Search…",
+  searchPlaceholder, // caller should pass a translated string (see t("searchEllipsis"))
   itemNoun = "book",
+  // No literal arrow glyph here on purpose — a hardcoded "→" would point the
+  // wrong way for Arabic/Urdu, which read right-to-left. The caller-supplied
+  // label carries whatever directionality its own language needs.
+  exploreLabel = "Explore",
+  noResultsTitle = "Nothing found",
+  noResultsSubtitle = "Try a different search term.",
 }) {
   const [q, setQ] = useState("");
 
@@ -50,12 +56,12 @@ export default function NamedListBrowser({
             <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-brand-500/10" />
             <h2 className="text-xl font-bold">{c.name}</h2>
             <p className="text-muted mt-1 text-sm">{c.count} {c.count === 1 ? itemNoun : `${itemNoun}s`}</p>
-            <p className="mt-4 text-sm font-semibold text-brand-600">Explore →</p>
+            <p className="mt-4 text-sm font-semibold text-brand-600">{exploreLabel}</p>
           </Link>
         ))}
       </div>
 
-      {!filtered.length && <EmptyState title="Nothing found" subtitle="Try a different search term." />}
+      {!filtered.length && <EmptyState title={noResultsTitle} subtitle={noResultsSubtitle} />}
     </div>
   );
 }

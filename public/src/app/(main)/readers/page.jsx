@@ -1,5 +1,6 @@
 import ReadersBrowser from "@/components/ReadersBrowser";
 import { getLeaderboard, getPopularReaders } from "@/lib/repo";
+import { getLang } from "@/lib/lang";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -12,9 +13,10 @@ export default async function ReadersIndexPage() {
   // Both already cached 300s and shared with /leaderboard's own queries —
   // this page adds zero new database reads, it just gives them a browsable
   // home instead of forcing every visitor through a straight redirect.
-  const [topReaders, popularReaders] = await Promise.all([
+  const [lang, topReaders, popularReaders] = await Promise.all([
+    getLang(),
     getLeaderboard({ limit: 60 }),
     getPopularReaders(60),
   ]);
-  return <ReadersBrowser topReaders={topReaders} popularReaders={popularReaders} />;
+  return <ReadersBrowser topReaders={topReaders} popularReaders={popularReaders} lang={lang} />;
 }

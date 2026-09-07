@@ -13,6 +13,8 @@ export default async function PublicLayout({ children }) {
     authors: _("authors"), publishers: _("publishers"), comics: _("comics"), tags: _("tags"),
     search: _("search"), signIn: _("signIn"), account: _("account"), signOut: _("signOut"),
     skipToContent: _("skipToContent"),
+    surpriseMe: _("navSurpriseMe"), notifications: _("navNotifications"), likedBooks: _("navLikedBooks"),
+    theme: _("navTheme"), language: _("navLanguage"), menu: _("navMenu"),
   };
 
   return (

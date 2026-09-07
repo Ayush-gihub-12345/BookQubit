@@ -5,6 +5,7 @@ import Link from "next/link";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
 import { FollowButton } from "./FollowButton";
+import { t } from "@/lib/i18n";
 
 const MEDAL_STYLE = ["text-amber-400", "text-muted", "text-amber-700"];
 
@@ -12,7 +13,8 @@ const MEDAL_STYLE = ["text-amber-400", "text-muted", "text-amber-700"];
 // (avatar, follow button) instead of plain name/count cards — reuses the
 // already-fetched, already-cached top-readers/most-followed lists rather
 // than issuing any new query.
-export default function ReadersBrowser({ topReaders, popularReaders }) {
+export default function ReadersBrowser({ topReaders, popularReaders, lang }) {
+  const tr = t(lang);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState("top");
 
@@ -80,7 +82,7 @@ export default function ReadersBrowser({ topReaders, popularReaders }) {
           ))}
         </ol>
       ) : (
-        <EmptyState title="No readers found" subtitle="Try a different search term." />
+        <EmptyState title={tr("noReadersFound")} subtitle={tr("noResultsTryAdjusting")} />
       )}
     </div>
   );

@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import Icon from "./Icon";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 export default function ContactForm() {
+  const tr = t(useLang());
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -40,8 +43,8 @@ export default function ContactForm() {
           <Icon name="check" size={17} />
         </span>
         <div>
-          <p className="font-semibold">Message sent</p>
-          <p className="text-muted text-sm">Thanks for reaching out — we'll get back to you soon.</p>
+          <p className="font-semibold">{tr("messageSent")}</p>
+          <p className="text-muted text-sm">{tr("thanksForReachingOut")}</p>
         </div>
       </div>
     );
@@ -50,17 +53,17 @@ export default function ContactForm() {
   return (
     <form onSubmit={submit} className="card space-y-3 p-5 hover:!translate-y-0">
       <div className="grid gap-3 sm:grid-cols-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="input" />
-        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email" className="input" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("yourName")} className="input" />
+        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tr("yourEmail")} className="input" />
       </div>
       <textarea
         required value={message} onChange={(e) => setMessage(e.target.value)}
-        rows={5} maxLength={2000} placeholder="How can we help?"
+        rows={5} maxLength={2000} placeholder={tr("howCanWeHelp")}
         className="input resize-y"
       />
       {error && <p className="text-sm text-red-500">{error}</p>}
       <button type="submit" disabled={state === "busy" || !message.trim()} className="btn-primary w-full sm:w-auto">
-        <Icon name="feather" size={15} /> {state === "busy" ? "Sending…" : "Send message"}
+        <Icon name="feather" size={15} /> {state === "busy" ? tr("sending") : tr("sendMessage")}
       </button>
     </form>
   );

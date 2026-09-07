@@ -1,6 +1,7 @@
 import NamedListBrowser from "@/components/NamedListBrowser";
 import { facets } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -10,15 +11,21 @@ export const metadata = {
 };
 
 export default async function CategoriesPage() {
-  const f = await facets(await getLang());
+  const lang = await getLang();
+  const _ = t(lang);
+  const f = await facets(lang);
 
   return (
     <NamedListBrowser
       items={f.categories}
       getHref={(name) => `/books?category=${encodeURIComponent(name)}`}
-      title="Categories"
-      subtitle="Browse books by category"
-      searchPlaceholder="Search categories…"
+      title={_("categories")}
+      subtitle={_("categoriesSub")}
+      searchPlaceholder={_("searchEllipsis")}
+      itemNoun={_("books").toLowerCase()}
+      exploreLabel={_("viewAll")}
+      noResultsTitle={_("noResults")}
+      noResultsSubtitle={_("noResultsTryAdjusting")}
     />
   );
 }

@@ -3,6 +3,7 @@ import FilterableBookGrid from "@/components/FilterableBookGrid";
 import Icon from "@/components/Icon";
 import { queryBooks } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,9 @@ export default async function CollectionPage({ params }) {
   // `hasMore` instead of a total — queryBooks no longer runs a COUNT(*),
   // since an exact number cost a full scan of every matching row on a
   // query readers hit constantly.
-  const { books, hasMore } = await queryBooks(await getLang(), { collection, perPage: PAGE_SIZE });
+  const lang = await getLang();
+  const _ = t(lang);
+  const { books, hasMore } = await queryBooks(lang, { collection, perPage: PAGE_SIZE });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
@@ -36,7 +39,7 @@ export default async function CollectionPage({ params }) {
         {hasMore ? `Showing ${books.length} of many` : `${books.length} ${books.length === 1 ? "book" : "books"} in this collection`}
       </p>
       <div className="mt-6">
-        <FilterableBookGrid books={books} emptyMessage="No books match these filters." />
+        <FilterableBookGrid books={books} emptyMessage={_("noResultsTryAdjusting")} />
       </div>
       {hasMore && (
         <div className="mt-8 text-center">

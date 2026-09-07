@@ -219,13 +219,13 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         <button
           onClick={surpriseMe} disabled={surprising}
           className={`${iconBtn} hidden sm:grid disabled:opacity-50`}
-          aria-label="Surprise me" title="Surprise me"
+          aria-label={labels.surpriseMe} title={labels.surpriseMe}
         >
           <Icon name="zap" size={17} />
         </button>
 
         {/* Notifications */}
-        <Link href="/notifications" prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label="Notifications" title="Notifications">
+        <Link href="/notifications" prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label={labels.notifications} title={labels.notifications}>
           <Icon name="bell" size={17} />
           {notifCount > 0 && (
             <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[9px] font-bold text-white">
@@ -235,7 +235,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         </Link>
 
         {/* Liked books */}
-        <Link href="/liked" prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label="Liked books" title="Liked books">
+        <Link href="/liked" prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label={labels.likedBooks} title={labels.likedBooks}>
           <Icon name="heart" size={17} />
         </Link>
 
@@ -244,12 +244,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           <Dropdown
             width="w-44"
             button={(toggle) => (
-              <button onClick={toggle} className={iconBtn} title={`Theme: ${currentTheme.name}`} aria-label="Theme">
+              <button onClick={toggle} className={iconBtn} title={`${labels.theme}: ${currentTheme.name}`} aria-label={labels.theme}>
                 <Icon name="palette" size={17} />
               </button>
             )}
           >
-            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">Theme</p>
+            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.theme}</p>
             {themes.map((t) => (
               <button key={t.id} onClick={() => setCookie("theme", t.id)}
                 className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${t.id === theme ? "font-bold text-brand-600" : ""}`}>
@@ -269,13 +269,13 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             button={(toggle) => (
               <button onClick={toggle}
                 className="border-line bg-surface flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold shadow-sm transition hover:scale-105 hover:border-brand-500 hover:shadow-md"
-                aria-label="Language">
+                aria-label={labels.language}>
                 🌐 <span className="uppercase">{currentLang.code}</span>
                 <span className="text-[9px] opacity-50">▼</span>
               </button>
             )}
           >
-            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">Language</p>
+            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.language}</p>
             <div className="max-h-72 overflow-auto">
               {languages.map((l) => (
                 <button key={l.code} onClick={() => setCookie("lang", l.code)}
@@ -290,7 +290,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
         <div className="shrink-0 whitespace-nowrap"><AuthButton labels={labels} /></div>
 
-        <button onClick={() => setOpen(!open)} className={`${iconBtn} lg:hidden`} aria-label="Menu">☰</button>
+        <button onClick={() => setOpen(!open)} className={`${iconBtn} lg:hidden`} aria-label={labels.menu}>☰</button>
       </div>
 
       {/* Mobile search row — full width, never squeezed */}

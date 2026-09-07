@@ -10,6 +10,7 @@ export const metadata = {
 };
 
 export default async function ComicsPage() {
-  const comics = await listComics(await getLang());
-  return <ComicsBrowser comics={comics} />;
+  const lang = await getLang();
+  const comics = await listComics(lang);
+  return <ComicsBrowser comics={comics} lang={lang} />;
 }

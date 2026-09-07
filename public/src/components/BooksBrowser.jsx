@@ -8,6 +8,7 @@ import Rating from "./Rating";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
 import { readLocalCache, writeLocalCache } from "@/lib/localCache";
+import { t } from "@/lib/i18n";
 
 // How long a given filter/sort combination's result is trusted from the
 // browser's own cache before re-asking the server — short enough that newly
@@ -31,6 +32,7 @@ const FORMATS = ["Paperback", "Hardcover", "EBook"];
 // 32 at a time — only "Load More" triggers the next batch, appended to the
 // list, so changing a filter never silently pulls hundreds of rows at once.
 export default function BooksBrowser({ lang, initialParams, initialData, facets }) {
+  const tr = t(lang);
   const { page: _ignoredPage, ...initialFilters } = initialParams;
   const [params, setParams] = useState(initialFilters);
   const [books, setBooks] = useState(initialData.books);
@@ -282,8 +284,8 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
         <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {books.length === 0 ? (
-            <EmptyState title="No books found" subtitle="Try adjusting your filters or search terms.">
-              <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">Clear filters</button>
+            <EmptyState title={tr("noResults")} subtitle={tr("noResultsTryAdjusting")}>
+              <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">{tr("searchClear")}</button>
               <Link href="/request-a-book" className="btn-ghost inline-flex">Can't find it? Request it</Link>
             </EmptyState>
           ) : isList ? (

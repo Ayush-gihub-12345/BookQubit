@@ -7,6 +7,8 @@ import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "@/components/Icon";
 import ChatPanel from "@/components/community/ChatPanel";
 import NewDiscussionModal from "@/components/community/NewDiscussionModal";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 function timeAgo(iso) {
   if (!iso) return "";
@@ -26,6 +28,7 @@ export default function CommunityPage() {
 }
 
 function CommunityInner() {
+  const tr = t(useLang());
   const sp = useSearchParams();
   const router = useRouter();
   const [user, setUser] = useState(undefined);
@@ -91,8 +94,8 @@ function CommunityInner() {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <Icon name="users" size={32} className="text-muted mx-auto" />
-        <p className="mt-3 font-semibold">Sign in to join the conversation</p>
-        <Link href="/login" className="btn-primary mt-4 inline-flex">Sign in</Link>
+        <p className="mt-3 font-semibold">{tr("signInToJoinConversation")}</p>
+        <Link href="/login" className="btn-primary mt-4 inline-flex">{tr("signIn")}</Link>
       </div>
     );
   }

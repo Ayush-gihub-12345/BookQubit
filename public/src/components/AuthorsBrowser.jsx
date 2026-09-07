@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
+import EmptyState from "./EmptyState";
+import { t } from "@/lib/i18n";
 
 const SORTS = [
   { value: "name", label: "Name A–Z" },
@@ -27,6 +29,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 // never got emitted, leaving the page blank at any screen size). See
 // queryAuthors() in repo.js for the full story.
 export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, countries }) {
+  const tr = t(lang);
   const [q, setQ] = useState("");
   const [country, setCountry] = useState("");
   const [sort, setSort] = useState("name");
@@ -136,11 +139,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
       )}
 
       {!loading && !authors.length && (
-        <div className="py-24 text-center">
-          <Icon name="search" size={40} className="text-muted mx-auto" />
-          <p className="mt-4 text-lg font-semibold">No authors found</p>
-          <p className="text-muted mt-1 text-sm">Try a different search or clear filters.</p>
-        </div>
+        <EmptyState title={tr("noAuthorsFound")} subtitle={tr("noResultsTryAdjusting")} />
       )}
 
       {!loading && hasMore && (

@@ -8,8 +8,11 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Logo from "@/components/Logo";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 export default function LoginPage() {
+  const tr = t(useLang());
   const router = useRouter();
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -117,9 +120,9 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={submit} className="space-y-3">
-          <input type="email" required placeholder="Email" value={email}
+          <input type="email" required placeholder={tr("emailLabel")} value={email}
             onChange={(e) => setEmail(e.target.value)} className="input" />
-          <input type="password" required minLength={6} placeholder="Password" value={password}
+          <input type="password" required minLength={6} placeholder={tr("passwordLabel")} value={password}
             onChange={(e) => setPassword(e.target.value)} className="input" />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button type="submit" disabled={busy} className="btn-primary w-full">
