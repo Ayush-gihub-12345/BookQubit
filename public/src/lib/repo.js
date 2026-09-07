@@ -157,7 +157,7 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
 // SQL-level catalog query with real pagination — scales to very large catalogs
 // (never loads the full table). Used by the /books browser.
 export async function queryBooks(lang, opts = {}) {
-  const { q, category, collection, tag, format, country, minRating, mood, sort, page = 1 } = opts;
+  const { q, category, collection, tag, format, author, publisher, country, minRating, mood, sort, page = 1 } = opts;
   // Clamped regardless of caller — protects against an accidental (or
   // malicious) request for perPage=1000000 forcing a huge unbounded read.
   const perPage = Math.min(Math.max(1, Number(opts.perPage) || 32), 200);
@@ -206,6 +206,30 @@ export async function queryBooks(lang, opts = {}) {
     // ceiling if passed as `IN (?,?,?...)`. Number.isInteger is a defensive
     // check against ever inlining anything that isn't a plain integer.
     where.push(`id IN (${ids.filter(Number.isInteger).join(",")})`);
+  }
+  // Entry point is a link from an author/publisher page (/books?author=X),
+  // not a sidebar facet — a facet list would need its own GROUP BY query,
+  // which isn't worth adding for a filter most people reach by clicking a
+  // name, not typing one. Reuses the same shared indexes booksByAuthor/
+  // booksByPublisher already built, just filtering the general browser
+  // instead of a single profile page's book list.
+  if (author) {
+    const authorIndex = await getAuthorBookIndex(lang);
+    const slugs = authorIndex[author.trim().toLowerCase()] || [];
+    if (!slugs.length) return { books: [], page: Number(page), hasMore: false };
+    where.push(`slug IN (${slugs.map((_, i) => `?${binds.length + i + 1}`).join(",")})`);
+    binds.push(...slugs);
+  }
+  if (publisher) {
+    const publisherIndex = await getPublisherBookIndex(lang);
+    const needle = publisher.trim().toLowerCase();
+    const slugs = [];
+    for (const key of Object.keys(publisherIndex)) {
+      if (key.includes(needle)) slugs.push(...publisherIndex[key]);
+    }
+    if (!slugs.length) return { books: [], page: Number(page), hasMore: false };
+    where.push(`slug IN (${slugs.map((_, i) => `?${binds.length + i + 1}`).join(",")})`);
+    binds.push(...slugs);
   }
   // Mood/pace come from what readers actually felt while reading (shelf.moods,
   // a different D1 database) — so this is resolved as two steps: find the
@@ -370,6 +394,31 @@ export async function getFeaturedBooks(lang, limit = 5) {
       if (!results.length && lang !== "en") {
         ({ results } = await db
           .prepare("SELECT * FROM books WHERE lang='en' AND featured=1 ORDER BY id LIMIT ?1")
+          .bind(limit).all());
+      }
+      return results;
+    }, 10800),
+    getSiteSettings(),
+  ]);
+  return rows.map((r) => mapBook(r, amazon_assoc_tag));
+}
+
+// Same shape as getFeaturedBooks() above, filtering on `bestseller` instead
+// of `featured`. This activates a column that already exists in the schema
+// and the admin editor but was read nowhere — used to give signed-out
+// visitors (the majority of traffic) a populated "Popular right now" section
+// where ForYou.jsx previously rendered nothing, without adding any new
+// write path or per-visitor tracking.
+export async function getBestsellerBooks(lang, limit = 12) {
+  const [rows, { amazon_assoc_tag }] = await Promise.all([
+    cached(`bestsellers:${lang}:${limit}`, async () => {
+      const db = await getCatalogDb();
+      let { results } = await db
+        .prepare("SELECT * FROM books WHERE lang=?1 AND bestseller=1 ORDER BY rating DESC NULLS LAST LIMIT ?2")
+        .bind(lang, limit).all();
+      if (!results.length && lang !== "en") {
+        ({ results } = await db
+          .prepare("SELECT * FROM books WHERE lang='en' AND bestseller=1 ORDER BY rating DESC NULLS LAST LIMIT ?1")
           .bind(limit).all());
       }
       return results;
@@ -767,6 +816,36 @@ export async function getPublicationByName(name, lang) {
 }
 export async function getComic(slug, lang) {
   return (await listComics(lang)).find((c) => c.slug === decodeURIComponent(slug)) || null;
+}
+
+// Same shape as relatedBooks() above (category/publisher match, rating-order,
+// deduped, cached) — the comics table is small enough that this doesn't need
+// its own composite index the way books' equivalent does.
+export async function relatedComics(comic, lang, limit = 4) {
+  const cacheKey = `related-comics:${lang}:${comic.id}:${limit}`;
+  return cached(cacheKey, async () => {
+    const db = await getCatalogDb();
+    const build = (column, value) =>
+      db.prepare(
+        `SELECT * FROM comics WHERE lang=?1 AND ${column}=?2 AND id != ?3
+         ORDER BY rating DESC NULLS LAST LIMIT ?4`
+      ).bind(lang, value, comic.id, limit);
+
+    const queries = [];
+    if (comic.category) queries.push(build("category", comic.category));
+    if (comic.publisher) queries.push(build("publisher", comic.publisher));
+    if (!queries.length) return [];
+
+    const batched = await db.batch(queries);
+    const seen = new Map();
+    for (const part of batched) {
+      for (const row of part.results) if (!seen.has(row.id)) seen.set(row.id, row);
+    }
+    return [...seen.values()]
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, limit)
+      .map((r) => ({ ...r, characters: J(r.characters), creators: J(r.creators) }));
+  }, 3600);
 }
 
 // One shared "individual author name -> their book slugs" index for the

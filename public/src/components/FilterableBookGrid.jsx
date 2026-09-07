@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import BookCard from "./BookCard";
 import Icon from "./Icon";
+import EmptyState from "./EmptyState";
 
 const SORTS = [
   ["", "Default"],
@@ -77,10 +78,7 @@ export default function FilterableBookGrid({ books, emptyMessage = "No books fou
       <p className="text-muted mt-4 text-sm">{filtered.length} of {books.length} books</p>
 
       {filtered.length === 0 ? (
-        <div className="py-16 text-center">
-          <Icon name="search" size={32} className="text-muted mx-auto" />
-          <p className="text-muted mt-3 text-sm">{emptyMessage}</p>
-        </div>
+        <EmptyState compact title={emptyMessage} />
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
           {filtered.map((b) => <BookCard key={b.id} book={b} />)}

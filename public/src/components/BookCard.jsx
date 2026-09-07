@@ -3,9 +3,9 @@ import Rating from "./Rating";
 import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
 
-export default function BookCard({ book }) {
+export default function BookCard({ book, hrefBase = "/books" }) {
   return (
-    <Link href={`/books/${encodeURIComponent(book.slug)}`} prefetch={false} className="card group block overflow-hidden">
+    <Link href={`${hrefBase}/${encodeURIComponent(book.slug)}`} prefetch={false} className="card group block overflow-hidden">
       <div className="relative aspect-[2/3] overflow-hidden bg-black/5 dark:bg-white/5">
         <BookCover title={book.title} author={book.author} cover_url={book.cover_url}
           imgClassName="transition duration-500 group-hover:scale-105" />

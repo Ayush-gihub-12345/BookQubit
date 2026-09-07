@@ -4,6 +4,7 @@ import { getUserProfile, levelFor, getAchievements, getQuotesByUser } from "@/li
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import { FollowButton } from "@/components/FollowButton";
+import ReviewCard from "@/components/ReviewCard";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,26 @@ export default async function ReaderProfilePage({ params }) {
               <span key={a.id} className="pill !bg-brand-600/10 !text-brand-600" title={a.desc}>
                 <Icon name={a.icon} size={13} /> {a.name}
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {reviews.length > 0 && (
+        <div>
+          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
+            <Icon name="feather" size={18} className="text-brand-600" /> Reviews <span className="text-muted text-sm font-normal">({reviews.length})</span>
+          </h2>
+          <div className="mt-4 space-y-4">
+            {reviews.map((s) => (
+              <ReviewCard
+                key={s.book_slug}
+                rating={s.rating}
+                review={s.review}
+                spoiler={s.spoiler}
+                updatedAt={s.updated_at}
+                book={{ slug: s.book_slug, title: s.title || s.book_slug }}
+              />
             ))}
           </div>
         </div>

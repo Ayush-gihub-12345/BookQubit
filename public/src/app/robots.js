@@ -49,12 +49,28 @@ const SEO_CRAWLERS = [
 // without needing to crawl filter permutations to find it.
 const FACETED = ["/books?*", "/comics?*", "/authors?*", "/publications?*", "/collections?*"];
 
+// Deliberate, temporary policy: organic crawling is limited to book pages
+// for now. The core hub pages (/, /books, /about, etc.) are being submitted
+// directly via Search Console instead of relying on crawl-discovery, so they
+// stay allowed here — a disallowed URL can't be indexed even via manual
+// submission, since Google still has to crawl it either way. What's blocked
+// is the LONG-TAIL: individual author/publisher/collection/comic/reader
+// pages, which don't carry the same buyer intent as a book page and are
+// exactly what was driving the heaviest aggregate queries when crawled at
+// volume (listAuthors' full-table scan, category/tag facet computation).
+// Revisit once caching is proven to hold under sustained real crawl load —
+// book pages are unrestricted precisely because that's the content worth
+// showing up in search for.
+const LONG_TAIL_DETAIL_PAGES = [
+  "/authors/*", "/publications/*", "/collections/*", "/comics/*", "/readers/*",
+];
+
 export default function robots() {
   return {
     rules: [
       // Real search engines — full access (minus private areas), since these
       // are the ones that actually drive discovery and rankings.
-      { userAgent: "*", allow: "/", disallow: [...PRIVATE, ...FACETED], crawlDelay: 10 },
+      { userAgent: "*", allow: "/", disallow: [...PRIVATE, ...FACETED, ...LONG_TAIL_DETAIL_PAGES], crawlDelay: 10 },
       // Everything above gets shut out entirely.
       ...SEO_CRAWLERS.map((userAgent) => ({ userAgent, disallow: "/" })),
     ],

@@ -1,4 +1,4 @@
-import CollectionsBrowser from "@/components/CollectionsBrowser";
+import NamedListBrowser from "@/components/NamedListBrowser";
 import { facets } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 
@@ -11,5 +11,13 @@ export const metadata = {
 
 export default async function CollectionsPage() {
   const f = await facets(await getLang());
-  return <CollectionsBrowser collections={f.collections} />;
+  return (
+    <NamedListBrowser
+      items={f.collections}
+      getHref={(name) => `/collections/${encodeURIComponent(name)}`}
+      title="Collections"
+      subtitle="Themed reading journeys, curated for you"
+      searchPlaceholder="Search collections…"
+    />
+  );
 }

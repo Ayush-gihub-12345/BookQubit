@@ -12,7 +12,7 @@ import HScrollRow from "@/components/HScrollRow";
 import Logo from "@/components/Logo";
 import {
   listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded, getMoodCounts,
-  getFeaturedBooks, getRandomBook, getPlatformStats,
+  getFeaturedBooks, getBestsellerBooks, getRandomBook, getPlatformStats,
 } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -23,8 +23,9 @@ export const metadata = { alternates: { canonical: "/" } };
 export default async function Home() {
   const lang = await getLang();
   const _ = t(lang);
-  const [featuredBooks, topRated, newReleases, exploreBooks, f, authors, pubs, comics, recentlyAdded, moods, stats, surprise] = await Promise.all([
+  const [featuredBooks, bestsellers, topRated, newReleases, exploreBooks, f, authors, pubs, comics, recentlyAdded, moods, stats, surprise] = await Promise.all([
     getFeaturedBooks(lang, 5),
+    getBestsellerBooks(lang, 12),
     listBooks(lang, { sort: "rating", limit: 10 }),
     listBooks(lang, { sort: "new", limit: 6 }),
     listBooks(lang, { limit: 12 }),
@@ -38,6 +39,12 @@ export default async function Home() {
     getRandomBook(lang),
   ]);
   const heroBooks = featuredBooks.length ? featuredBooks : topRated.slice(0, 5);
+  // Chained fallback rather than trusting `bestseller` alone — that flag is
+  // admin-set and, as of this change, unset on every book in the catalog, so
+  // querying it in isolation would render an empty section for every
+  // signed-out visitor. `topRated` is already fetched above and guaranteed
+  // non-empty once the catalog has any rated books at all.
+  const popularBooks = bestsellers.length ? bestsellers : featuredBooks.length ? featuredBooks : topRated.slice(0, 12);
 
   const QUOTES = [
     { text: "A reader lives a thousand lives before he dies. The man who never reads lives only one.", by: "George R.R. Martin" },
@@ -76,8 +83,10 @@ export default async function Home() {
       {/* Continue Reading (signed-in users) */}
       <ContinueReading />
 
-      {/* Personalized picks (signed-in users with history) */}
-      <ForYou lang={lang} />
+      {/* Personalized picks for signed-in readers with history; a "Popular
+          right now" fallback for anonymous visitors so this section is never
+          just a blank gap for the majority of traffic. */}
+      <ForYou lang={lang} fallbackBooks={popularBooks} />
 
       {/* Recently viewed (any visitor with history) */}
       <RecentlyViewed />

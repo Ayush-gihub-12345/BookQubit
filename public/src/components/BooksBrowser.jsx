@@ -6,6 +6,7 @@ import BookCard from "./BookCard";
 import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
+import EmptyState from "./EmptyState";
 import { readLocalCache, writeLocalCache } from "@/lib/localCache";
 
 // How long a given filter/sort combination's result is trusted from the
@@ -99,7 +100,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     debounceRef.current = setTimeout(() => apply({ q: v || undefined }), 350);
   };
 
-  const { q, category, collection, tag, format, country, rating, mood, sort, view } = params;
+  const { q, category, collection, tag, format, author, publisher, country, rating, mood, sort, view } = params;
   const isList = view === "list";
 
   const activeFilters = [
@@ -109,6 +110,8 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     tag && { key: "tag", label: `#${tag}` },
     rating && { key: "rating", label: `★ ${rating}+` },
     format && { key: "format", label: format },
+    author && { key: "author", label: `by ${author}` },
+    publisher && { key: "publisher", label: publisher },
     country && { key: "country", label: country },
     mood && { key: "mood", label: mood },
   ].filter(Boolean);
@@ -279,15 +282,10 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
         <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {books.length === 0 ? (
-            <div className="py-24 text-center">
-              <Icon name="search" size={40} className="text-muted mx-auto" />
-              <p className="mt-4 text-lg font-semibold">No books found</p>
-              <p className="text-muted mt-1 text-sm">Try adjusting your filters or search terms.</p>
-              <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-                <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">Clear filters</button>
-                <Link href="/request-a-book" className="btn-ghost inline-flex">Can't find it? Request it</Link>
-              </div>
-            </div>
+            <EmptyState title="No books found" subtitle="Try adjusting your filters or search terms.">
+              <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">Clear filters</button>
+              <Link href="/request-a-book" className="btn-ghost inline-flex">Can't find it? Request it</Link>
+            </EmptyState>
           ) : isList ? (
             <div className="space-y-4">
               {books.map((b) => (

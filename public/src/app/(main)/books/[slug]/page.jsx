@@ -4,6 +4,8 @@ import BookCard from "@/components/BookCard";
 import Rating from "@/components/Rating";
 import Section from "@/components/Section";
 import ShelfControls from "@/components/ShelfControls";
+import ReviewCard from "@/components/ReviewCard";
+import HScrollRow from "@/components/HScrollRow";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import ReportIssueButton from "@/components/ReportIssueButton";
@@ -12,7 +14,7 @@ import Translated from "@/components/Translated";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
 import { TrackView } from "@/components/RecentlyViewed";
-import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName } from "@/lib/repo";
+import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
@@ -51,7 +53,7 @@ export default async function BookPage({ params }) {
   const lang = await getLang();
   const book = await getBook(slug, lang);
   if (!book) notFound();
-  const [related, community, bookDiscussions, publisherProfile, authorLine] = await Promise.all([
+  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection] = await Promise.all([
     relatedBooks(book, lang),
     getBookCommunity(book.slug),
     getDiscussionsForBook(book.slug, 3),
@@ -62,7 +64,13 @@ export default async function BookPage({ params }) {
     // replaces the old single getAuthorByName() lookup, which only ever
     // resolved the first name in the list.
     getAuthorLineProfiles(book.author, lang),
+    // `book.collection` is a flat editorial label (e.g. "Harari Collection"),
+    // not a true series with an order/sequence — there's no such column
+    // anywhere in the schema. This is an honestly-labeled "more from this
+    // collection" strip, not a fake "Book 2 of 7" series feature.
+    book.collection ? listBooks(lang, { collection: book.collection, limit: 5 }) : [],
   ]);
+  const moreInCollectionFiltered = moreInCollection.filter((b) => b.slug !== book.slug).slice(0, 4);
   const _ = t(lang);
 
   const jsonLd = {
@@ -238,6 +246,27 @@ export default async function BookPage({ params }) {
               )}
             </div>
 
+            {moreInCollectionFiltered.length > 0 && (
+              <div className="mt-5">
+                <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">
+                  More from {book.collection}
+                </p>
+                <HScrollRow>
+                  {moreInCollectionFiltered.map((b) => (
+                    <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-28 shrink-0 overflow-hidden">
+                      <div className="aspect-[2/3] overflow-hidden bg-black/5">
+                        <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
+                          imgClassName="transition duration-500 group-hover:scale-105" />
+                      </div>
+                      <div className="p-2">
+                        <p className="line-clamp-2 text-xs font-semibold group-hover:text-brand-600">{b.title}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </HScrollRow>
+              </div>
+            )}
+
             {book.description && <Translated as="p" className="mt-6 text-lg leading-relaxed" text={book.description} />}
 
             {(book.category || book.subjects?.length > 0) && (
@@ -363,33 +392,14 @@ export default async function BookPage({ params }) {
                 <div className="mt-6 space-y-4">
                   <h3 className="font-bold">{_("readerReviews")} ({community.reviews.length})</h3>
                   {community.reviews.map((r) => (
-                    <div key={`${r.user_id}-${r.updated_at}`} className="card p-5 hover:!translate-y-0">
-                      <div className="flex items-center gap-3">
-                        {r.photo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={r.photo_url} alt="" className="h-9 w-9 rounded-full" />
-                        ) : (
-                          <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white">
-                            {(r.name || "R")[0].toUpperCase()}
-                          </span>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/readers/${r.slug || r.user_id}`} className="text-sm font-semibold hover:text-brand-600">{r.name}</Link>
-                          <p className="text-muted text-xs">{r.updated_at?.slice(0, 10)}</p>
-                        </div>
-                        {r.rating && <span className="text-sm text-amber-400">{"★".repeat(r.rating)}</span>}
-                      </div>
-                      {r.spoiler ? (
-                        <details className="mt-3">
-                          <summary className="text-muted cursor-pointer text-xs font-semibold hover:text-brand-600">
-                            ⚠ This review contains spoilers — click to reveal
-                          </summary>
-                          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{r.review}</p>
-                        </details>
-                      ) : (
-                        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{r.review}</p>
-                      )}
-                    </div>
+                    <ReviewCard
+                      key={`${r.user_id}-${r.updated_at}`}
+                      rating={r.rating}
+                      review={r.review}
+                      spoiler={r.spoiler}
+                      updatedAt={r.updated_at}
+                      reviewer={{ name: r.name, photo_url: r.photo_url, slug: r.slug, user_id: r.user_id }}
+                    />
                   ))}
                 </div>
               )}

@@ -12,6 +12,8 @@ export async function GET(request) {
     collection: searchParams.get("collection") || undefined,
     tag: searchParams.get("tag") || undefined,
     format: searchParams.get("format") || undefined,
+    author: searchParams.get("author") || undefined,
+    publisher: searchParams.get("publisher") || undefined,
     country: searchParams.get("country") || undefined,
     minRating: searchParams.get("rating") || undefined,
     mood: searchParams.get("mood") || undefined,

@@ -6,6 +6,7 @@ import Rating from "./Rating";
 import BookCover from "./BookCover";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
+import EmptyState from "./EmptyState";
 
 const SORTS = [
   { value: "title", label: "Title A–Z" },
@@ -95,11 +96,7 @@ export default function ComicsBrowser({ comics }) {
       </div>
 
       {!filtered.length && (
-        <div className="py-24 text-center">
-          <Icon name="search" size={40} className="text-muted mx-auto" />
-          <p className="mt-4 text-lg font-semibold">No comics found</p>
-          <p className="text-muted mt-1 text-sm">Try a different search or clear filters.</p>
-        </div>
+        <EmptyState title="No comics found" subtitle="Try a different search or clear filters." />
       )}
     </div>
   );

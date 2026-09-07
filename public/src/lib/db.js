@@ -567,8 +567,19 @@ const STALE_GRACE_SECONDS = 86400;
 // genuinely big entries (the sitemap's 40,000 book slugs is a couple of MB,
 // and that's precisely the read worth not repeating). D1 keeps a tighter
 // bound so one cache row can't dominate the database.
+//
+// 900KB was too tight in practice: the full authors list (~5,300 authors,
+// even with columns already trimmed) lands close to or over that, so it
+// never reached the durable tier at all — only L1 (per-isolate) and L2
+// (per-COLO edge cache) covered it, and neither is shared across the whole
+// network. Verified live on the D1 dashboard: the authors-table scan behind
+// it was re-running dozens of times in a short window with no real traffic
+// spike, which only makes sense if most requests were landing on an isolate
+// or colo that had never seen it before. Raised well below any plausible D1
+// per-value ceiling; rowPut()'s existing try/catch still degrades safely
+// (falls back to L1/L2 only) if a value ever is too large for D1 to accept.
 const MAX_EDGE_BYTES = 8_000_000;
-const MAX_ROW_BYTES = 900_000;
+const MAX_ROW_BYTES = 1_800_000;
 
 const MEM_MAX = 400;
 const memCache = new Map();
@@ -694,11 +705,21 @@ async function rowGet(vkey) {
     const db = await cacheDb();
     if (!db) return undefined;
     const row = await db
-      .prepare("SELECT value, expires_at FROM app_cache WHERE key = ?1")
+      .prepare("SELECT value FROM app_cache WHERE key = ?1")
       .bind(vkey)
       .first();
     if (!row) return undefined;
-    return { value: JSON.parse(row.value), stale: Date.now() > row.expires_at };
+    // `row.value` is the stringified envelope written by store() — the same
+    // shape edgeGet() reads, so it goes through the same unwrap() rather
+    // than a second hand-rolled version. A prior version returned the
+    // parsed envelope itself as `.value` instead of its `.v` field, so every
+    // durable-tier hit silently handed callers `{v: [...], e: 123}` instead
+    // of the actual cached array — surfaced as "rows.map is not a function"
+    // wherever a cached list was consumed, once a value ever completed a
+    // write+read round trip. The bug was invisible in production earlier
+    // because D1 had been refusing all reads, so rowGet's catch swallowed
+    // every attempt without ever reaching this return line.
+    return unwrap(JSON.parse(row.value));
   } catch {
     // Includes the case that matters most: D1 itself is refusing reads
     // (quota). Returning undefined lets the caller fall through rather than
