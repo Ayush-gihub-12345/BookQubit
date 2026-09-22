@@ -4,3 +4,27 @@
 
 # Dependency directories
 node_modules/
+
+# ============================================================
+# Build output
+# ============================================================
+.next/
+.open-next/
+
+# ============================================================
+# Cloudflare / Wrangler local state
+# ============================================================
+# Includes the local D1 SQLite simulation under .wrangler/state/v3/d1 — this
+# is per-developer local dev state (seeded via sql/*_seed.sql, see README),
+# not something to commit. It also holds the Cache API simulation, which can
+# grow large and has no reason to be shared or diffed in git.
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# ============================================================
+# Environment
+# ============================================================
+.env
+.env.local
+.env*.local

@@ -1,9 +1,21 @@
-# BookQubit — Next.js on Cloudflare Workers (D1 + KV)
+# BookQubit — Next.js on Cloudflare Workers (D1)
 
-Clean rebuild: no static data files. All content lives in **Cloudflare D1**; hot reads are
-cached in **KV**. Tables are created automatically by code (`CREATE TABLE IF NOT EXISTS` runs
-on first DB access after every deploy — see `src/lib/db.js`). You only create the D1
-database and KV namespace once and insert rows.
+> **Note:** sections below "Firebase authentication" haven't been re-verified against
+> the current codebase (last confirmed accurate: KV-based caching, a single D1 database,
+> and 12 UI languages — all three have since changed. KV was removed entirely in favor of
+> a three-tier cache in `src/lib/db.js`; the catalog now lives in its own database;
+> there are 21 UI languages in `src/lib/i18n.js`). Trust `src/lib/db.js` and
+> `wrangler.jsonc` over prose below if they disagree.
+
+All content lives in **Cloudflare D1**, split across **two databases**:
+- `DB` (database name `database`) — users, shelves, reviews, discussions, site settings
+- `CATALOG_DB` (database name `catalog`) — books, authors, publications, comics
+
+Both auto-create their tables on first access in production (`CREATE TABLE IF NOT EXISTS`
+in `src/lib/db.js`) — but that auto-create is gated behind the `RUN_SCHEMA` var in
+`wrangler.jsonc` (normally `"0"`, to stop it re-running pointless DDL on every cold start —
+see the comment on `shouldBootstrap()` in `db.js`). **Locally, that means schema is never
+auto-created** — you apply it yourself once, via the files in `sql/`, below.
 
 ## 1. Install
 ```bash
@@ -11,59 +23,81 @@ cd public
 npm install
 ```
 
-## 2. Create Cloudflare resources (once)
+## 2. Environment
 ```bash
-npx wrangler d1 create bookqubit-db
-# → copy "database_id" into wrangler.jsonc
+cp .env.example .env.local
+```
+See `.env.example` for what each value does and what's *not* needed for local UI work.
 
-npx wrangler kv namespace create CACHE
-# → copy "id" into wrangler.jsonc
+## 3. Create Cloudflare resources (once, for your own deployment)
+```bash
+npx wrangler d1 create database
+npx wrangler d1 create catalog
+# → copy each "database_id" into wrangler.jsonc's d1_databases array
 ```
 
-## 3. Bindings (what connects to what)
+## 4. Bindings (what connects to what)
 
 | Resource | Binding name (env var in code) | Where set |
 |---|---|---|
-| D1 database | `DB` → `env.DB` | `wrangler.jsonc` → `d1_databases[0].binding` |
-| KV namespace | `CACHE` → `env.CACHE` | `wrangler.jsonc` → `kv_namespaces[0].binding` |
+| Main D1 database | `DB` → `env.DB` | `wrangler.jsonc` → `d1_databases[0].binding` |
+| Catalog D1 database | `CATALOG_DB` → `env.CATALOG_DB` | `wrangler.jsonc` → `d1_databases[1].binding` |
 | Static assets | `ASSETS` | `wrangler.jsonc` → `assets.binding` (auto-used by OpenNext) |
-| Amazon tag | `AMAZON_ASSOC_TAG` | `wrangler.jsonc` → `vars`, or dashboard → Settings → Variables |
+| Schema bootstrap flag | `RUN_SCHEMA` | `wrangler.jsonc` → `vars` — keep `"0"` normally, see note above |
 
-If you bind via the **Cloudflare dashboard** instead (Workers & Pages → your worker →
-Settings → Bindings): add a *D1 database binding* with name exactly `DB`, and a
-*KV namespace binding* with name exactly `CACHE`. Names must match — the code reads
-`env.DB` and `env.CACHE`.
+There is no KV binding — it was removed (see `db.js`'s cache-section comments for why:
+a write-metered cache tier silently degrading to uncached reads was a real production
+incident).
 
-## 4. Run locally (real D1/KV bindings)
+## 5. Schema + seed data (local dev)
 ```bash
-npm run preview     # builds with OpenNext + runs wrangler dev
-```
-Plain `npm run dev` also works for UI work: pages render, KV cache is skipped,
-but DB queries need bindings — so use `preview` to see real data.
+# one-time: create tables in your local D1 simulation
+npx wrangler d1 execute database --local --file=sql/main_schema.sql
+npx wrangler d1 execute catalog  --local --file=sql/catalog_schema.sql
 
-## 5. Schema + seed data
-Ready-made files in `sql/`:
-```bash
-# create tables (same schema the code auto-creates)
-npx wrangler d1 execute bookqubit-db --remote --file=sql/schema.sql
-# insert dummy data: 14 books (incl. 2 Hindi), 6 authors, 4 publishers, 4 comics
-npx wrangler d1 execute bookqubit-db --remote --file=sql/seed.sql
+# 10 dummy books/authors/publishers + a reviewer with reviews/quotes on every book
+npx wrangler d1 execute database --local --file=sql/main_seed.sql
+npx wrangler d1 execute catalog  --local --file=sql/catalog_seed.sql
 ```
-Use `--local` instead of `--remote` for local preview. All seed rows use
-`INSERT OR IGNORE`, so re-running is safe.
+**These 4 files are `--local` only.** Every one says so in its own header comment —
+running any of them with `--remote` would write test data into the real, production
+catalog (which has thousands of real rows). There is deliberately no documented
+`--remote` seed workflow.
+
+If you edit the seed data and re-run these while a `preview` server is already running,
+the app's own cache can still serve you the old values. Stop the server, clear
+`.wrangler/state/v3/cache` and `.open-next/cache` (leave `.wrangler/state/v3/d1` alone —
+that's your seeded data), then restart.
+
+## 6. Run locally
+```bash
+npm run preview     # builds with OpenNext + runs wrangler dev, binds to LOCAL D1 (see step 5)
+```
+Two other options:
+- `npm run dev` — plain `next dev`, no D1 access at all (no Workers runtime), but fastest
+  for pure UI/CSS work. Pages needing DB data degrade gracefully rather than crash.
+- `npx opennextjs-cloudflare preview --remote` — binds to the **real production D1**
+  instead of local. Read *and* write — shelf updates, likes, etc. hit production. Useful
+  for reproducing a production-only bug, not for routine dev.
 
 Cover images: use Open Library covers (`https://covers.openlibrary.org/b/isbn/<ISBN>-L.jpg`)
 or Google Books thumbnails — both free.
 
-## 6. Deploy
+## 7. Deploy
 ```bash
 npm run deploy
 ```
+After a schema change in `db.js`: set `RUN_SCHEMA` to `"1"` in `wrangler.jsonc`, deploy,
+load one page (so the bootstrap runs once), then set it back to `"0"` and deploy again.
 
 ## Firebase authentication (Google + email/password)
-Set these as **build-time variables** (dashboard → Worker → Settings → Build → Variables —
-NOT runtime secrets, because `NEXT_PUBLIC_*` values are inlined into the client bundle
-during the build; they are public by design):
+For local dev, these already live in `.env.example` (step 2 above) — the values below
+are the same ones, already hardcoded as defaults in `src/lib/firebase.js` /
+`src/lib/auth-server.js` too, so auth works even with no env file at all.
+
+For a real deployment, set these as **build-time variables** (dashboard → Worker →
+Settings → Build → Variables — NOT runtime secrets, because `NEXT_PUBLIC_*` values are
+inlined into the client bundle during the build; they are public by design):
 
 | Variable | From Firebase console → Project settings → Your web app |
 |---|---|

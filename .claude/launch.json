@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "public"],
       "port": 3000
+    },
+    {
+      "name": "bookqubit-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--prefix", "public"],
+      "port": 8787
     }
   ]
 }
