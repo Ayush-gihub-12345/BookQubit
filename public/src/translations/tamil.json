@@ -1,0 +1,20 @@
+{
+  "books": "புத்தகங்கள்",
+  "collections": "தொகுப்புகள்",
+  "categories": "வகைகள்",
+  "authors": "ஆசிரியர்கள்",
+  "publishers": "பதிப்பகங்கள்",
+  "comics": "காமிக்ஸ்",
+  "tags": "குறிச்சொற்கள்",
+  "search": "தேடு",
+  "signIn": "உள்நுழை",
+  "account": "கணக்கு",
+  "signOut": "வெளியேறு",
+  "skipToContent": "உள்ளடக்கத்திற்குச் செல்",
+  "navSurpriseMe": "என்னை ஆச்சரியப்படுத்து",
+  "navNotifications": "அறிவிப்புகள்",
+  "navLikedBooks": "பிடித்த புத்தகங்கள்",
+  "navTheme": "தீம்",
+  "navLanguage": "மொழி",
+  "navMenu": "மெனு"
+}

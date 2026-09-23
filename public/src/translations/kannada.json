@@ -1,0 +1,20 @@
+{
+  "books": "ಪುಸ್ತಕಗಳು",
+  "collections": "ಸಂಗ್ರಹಗಳು",
+  "categories": "ವರ್ಗಗಳು",
+  "authors": "ಲೇಖಕರು",
+  "publishers": "ಪ್ರಕಾಶಕರು",
+  "comics": "ಕಾಮಿಕ್ಸ್",
+  "tags": "ಟ್ಯಾಗ್ಗಳು",
+  "search": "ಹುಡುಕಿ",
+  "signIn": "ಸೈನ್ ಇನ್",
+  "account": "ಖಾತೆ",
+  "signOut": "ಸೈನ್ ಔಟ್",
+  "skipToContent": "ನೇರವಾಗಿ ವಿಷಯಕ್ಕೆ ಹೋಗಿ",
+  "navSurpriseMe": "ನನ್ನನ್ನು ಆಶ್ಚರ್ಯಗೊಳಿಸಿ",
+  "navNotifications": "ಅಧಿಸೂಚನೆಗಳು",
+  "navLikedBooks": "ಇಷ್ಟದ ಪುಸ್ತಕಗಳು",
+  "navTheme": "ಥೀಮ್",
+  "navLanguage": "ಭಾಷೆ",
+  "navMenu": "ಮೆನು"
+}

@@ -8,6 +8,7 @@ import SearchBar from "./SearchBar";
 import Icon from "./Icon";
 import { LogoMark } from "./Logo";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { useT } from "@/context/TranslationContext";
 
 function Dropdown({ button, children, width = "w-48" }) {
   const [open, setOpen] = useState(false);
@@ -33,7 +34,9 @@ function Dropdown({ button, children, width = "w-48" }) {
 const iconBtn =
   "grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-base shadow-sm transition hover:scale-105 hover:border-brand-500 hover:shadow-md";
 
-export default function Navbar({ lang, theme, languages, themes, labels }) {
+export default function Navbar({ lang, theme, languages, themes }) {
+  const t = useT();
+
   const [open, setOpen] = useState(false);
   const [myGenres, setMyGenres] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
@@ -42,9 +45,6 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const router = useRouter();
   const headerRef = useRef(null);
 
-  // Unlike the homepage's own "Surprise me" link (which reuses whatever
-  // random book that page's server render happened to pick), this fetches
-  // a genuinely fresh pick on every click, from anywhere on the site.
   const surpriseMe = async () => {
     setSurprising(true);
     try {
@@ -56,8 +56,6 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
     }
   };
 
-  // Powers the "Your Genres" row in the Discover dropdown — set during
-  // onboarding, editable from the account page.
   useEffect(() => {
     if (!firebaseEnabled) return;
     const auth = getFirebaseAuth();
@@ -71,7 +69,6 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
     });
   }, []);
 
-  // Close the mobile sheet on any click/tap outside the header
   useEffect(() => {
     const close = (e) => { if (!headerRef.current?.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", close);
@@ -83,92 +80,91 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   }, []);
 
   const MENUS = [
-    { href: "/", icon: "home", label: "Home" },
+    { href: "/", icon: "home", label: t("nav.home") },
     {
-      href: "/books", icon: "compass", label: "Discover",
+      href: "/books", icon: "compass", label: t("nav.discover"),
       items: [
-        { href: "/books?sort=rating", icon: "trendingUp", label: "Trending" },
-        { href: "/books?sort=new", icon: "clock", label: "New Releases" },
-        { href: "/books?sort=rating", icon: "star", label: "Top Rated" },
-        { href: "/collections", icon: "layers", label: labels.collections },
+        { href: "/books?sort=rating", icon: "trendingUp", label: t("discover.trending") },
+        { href: "/books?sort=new",    icon: "clock",      label: t("discover.newReleases") },
+        { href: "/books?sort=rating", icon: "star",       label: t("discover.topRated") },
+        { href: "/collections",       icon: "layers",     label: t("discover.collections") },
         ...myGenres.map((g) => ({ href: `/books?category=${encodeURIComponent(g)}`, icon: "heart", label: g })),
       ],
     },
     {
-      href: "/books", icon: "book", label: "Browse",
+      href: "/books", icon: "book", label: t("nav.browse"),
       items: [
-        { href: "/books", icon: "book", label: "All Books" },
-        { href: "/categories", icon: "grid", label: "Genres & Categories" },
-        { href: "/tags", icon: "hash", label: labels.tags },
-        { href: "/comics", icon: "zap", label: labels.comics },
+        { href: "/books",       icon: "book", label: t("browse.allBooks") },
+        { href: "/categories",  icon: "grid", label: t("browse.genresCategories") },
+        { href: "/tags",        icon: "hash", label: t("browse.tags") },
+        { href: "/comics",      icon: "zap",  label: t("browse.comics") },
       ],
     },
-    { href: "/authors", icon: "feather", label: labels.authors },
+    { href: "/authors", icon: "feather", label: t("nav.authors") },
     {
-      href: "/publications", icon: "building", label: labels.publishers,
+      href: "/publications", icon: "building", label: t("nav.publishers"),
       items: [
-        { href: "/publications", icon: "building", label: "All Publishers" },
+        { href: "/publications", icon: "building", label: t("publishers.allPublishers") },
         { href: "/publications/penguin-random-house", icon: "book", label: "Penguin Random House" },
         { href: "/publications/harpercollins", icon: "book", label: "HarperCollins" },
       ],
     },
-    { href: "/community", icon: "users", label: "Community" },
-    { href: "/leaderboard", icon: "trophy", label: "Bookworm Ranking" },
+    { href: "/community",   icon: "users",  label: t("nav.community") },
+    { href: "/leaderboard", icon: "trophy", label: t("nav.leaderboard") },
   ];
 
-  // Multi-column mega menu ("More") — enterprise-style grouped catalog entry points
   const MEGA = [
     {
-      title: "Best Sellers",
+      title: t("mega.bestSellers"),
       links: [
-        ["Top Rated", "/books?sort=rating"],
-        ["Trending Now", "/books?sort=rating"],
-        ["New Releases", "/books?sort=new"],
-        ["All Books", "/books"],
-        ["Editors' Choice", "/books?sort=rating&rating=4.5"],
+        [t("discover.topRated"), "/books?sort=rating"],
+        [t("mega.trendingNow"), "/books?sort=rating"],
+        [t("discover.newReleases"), "/books?sort=new"],
+        [t("browse.allBooks"), "/books"],
+        [t("mega.editorsChoice"), "/books?sort=rating&rating=4.5"],
       ],
     },
     {
-      title: "Literature Types",
+      title: t("mega.literatureTypes"),
       links: [
-        ["Philosophy", "/books?category=Philosophy"],
-        ["History", "/books?category=History"],
-        ["Fiction", "/books?category=Fiction"],
-        ["Psychology", "/books?category=Psychology"],
-        ["Self-Help", "/books?category=Self-Help"],
-        ["Business", "/books?category=Business"],
-        ["Finance", "/books?category=Finance"],
+        [t("mega.philosophy"),  "/books?category=Philosophy"],
+        [t("mega.history"),     "/books?category=History"],
+        [t("mega.fiction"),     "/books?category=Fiction"],
+        [t("mega.psychology"),  "/books?category=Psychology"],
+        [t("mega.selfHelp"),    "/books?category=Self-Help"],
+        [t("mega.business"),    "/books?category=Business"],
+        [t("mega.finance"),     "/books?category=Finance"],
       ],
     },
     {
-      title: "Books by Country",
+      title: t("mega.booksByCountry"),
       links: [
-        ["India", "/books?country=India"],
-        ["USA", "/books?country=USA"],
-        ["UK", "/books?country=UK"],
-        ["Israel", "/books?country=Israel"],
-        ["Germany", "/books?country=Germany"],
-        ["Japan", "/books?country=Japan"],
-        ["Russia", "/books?country=Russia"],
+        [t("mega.countryIndia"),   "/books?country=India"],
+        [t("mega.countryUSA"),     "/books?country=USA"],
+        [t("mega.countryUK"),      "/books?country=UK"],
+        [t("mega.countryIsrael"),  "/books?country=Israel"],
+        [t("mega.countryGermany"), "/books?country=Germany"],
+        [t("mega.countryJapan"),   "/books?country=Japan"],
+        [t("mega.countryRussia"),  "/books?country=Russia"],
       ],
     },
     {
-      title: "Special Collections",
+      title: t("mega.specialCollections"),
       links: [
-        ["Harari Collection", "/collections/Harari%20Collection"],
-        ["Stoic Classics", "/collections/Stoic%20Classics"],
-        ["Dystopian Classics", "/collections/Dystopian%20Classics"],
-        ["Revolutionary Classics", "/collections/Revolutionary%20Classics"],
-        ["All Collections", "/collections"],
+        [t("mega.harariCollection"),       "/collections/Harari%20Collection"],
+        [t("mega.stoicClassics"),          "/collections/Stoic%20Classics"],
+        [t("mega.dystopianClassics"),      "/collections/Dystopian%20Classics"],
+        [t("mega.revolutionaryClassics"),  "/collections/Revolutionary%20Classics"],
+        [t("mega.allCollections"),         "/collections"],
       ],
     },
     {
-      title: "By Format",
+      title: t("mega.byFormat"),
       links: [
-        ["Paperback", "/books?format=Paperback"],
-        ["Hardcover", "/books?format=Hardcover"],
-        ["EBook", "/books?format=EBook"],
-        ["Comics", "/comics"],
+        [t("mega.paperback"), "/books?format=Paperback"],
+        [t("mega.hardcover"), "/books?format=Hardcover"],
+        [t("mega.ebook"),     "/books?format=EBook"],
+        [t("browse.comics"),  "/comics"],
       ],
     },
   ];
@@ -176,32 +172,24 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const setCookie = (name, value) => {
     document.cookie = `${name}=${value};path=/;max-age=31536000`;
     if (name === "lang") {
-      // A full reload (not router.refresh()) so every part of the site —
-      // not just the current route's server tree — re-renders in the new
-      // language on the very next paint, matching what a returning visit
-      // would look like instead of leaving some already-mounted client
-      // state behind in the old language.
       window.location.reload();
       return;
     }
     router.refresh();
   };
   const currentTheme = themes.find((t) => t.id === theme) || themes[0];
-  const currentLang = languages.find((l) => l.code === lang) || languages[0];
+  const currentLang  = languages.find((l) => l.code === lang) || languages[0];
+  const themeLabel   = (id, fallback) => {
+    const key = `themeNames.${id}`;
+    const out = t(key);
+    return out === key ? fallback : out;
+  };
 
   return (
     <header ref={headerRef} className="border-line bg-surface/85 relative z-50 border-b shadow-sm backdrop-blur-xl lg:sticky lg:top-0">
-      {/* brand accent strip */}
       <div className="h-0.5 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700" />
-      {/* Row 1 */}
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
-        {/* aria-label because the visible "BookQubit" text beside the mark is
-            `hidden` below the sm breakpoint and LogoMark is aria-hidden — so
-            on a phone this link had no accessible name at all, which is what
-            Lighthouse reported as "links do not have a discernible name" on
-            mobile only. The label also covers the icon-only rendering for
-            screen-reader users on any width. */}
-        <Link href="/" prefetch={false} aria-label="BookQubit — home" className="flex shrink-0 items-center gap-2">
+        <Link href="/" prefetch={false} aria-label={t("a11y.brandHome")} className="flex shrink-0 items-center gap-2">
           <LogoMark size={36} />
           <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
             Book<span className="text-brand-600">Qubit</span>
@@ -210,22 +198,20 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
         <div className="hidden min-w-0 flex-1 px-4 md:block">
           <div className="mx-auto max-w-xl">
-            <SearchBar lang={lang} placeholder={labels.search} big />
+            <SearchBar lang={lang} placeholder={t("nav.search")} big />
           </div>
         </div>
         <div className="flex-1 md:hidden" />
 
-        {/* Surprise me — fresh random book on every click */}
         <button
           onClick={surpriseMe} disabled={surprising}
           className={`${iconBtn} hidden sm:grid disabled:opacity-50`}
-          aria-label={labels.surpriseMe} title={labels.surpriseMe}
+          aria-label={t("nav.surpriseMe")} title={t("nav.surpriseMe")}
         >
           <Icon name="zap" size={17} />
         </button>
 
-        {/* Notifications */}
-        <Link href="/notifications" prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label={labels.notifications} title={labels.notifications}>
+        <Link href="/notifications" prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label={t("nav.notifications")} title={t("nav.notifications")}>
           <Icon name="bell" size={17} />
           {notifCount > 0 && (
             <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[9px] font-bold text-white">
@@ -234,48 +220,47 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           )}
         </Link>
 
-        {/* Liked books */}
-        <Link href="/liked" prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label={labels.likedBooks} title={labels.likedBooks}>
+        <Link href="/liked" prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label={t("nav.likedBooks")} title={t("nav.likedBooks")}>
           <Icon name="heart" size={17} />
         </Link>
 
-        {/* Theme picker */}
         <div className="hidden sm:block">
           <Dropdown
             width="w-44"
             button={(toggle) => (
-              <button onClick={toggle} className={iconBtn} title={`${labels.theme}: ${currentTheme.name}`} aria-label={labels.theme}>
+              <button onClick={toggle} className={iconBtn}
+                title={`${t("nav.theme")}: ${themeLabel(currentTheme.id, currentTheme.name)}`}
+                aria-label={t("nav.theme")}>
                 <Icon name="palette" size={17} />
               </button>
             )}
           >
-            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.theme}</p>
-            {themes.map((t) => (
-              <button key={t.id} onClick={() => setCookie("theme", t.id)}
-                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${t.id === theme ? "font-bold text-brand-600" : ""}`}>
+            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{t("nav.theme")}</p>
+            {themes.map((th) => (
+              <button key={th.id} onClick={() => setCookie("theme", th.id)}
+                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${th.id === theme ? "font-bold text-brand-600" : ""}`}>
                 <span className="h-3.5 w-3.5 rounded-full border border-black/10"
-                  style={{ background: { light: "#fff", dark: "#0b1220", sepia: "#b07d2f", midnight: "#7c3aed", ocean: "#0891b2", forest: "#059669", rose: "#e11d48" }[t.id] }} />
-                {t.name}
-                {t.id === theme && <Icon name="check" size={14} className="ml-auto text-brand-600" />}
+                  style={{ background: { light: "#fff", dark: "#0b1220", sepia: "#b07d2f", midnight: "#7c3aed", ocean: "#0891b2", forest: "#059669", rose: "#e11d48" }[th.id] }} />
+                {themeLabel(th.id, th.name)}
+                {th.id === theme && <Icon name="check" size={14} className="ml-auto text-brand-600" />}
               </button>
             ))}
           </Dropdown>
         </div>
 
-        {/* Language picker */}
         <div className="hidden sm:block">
           <Dropdown
             width="w-48"
             button={(toggle) => (
               <button onClick={toggle}
                 className="border-line bg-surface flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold shadow-sm transition hover:scale-105 hover:border-brand-500 hover:shadow-md"
-                aria-label={labels.language}>
+                aria-label={t("nav.language")}>
                 🌐 <span className="uppercase">{currentLang.code}</span>
                 <span className="text-[9px] opacity-50">▼</span>
               </button>
             )}
           >
-            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.language}</p>
+            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{t("nav.language")}</p>
             <div className="max-h-72 overflow-auto">
               {languages.map((l) => (
                 <button key={l.code} onClick={() => setCookie("lang", l.code)}
@@ -288,17 +273,15 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           </Dropdown>
         </div>
 
-        <div className="shrink-0 whitespace-nowrap"><AuthButton labels={labels} /></div>
+        <div className="shrink-0 whitespace-nowrap"><AuthButton /></div>
 
-        <button onClick={() => setOpen(!open)} className={`${iconBtn} lg:hidden`} aria-label={labels.menu}>☰</button>
+        <button onClick={() => setOpen(!open)} className={`${iconBtn} lg:hidden`} aria-label={t("nav.menu")}>☰</button>
       </div>
 
-      {/* Mobile search row — full width, never squeezed */}
       <div className="border-line border-t px-4 py-2 md:hidden">
-        <SearchBar lang={lang} placeholder={labels.search} big />
+        <SearchBar lang={lang} placeholder={t("nav.search")} big />
       </div>
 
-      {/* Row 2 */}
       <div className="border-line relative hidden border-t lg:block">
         <nav className="mx-auto flex max-w-7xl items-center justify-center px-4">
           {MENUS.map((m) => {
@@ -327,10 +310,9 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             );
           })}
 
-          {/* More — full mega menu */}
           <div className="group">
             <button className="relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600">
-              <Icon name="grid" size={14} className="opacity-70" /> More
+              <Icon name="grid" size={14} className="opacity-70" /> {t("nav.more")}
               <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />
               <span className="absolute inset-x-3 bottom-0 h-0.5 scale-x-0 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform group-hover:scale-x-100" />
             </button>
@@ -352,7 +334,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                     </div>
                   ))}
                   <div>
-                    <p className="border-line mb-3 border-b pb-2 text-sm font-bold">By Language</p>
+                    <p className="border-line mb-3 border-b pb-2 text-sm font-bold">{t("mega.byLanguage")}</p>
                     <ul className="max-h-52 space-y-1.5 overflow-auto pr-1">
                       {languages.map((l) => (
                         <li key={l.code}>
@@ -367,10 +349,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                 </div>
                 <div className="border-line flex justify-center gap-3 border-t p-4">
                   <Link href="/categories" prefetch={false} className="btn-primary !py-2 text-sm">
-                    Browse All Categories <Icon name="arrowRight" size={14} />
+                    {t("mega.browseAllCategories")} <Icon name="arrowRight" size={14} />
                   </Link>
                   <Link href="/request-a-book" prefetch={false} className="btn-ghost !py-2 text-sm">
-                    <Icon name="bookmark" size={14} /> Request a Book
+                    <Icon name="bookmark" size={14} /> {t("mega.requestBook")}
                   </Link>
                 </div>
               </div>
@@ -379,19 +361,18 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
           <Link href="/compare" prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/compare" || pathname.startsWith("/compare/") ? "text-brand-600" : ""}`}>
-            <Icon name="layers" size={14} className="opacity-70" /> Compare
+            <Icon name="layers" size={14} className="opacity-70" /> {t("nav.compare")}
             <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/compare" || pathname.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
 
           <Link href="/about" prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/about" ? "text-brand-600" : ""}`}>
-            <Icon name="shieldCheck" size={14} className="opacity-70" /> About
+            <Icon name="shieldCheck" size={14} className="opacity-70" /> {t("nav.about")}
             <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
         </nav>
       </div>
 
-      {/* Mobile sheet */}
       {open && (
         <div className="border-line border-t px-4 py-4 lg:hidden">
           <div className="grid grid-cols-2 gap-2">
@@ -402,40 +383,48 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               </Link>
             ))}
             <Link href="/notifications" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="bell" size={15} className="text-muted" /> Notifications {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
+              <Icon name="bell" size={15} className="text-muted" /> {t("nav.notifications")} {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
             </Link>
             <Link href="/liked" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="heart" size={15} className="text-muted" /> Liked Books
+              <Icon name="heart" size={15} className="text-muted" /> {t("nav.likedBooks")}
             </Link>
             <Link href="/compare" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="layers" size={15} className="text-muted" /> Compare
+              <Icon name="layers" size={15} className="text-muted" /> {t("nav.compare")}
             </Link>
             <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="zap" size={15} className="text-muted" /> Surprise me
+              <Icon name="zap" size={15} className="text-muted" /> {t("nav.surpriseMe")}
             </button>
             <Link href="/about" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="shieldCheck" size={15} className="text-muted" /> About
+              <Icon name="shieldCheck" size={15} className="text-muted" /> {t("nav.about")}
             </Link>
             <Link href="/login" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
+              <Icon name="user" size={15} className="text-muted" /> {t("nav.signIn")}
             </Link>
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Explore</p>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{t("mobile.explore")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {[["Top Rated", "/books?sort=rating"], ["New Releases", "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], ["Collections", "/collections"], ["Tags", "/tags"]].map(([label, href]) => (
+            {[
+              [t("discover.topRated"),     "/books?sort=rating"],
+              [t("discover.newReleases"),  "/books?sort=new"],
+              [t("mega.philosophy"),       "/books?category=Philosophy"],
+              [t("mega.history"),          "/books?category=History"],
+              [t("mega.countryIndia"),     "/books?country=India"],
+              [t("discover.collections"),  "/collections"],
+              [t("browse.tags"),           "/tags"],
+            ].map(([label, href]) => (
               <Link key={label} href={href} prefetch={false} onClick={() => setOpen(false)} className="pill">{label}</Link>
             ))}
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Theme</p>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{t("mobile.theme")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {themes.map((t) => (
-              <button key={t.id} onClick={() => setCookie("theme", t.id)}
-                className={`pill ${t.id === theme ? "!bg-brand-600 !text-white" : ""}`}>
-                {t.icon} {t.name}
+            {themes.map((th) => (
+              <button key={th.id} onClick={() => setCookie("theme", th.id)}
+                className={`pill ${th.id === theme ? "!bg-brand-600 !text-white" : ""}`}>
+                {th.icon} {themeLabel(th.id, th.name)}
               </button>
             ))}
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Language</p>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{t("mobile.language")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {languages.map((l) => (
               <button key={l.code} onClick={() => setCookie("lang", l.code)}

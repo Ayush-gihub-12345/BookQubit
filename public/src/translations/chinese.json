@@ -1,0 +1,20 @@
+{
+  "books": "图书",
+  "collections": "书单",
+  "categories": "分类",
+  "authors": "作者",
+  "publishers": "出版社",
+  "comics": "漫画",
+  "tags": "标签",
+  "search": "搜索",
+  "signIn": "登录",
+  "account": "账户",
+  "signOut": "退出登录",
+  "skipToContent": "跳到主要内容",
+  "navSurpriseMe": "随便看看",
+  "navNotifications": "通知",
+  "navLikedBooks": "喜欢的书",
+  "navTheme": "主题",
+  "navLanguage": "语言",
+  "navMenu": "菜单"
+}

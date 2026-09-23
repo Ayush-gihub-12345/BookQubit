@@ -1,0 +1,20 @@
+{
+  "books": "বই",
+  "collections": "সংগ্রহ",
+  "categories": "বিভাগ",
+  "authors": "লেখক",
+  "publishers": "প্রকাশক",
+  "comics": "কমিক্স",
+  "tags": "ট্যাগ",
+  "search": "খুঁজুন",
+  "signIn": "সাইন ইন",
+  "account": "অ্যাকাউন্ট",
+  "signOut": "সাইন আউট",
+  "skipToContent": "সরাসরি বিষয়বস্তুতে যান",
+  "navSurpriseMe": "আমাকে অবাক করুন",
+  "navNotifications": "বিজ্ঞপ্তি",
+  "navLikedBooks": "পছন্দের বই",
+  "navTheme": "থিম",
+  "navLanguage": "ভাষা",
+  "navMenu": "মেনু"
+}

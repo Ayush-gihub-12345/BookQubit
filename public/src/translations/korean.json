@@ -1,0 +1,20 @@
+{
+  "books": "도서",
+  "collections": "컬렉션",
+  "categories": "카테고리",
+  "authors": "저자",
+  "publishers": "출판사",
+  "comics": "만화",
+  "tags": "태그",
+  "search": "검색",
+  "signIn": "로그인",
+  "account": "계정",
+  "signOut": "로그아웃",
+  "skipToContent": "본문으로 건너뛰기",
+  "navSurpriseMe": "랜덤 추천",
+  "navNotifications": "알림",
+  "navLikedBooks": "좋아하는 책",
+  "navTheme": "테마",
+  "navLanguage": "언어",
+  "navMenu": "메뉴"
+}

@@ -1,0 +1,20 @@
+{
+  "books": "പുസ്തകങ്ങൾ",
+  "collections": "ശേഖരങ്ങൾ",
+  "categories": "വിഭാഗങ്ങൾ",
+  "authors": "രചയിതാക്കൾ",
+  "publishers": "പ്രസാധകർ",
+  "comics": "കോമിക്സ്",
+  "tags": "ടാഗുകൾ",
+  "search": "തിരയുക",
+  "signIn": "സൈൻ ഇൻ",
+  "account": "അക്കൗണ്ട്",
+  "signOut": "സൈൻ ഔട്ട്",
+  "skipToContent": "ഉള്ളടക്കത്തിലേക്ക് പോകുക",
+  "navSurpriseMe": "എന്നെ ആശ്ചര്യപ്പെടുത്തൂ",
+  "navNotifications": "അറിയിപ്പുകൾ",
+  "navLikedBooks": "ഇഷ്ടപ്പെട്ട പുസ്തകങ്ങൾ",
+  "navTheme": "തീം",
+  "navLanguage": "ഭാഷ",
+  "navMenu": "മെനു"
+}

@@ -1,0 +1,20 @@
+{
+  "books": "Libros",
+  "collections": "Colecciones",
+  "categories": "Categorías",
+  "authors": "Autores",
+  "publishers": "Editoriales",
+  "comics": "Cómics",
+  "tags": "Etiquetas",
+  "search": "Buscar",
+  "signIn": "Iniciar sesión",
+  "account": "Cuenta",
+  "signOut": "Cerrar sesión",
+  "skipToContent": "Ir al contenido",
+  "navSurpriseMe": "Sorpréndeme",
+  "navNotifications": "Notificaciones",
+  "navLikedBooks": "Libros favoritos",
+  "navTheme": "Tema",
+  "navLanguage": "Idioma",
+  "navMenu": "Menú"
+}

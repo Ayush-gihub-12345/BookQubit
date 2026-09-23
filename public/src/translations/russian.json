@@ -1,0 +1,20 @@
+{
+  "books": "Книги",
+  "collections": "Коллекции",
+  "categories": "Категории",
+  "authors": "Авторы",
+  "publishers": "Издательства",
+  "comics": "Комиксы",
+  "tags": "Теги",
+  "search": "Поиск",
+  "signIn": "Войти",
+  "account": "Аккаунт",
+  "signOut": "Выйти",
+  "skipToContent": "Перейти к содержимому",
+  "navSurpriseMe": "Удиви меня",
+  "navNotifications": "Уведомления",
+  "navLikedBooks": "Избранные книги",
+  "navTheme": "Тема",
+  "navLanguage": "Язык",
+  "navMenu": "Меню"
+}

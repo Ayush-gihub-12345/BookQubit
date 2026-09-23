@@ -1,0 +1,20 @@
+{
+  "books": "الكتب",
+  "collections": "المجموعات",
+  "categories": "الفئات",
+  "authors": "المؤلفون",
+  "publishers": "الناشرون",
+  "comics": "القصص المصورة",
+  "tags": "الوسوم",
+  "search": "بحث",
+  "signIn": "تسجيل الدخول",
+  "account": "الحساب",
+  "signOut": "تسجيل الخروج",
+  "skipToContent": "تخطَّ إلى المحتوى",
+  "navSurpriseMe": "فاجئني",
+  "navNotifications": "الإشعارات",
+  "navLikedBooks": "الكتب المفضلة",
+  "navTheme": "المظهر",
+  "navLanguage": "اللغة",
+  "navMenu": "القائمة"
+}

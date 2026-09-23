@@ -1,0 +1,20 @@
+{
+  "books": "પુસ્તકો",
+  "collections": "સંગ્રહો",
+  "categories": "શ્રેણીઓ",
+  "authors": "લેખકો",
+  "publishers": "પ્રકાશકો",
+  "comics": "કોમિક્સ",
+  "tags": "ટૅગ્સ",
+  "search": "શોધો",
+  "signIn": "સાઇન ઇન",
+  "account": "ખાતું",
+  "signOut": "સાઇન આઉટ",
+  "skipToContent": "સીધા સામગ્રી પર જાઓ",
+  "navSurpriseMe": "મને આશ્ચર્ય કરો",
+  "navNotifications": "સૂચનાઓ",
+  "navLikedBooks": "ગમતાં પુસ્તકો",
+  "navTheme": "થીમ",
+  "navLanguage": "ભાષા",
+  "navMenu": "મેનૂ"
+}

@@ -1,0 +1,20 @@
+{
+  "books": "पुस्तके",
+  "collections": "संग्रह",
+  "categories": "श्रेणी",
+  "authors": "लेखक",
+  "publishers": "प्रकाशक",
+  "comics": "कॉमिक्स",
+  "tags": "टॅग",
+  "search": "शोधा",
+  "signIn": "साइन इन करा",
+  "account": "खाते",
+  "signOut": "साइन आउट करा",
+  "skipToContent": "थेट सामग्रीवर जा",
+  "navSurpriseMe": "मला आश्चर्यचकित करा",
+  "navNotifications": "सूचना",
+  "navLikedBooks": "आवडती पुस्तके",
+  "navTheme": "थीम",
+  "navLanguage": "भाषा",
+  "navMenu": "मेनू"
+}

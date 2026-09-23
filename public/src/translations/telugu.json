@@ -1,0 +1,20 @@
+{
+  "books": "పుస్తకాలు",
+  "collections": "సేకరణలు",
+  "categories": "వర్గాలు",
+  "authors": "రచయితలు",
+  "publishers": "ప్రచురణకర్తలు",
+  "comics": "కామిక్స్",
+  "tags": "ట్యాగ్లు",
+  "search": "వెతకండి",
+  "signIn": "సైన్ ఇన్",
+  "account": "ఖాతా",
+  "signOut": "సైన్ అవుట్",
+  "skipToContent": "నేరుగా కంటెంట్కు వెళ్లండి",
+  "navSurpriseMe": "నన్ను ఆశ్చర్యపరచండి",
+  "navNotifications": "నోటిఫికేషన్లు",
+  "navLikedBooks": "ఇష్టమైన పుస్తకాలు",
+  "navTheme": "థీమ్",
+  "navLanguage": "భాష",
+  "navMenu": "మెనూ"
+}

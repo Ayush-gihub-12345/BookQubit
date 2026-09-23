@@ -1,0 +1,20 @@
+{
+  "books": "書籍",
+  "collections": "コレクション",
+  "categories": "カテゴリー",
+  "authors": "著者",
+  "publishers": "出版社",
+  "comics": "コミック",
+  "tags": "タグ",
+  "search": "検索",
+  "signIn": "ログイン",
+  "account": "アカウント",
+  "signOut": "ログアウト",
+  "skipToContent": "コンテンツへスキップ",
+  "navSurpriseMe": "おまかせ表示",
+  "navNotifications": "通知",
+  "navLikedBooks": "お気に入りの本",
+  "navTheme": "テーマ",
+  "navLanguage": "言語",
+  "navMenu": "メニュー"
+}
