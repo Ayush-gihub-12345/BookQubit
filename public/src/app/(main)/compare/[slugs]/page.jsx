@@ -5,7 +5,9 @@ import { getLang } from "@/lib/lang";
 import BookCover from "@/components/BookCover";
 import Rating from "@/components/Rating";
 import Icon from "@/components/Icon";
+import TitleTransliterated from "@/components/TitleTransliterated";
 import { SITE_URL } from "@/lib/site";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,7 @@ export default async function ComparePage({ params }) {
   if (slugs.length < 2) notFound();
 
   const lang = await getLang();
+  const _ = t(lang);
   const map = await getBooksBySlug(slugs, lang, "*");
   const books = slugs.map((s) => map.get(s)).filter(Boolean);
   if (books.length < 2) notFound();
@@ -57,14 +60,14 @@ export default async function ComparePage({ params }) {
   };
 
   const rows = [
-    ["Author", (b) => b.author || "—"],
-    ["Rating", (b) => (b.rating ? `★ ${b.rating}` : "—")],
-    ["Pages", (b) => b.page_count || "—"],
-    ["Published", (b) => b.published || "—"],
-    ["Format", (b) => b.format || "—"],
-    ["Category", (b) => b.category || "—"],
-    ["Publisher", (b) => b.publisher || "—"],
-    ["Country", (b) => b.country || "—"],
+    [_("authorRowLabel"), (b) => b.author ? <TitleTransliterated text={b.author} /> : "—"],
+    [_("ratingRowLabel"), (b) => (b.rating ? `★ ${b.rating}` : "—")],
+    [_("pagesRowLabel"), (b) => b.page_count || "—"],
+    [_("publishedLabel"), (b) => b.published || "—"],
+    [_("formatLabel"), (b) => b.format || "—"],
+    [_("categoryRowLabel"), (b) => b.category || "—"],
+    [_("publisherRowLabel"), (b) => b.publisher || "—"],
+    [_("countryRowLabel"), (b) => b.country || "—"],
   ];
   const gridStyle = { gridTemplateColumns: `repeat(${books.length}, minmax(0, 1fr))` };
 
@@ -73,14 +76,14 @@ export default async function ComparePage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       <nav className="text-muted mb-6 text-sm">
-        <Link href="/compare" className="hover:text-brand-600">Compare</Link>
+        <Link href="/compare" className="hover:text-brand-600">{_("compareCrumb")}</Link>
         <span className="mx-1.5">/</span>
         <span className="text-[var(--fg)]">{heading}</span>
       </nav>
 
       <h1 className="text-3xl font-bold sm:text-4xl">{heading}</h1>
       <p className="text-muted mt-2 max-w-2xl">
-        Side-by-side comparison — ratings, page count, and key takeaways, to help you decide which to read {books.length > 2 ? "first" : "next"}.
+        {_("compareSubtitle", { order: books.length > 2 ? _("compareOrderFirst") : _("compareOrderNext") })}
       </p>
 
       <div className="mt-8 grid gap-6" style={gridStyle}>
@@ -92,9 +95,9 @@ export default async function ComparePage({ params }) {
               </div>
             </Link>
             <Link href={`/books/${encodeURIComponent(b.slug)}`} className="mt-3 block font-bold hover:text-brand-600">
-              {b.title}
+              <TitleTransliterated text={b.title} />
             </Link>
-            <p className="text-muted text-xs">{b.author}</p>
+            <p className="text-muted text-xs"><TitleTransliterated text={b.author} /></p>
             <div className="mt-2 flex justify-center"><Rating value={b.rating} /></div>
           </div>
         ))}
@@ -117,11 +120,11 @@ export default async function ComparePage({ params }) {
 
       {books.some((b) => J(b.key_points).length > 0) && (
         <div className="mt-10">
-          <h2 className="text-xl font-bold">Key Takeaways</h2>
+          <h2 className="text-xl font-bold">{_("keyTakeawaysLabel")}</h2>
           <div className="mt-4 grid gap-6" style={gridStyle}>
             {books.map((b) => (
               <div key={b.slug}>
-                <p className="mb-2 font-semibold">{b.title}</p>
+                <p className="mb-2 font-semibold"><TitleTransliterated text={b.title} /></p>
                 <ul className="space-y-2">
                   {J(b.key_points).map((k) => (
                     <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-3 py-2 text-xs leading-relaxed">
@@ -137,7 +140,7 @@ export default async function ComparePage({ params }) {
 
       <div className="mt-10 text-center">
         <Link href="/compare" className="btn-ghost inline-flex">
-          <Icon name="layers" size={14} /> Compare different books
+          <Icon name="layers" size={14} /> {_("compareDifferentBooksLabel")}
         </Link>
       </div>
     </div>

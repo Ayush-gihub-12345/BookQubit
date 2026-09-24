@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "@/components/Icon";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 export default function AchievementsPage() {
+  const tr = t(useLang());
   const router = useRouter();
   const [user, setUser] = useState(undefined);
   const [achievements, setAchievements] = useState([]);
@@ -31,9 +34,9 @@ export default function AchievementsPage() {
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
           <Icon name="award" size={26} />
         </span>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight">Achievements</h1>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight">{tr("achievementsLabel")}</h1>
         <p className="text-muted mx-auto mt-2 max-w-md text-sm">
-          {unlocked.length} of {achievements.length} unlocked — every one earned by actually reading, not just showing up.
+          {tr("achievementsUnlockedSub", { unlocked: unlocked.length, total: achievements.length })}
         </p>
       </div>
 

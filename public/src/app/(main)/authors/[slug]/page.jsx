@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
+import TitleTransliterated from "@/components/TitleTransliterated";
 import { getAuthor, booksByAuthor } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 import { FollowButton, ShareButton } from "@/components/FollowButton";
 import Icon from "@/components/Icon";
 
@@ -11,15 +13,17 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const author = await getAuthor(slug, await getLang());
+  const lang = await getLang();
+  const author = await getAuthor(slug, lang);
   return author
     ? { title: author.name, description: author.bio?.slice(0, 160), alternates: { canonical: `/authors/${author.slug}` } }
-    : { title: "Author Not Found", robots: { index: false } };
+    : { title: t(lang)("authorNotFound"), robots: { index: false } };
 }
 
 export default async function AuthorPage({ params }) {
   const { slug } = await params;
   const lang = await getLang();
+  const _ = t(lang);
   const author = await getAuthor(slug, lang);
   if (!author) notFound();
   const books = await booksByAuthor(author.name, lang);
@@ -38,37 +42,37 @@ export default async function AuthorPage({ params }) {
           )}
           <div className="flex-1 text-center sm:text-left">
             <h1 className="flex items-center justify-center gap-2 text-3xl font-bold sm:justify-start">
-              {author.name}
+              <TitleTransliterated text={author.name} />
               {author.verified ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 px-2 py-0.5 text-xs font-semibold text-brand-600" title="Verified author">
-                  <Icon name="shieldCheck" size={14} /> Verified
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 px-2 py-0.5 text-xs font-semibold text-brand-600" title={_("verifiedTitleAttr")}>
+                  <Icon name="shieldCheck" size={14} /> {_("verifiedBadge")}
                 </span>
               ) : null}
             </h1>
             <p className="text-muted mt-1 text-sm">
-              {[author.country, author.birth_year && `b. ${author.birth_year}`].filter(Boolean).join(" · ")}
+              {[author.country, author.birth_year && _("bornAbbrev", { year: author.birth_year })].filter(Boolean).join(" · ")}
             </p>
             <p className="mt-3 max-w-2xl leading-relaxed">{author.bio}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
               {author.genres.map((g) => <span key={g} className="pill">{g}</span>)}
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <FollowButton type="author" id={author.slug} label="Follow author" />
-              <ShareButton label="Share profile" />
+              <FollowButton type="author" id={author.slug} label={_("followAuthorLabel")} />
+              <ShareButton label={_("shareProfileLabel")} />
               {author.wikipedia_url && (
-                <a href={author.wikipedia_url} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">Wikipedia</a>
+                <a href={author.wikipedia_url} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">{_("wikipediaLabel")}</a>
               )}
               {author.website_url && (
-                <a href={author.website_url} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">Website</a>
+                <a href={author.website_url} target="_blank" rel="noopener noreferrer" className="btn-ghost text-sm">{_("websiteLabel")}</a>
               )}
             </div>
           </div>
           {/* Engagement stats */}
           <div className="grid shrink-0 grid-cols-3 gap-3 sm:grid-cols-1">
             {[
-              [books.length, "Books"],
-              [books.filter((b) => b.rating).length ? (books.reduce((n, b) => n + (b.rating || 0), 0) / books.filter((b) => b.rating).length).toFixed(1) : "—", "Avg rating"],
-              [author.famous_work ? 1 : 0, "Featured", author.famous_work],
+              [books.length, _("booksStat")],
+              [books.filter((b) => b.rating).length ? (books.reduce((n, b) => n + (b.rating || 0), 0) / books.filter((b) => b.rating).length).toFixed(1) : "—", _("avgRatingStat")],
+              [author.famous_work ? 1 : 0, _("featuredLabelStat"), author.famous_work],
             ].map(([val, label, sub]) => (
               <div key={label} className="rounded-xl border border-line px-4 py-3 text-center">
                 <p className="text-lg font-extrabold">{val}</p>
@@ -81,7 +85,7 @@ export default async function AuthorPage({ params }) {
       </div>
 
       {books.length > 0 && (
-        <Section title={`Books by ${author.name}`}>
+        <Section title={_("booksByName", { name: author.name })}>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
             {books.map((b) => <BookCard key={b.id} book={b} />)}
           </div>

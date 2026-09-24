@@ -7,6 +7,7 @@ import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "@/components/Icon";
 import ChatPanel from "@/components/community/ChatPanel";
 import NewDiscussionModal from "@/components/community/NewDiscussionModal";
+import TitleTransliterated from "@/components/TitleTransliterated";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
@@ -88,7 +89,7 @@ function CommunityInner() {
     if (r.ok) { await loadMine(); setSelected(id); setTab("chats"); }
   };
 
-  if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">Community requires sign-in.</div>;
+  if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">{tr("communityRequiresSignIn")}</div>;
   if (user === undefined) return null;
   if (!user) {
     return (
@@ -107,11 +108,11 @@ function CommunityInner() {
       {/* Slim top bar — no page-level scroll here, everything below manages its own */}
       <div className="border-line flex shrink-0 items-center justify-between border-b px-4 py-3 sm:px-6">
         <div>
-          <h1 className="text-lg font-bold sm:text-xl">Community</h1>
-          <p className="text-muted hidden text-xs sm:block">Join discussions with fellow readers, book by book.</p>
+          <h1 className="text-lg font-bold sm:text-xl">{tr("communityTitle")}</h1>
+          <p className="text-muted hidden text-xs sm:block">{tr("communityTagline")}</p>
         </div>
         <button onClick={() => setShowNew(true)} className="btn-primary text-sm">
-          <Icon name="feather" size={14} /> <span className="hidden sm:inline">New Discussion</span>
+          <Icon name="feather" size={14} /> <span className="hidden sm:inline">{tr("newDiscussionLabel")}</span>
         </button>
       </div>
 
@@ -119,7 +120,7 @@ function CommunityInner() {
         {/* Sidebar */}
         <div className={`border-line flex min-h-0 flex-col border-r bg-surface ${selected ? "hidden lg:flex" : "flex"}`}>
           <div className="border-line flex gap-1 border-b p-2">
-            {[["chats", "Chats"], ["archived", "Archived"], ["discover", "Discover"]].map(([id, label]) => (
+            {[["chats", tr("chatsTabLabel")], ["archived", tr("archivedTabLabel")], ["discover", tr("discoverTabLabel")]].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)}
                 className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${tab === id ? "bg-brand-600 text-white" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"}`}>
                 {label}
@@ -131,7 +132,7 @@ function CommunityInner() {
             <div className="border-line border-b p-2">
               <div className="relative">
                 <Icon name="search" size={13} className="text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search discussions…" className="input w-full !pl-8 text-sm" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("searchDiscussionsPlaceholder")} className="input w-full !pl-8 text-sm" />
               </div>
             </div>
           )}
@@ -147,22 +148,22 @@ function CommunityInner() {
                   <span className="min-w-0 flex-1">
                     <span className="line-clamp-1 block text-sm font-semibold">{d.title}</span>
                     <span className="text-muted line-clamp-1 block text-xs">
-                      {d.book_title || d.author_name} · {d.members} member{d.members === 1 ? "" : "s"}
+                      <TitleTransliterated text={d.book_title || d.author_name} /> · {d.members} {tr("memberCountSuffix", { plural: d.members === 1 ? "" : "s" })}
                     </span>
                   </span>
                   {d.my_exit_count >= 2 && !d.my_active ? (
-                    <span className="text-muted shrink-0 text-[10px]">Locked</span>
+                    <span className="text-muted shrink-0 text-[10px]">{tr("lockedLabel")}</span>
                   ) : d.my_active ? (
-                    <span className="shrink-0 text-[10px] font-semibold text-brand-600">Open</span>
+                    <span className="shrink-0 text-[10px] font-semibold text-brand-600">{tr("openLabel")}</span>
                   ) : (
-                    <span className="shrink-0 rounded-full bg-brand-600/10 px-2 py-0.5 text-[10px] font-semibold text-brand-600">Join</span>
+                    <span className="shrink-0 rounded-full bg-brand-600/10 px-2 py-0.5 text-[10px] font-semibold text-brand-600">{tr("joinLabel")}</span>
                   )}
                 </button>
               )) : (
                 <div className="text-muted grid h-full place-items-center p-6 text-center text-sm">
                   <div>
                     <Icon name="search" size={24} className="mx-auto opacity-50" />
-                    <p className="mt-2">Search for a discussion by title, book, or tag.</p>
+                    <p className="mt-2">{tr("searchDiscussionsEmptyHint")}</p>
                   </div>
                 </div>
               )
@@ -175,7 +176,7 @@ function CommunityInner() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="line-clamp-1 block text-sm font-semibold">{d.title}</span>
-                    <span className="text-muted line-clamp-1 block text-xs">{d.last_message || "No messages yet"}</span>
+                    <span className="text-muted line-clamp-1 block text-xs">{d.last_message || tr("noMessagesYetLabel")}</span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-muted text-[10px]">{timeAgo(d.last_message_at || d.created_at)}</span>
@@ -190,7 +191,7 @@ function CommunityInner() {
                 <div>
                   <Icon name="users" size={24} className="mx-auto opacity-50" />
                   <p className="mt-2">
-                    {tab === "archived" ? "No archived discussions." : "No discussions yet — join one from Discover or start your own."}
+                    {tab === "archived" ? tr("noArchivedDiscussionsLabel") : tr("noDiscussionsYetLabel")}
                   </p>
                 </div>
               </div>
@@ -203,7 +204,7 @@ function CommunityInner() {
           {selected ? (
             <>
               <button onClick={() => setSelected(null)} className="btn-ghost m-2 self-start !px-3 text-xs lg:hidden">
-                <Icon name="arrowRight" size={13} className="rotate-180" /> Back
+                <Icon name="arrowRight" size={13} className="rotate-180" /> {tr("backLabel")}
               </button>
               <ChatPanel
                 key={selected}
@@ -217,7 +218,7 @@ function CommunityInner() {
             <div className="text-muted grid flex-1 place-items-center p-6 text-center text-sm">
               <div>
                 <Icon name="users" size={28} className="mx-auto opacity-50" />
-                <p className="mt-2">Select a discussion, or start a new one.</p>
+                <p className="mt-2">{tr("selectDiscussionHint")}</p>
               </div>
             </div>
           )}

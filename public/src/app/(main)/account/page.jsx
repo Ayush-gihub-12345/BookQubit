@@ -8,23 +8,33 @@ import { readWishlist } from "@/components/WishlistButton";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import ShelfItemCard from "@/components/ShelfItemCard";
+import TitleTransliterated from "@/components/TitleTransliterated";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
-const TABS = [
-  { id: "all", label: "All" },
-  { id: "reading", icon: "bookOpen", label: "Reading" },
-  { id: "read", icon: "check", label: "Read" },
-  { id: "want", icon: "bookmark", label: "Want to Read" },
-];
+function getTabs(tr) {
+  return [
+    { id: "all", label: tr("tabAll") },
+    { id: "reading", icon: "bookOpen", label: tr("statusReading") },
+    { id: "read", icon: "check", label: tr("statusRead") },
+    { id: "want", icon: "bookmark", label: tr("wantToReadTab") },
+  ];
+}
 
-const LEVELS = [
-  { min: 400, name: "Grand Librarian", icon: "award" },
-  { min: 150, name: "Bibliophile", icon: "layers" },
-  { min: 50, name: "Bookworm", icon: "book" },
-  { min: 10, name: "Page Turner", icon: "bookOpen" },
-  { min: 0, name: "New Reader", icon: "compass" },
-];
+function getLevels(tr) {
+  return [
+    { min: 400, name: tr("levelGrandLibrarian"), icon: "award" },
+    { min: 150, name: tr("levelBibliophile"), icon: "layers" },
+    { min: 50, name: tr("levelBookworm"), icon: "book" },
+    { min: 10, name: tr("levelPageTurner"), icon: "bookOpen" },
+    { min: 0, name: tr("levelNewReader"), icon: "compass" },
+  ];
+}
 
 export default function AccountPage() {
+  const tr = t(useLang());
+  const TABS = useMemo(() => getTabs(tr), [tr]);
+  const LEVELS = useMemo(() => getLevels(tr), [tr]);
   const router = useRouter();
   const [user, setUser] = useState(undefined);
   const [shelf, setShelf] = useState([]);
@@ -90,7 +100,7 @@ export default function AccountPage() {
       points,
       level: LEVELS.find((l) => points >= l.min),
     };
-  }, [shelf]);
+  }, [shelf, LEVELS]);
 
   // Books finished per month, last 6 months — pure client-side aggregation, no new API.
   const activity = useMemo(() => {
@@ -135,7 +145,7 @@ export default function AccountPage() {
     });
   };
 
-  if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">Sign-in is not configured.</div>;
+  if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">{tr("signInNotConfigured")}</div>;
   if (user === undefined) {
     return (
       <div className="mx-auto max-w-7xl animate-pulse px-4 py-10">
@@ -169,10 +179,10 @@ export default function AccountPage() {
             <Icon name="compass" size={20} />
           </span>
           <div className="flex-1 text-center sm:text-left">
-            <p className="font-semibold">Finish setting up your profile</p>
-            <p className="text-muted text-sm">Pick your favorite genres and rate a few books to get personalized recommendations.</p>
+            <p className="font-semibold">{tr("finishProfileSetup")}</p>
+            <p className="text-muted text-sm">{tr("finishProfileSetupBody")}</p>
           </div>
-          <Link href="/onboarding" className="btn-primary shrink-0 text-sm">Complete setup</Link>
+          <Link href="/onboarding" className="btn-primary shrink-0 text-sm">{tr("completeSetup")}</Link>
         </div>
       )}
 
@@ -187,21 +197,21 @@ export default function AccountPage() {
           </span>
         )}
         <div className="flex-1 text-center sm:text-left">
-          <h1 className="text-2xl font-bold">{user.displayName || "Reader"}</h1>
+          <h1 className="text-2xl font-bold">{user.displayName || tr("readerFallback")}</h1>
           <p className="text-muted text-sm">{user.email}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <span className="pill !text-sm"><Icon name={stats.level.icon} size={13} /> {stats.level.name}</span>
-            <span className="pill !text-sm"><Icon name="zap" size={13} /> {stats.points} pts</span>
+            <span className="pill !text-sm"><Icon name="zap" size={13} /> {tr("ptsSuffix", { n: stats.points })}</span>
             {goal?.streak > 0 && (
-              <span className="pill !bg-orange-500/15 !text-sm !text-orange-500"><Icon name="flame" size={13} /> {goal.streak}-day streak</span>
+              <span className="pill !bg-orange-500/15 !text-sm !text-orange-500"><Icon name="flame" size={13} /> {tr("dayStreakSuffix", { n: goal.streak })}</span>
             )}
-            {rank && <Link href="/leaderboard" className="pill !text-sm"><Icon name="trophy" size={13} /> Rank #{rank.position}</Link>}
+            {rank && <Link href="/leaderboard" className="pill !text-sm"><Icon name="trophy" size={13} /> {tr("rankHash", { n: rank.position })}</Link>}
           </div>
         </div>
-        <Link href="/wrapped" className="btn-ghost text-sm"><Icon name="zap" size={15} /> Your Year in Books</Link>
-        <Link href="/achievements" className="btn-ghost text-sm"><Icon name="award" size={15} /> Achievements</Link>
-        <Link href="/leaderboard" className="btn-ghost text-sm"><Icon name="trophy" size={15} /> Bookworm Ranking</Link>
-        <Link href="/community" className="btn-ghost text-sm"><Icon name="users" size={15} /> Community</Link>
+        <Link href="/wrapped" className="btn-ghost text-sm"><Icon name="zap" size={15} /> {tr("yourYearInBooks")}</Link>
+        <Link href="/achievements" className="btn-ghost text-sm"><Icon name="award" size={15} /> {tr("achievementsWord")}</Link>
+        <Link href="/leaderboard" className="btn-ghost text-sm"><Icon name="trophy" size={15} /> {tr("navBookwormRanking")}</Link>
+        <Link href="/community" className="btn-ghost text-sm"><Icon name="users" size={15} /> {tr("navCommunity")}</Link>
       </div>
 
       {/* Currently reading spotlight */}
@@ -212,12 +222,12 @@ export default function AccountPage() {
           </Link>
           <div className="flex-1">
             <p className="text-muted flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-              <Icon name="bookOpen" size={13} className="text-brand-600" /> Currently Reading
+              <Icon name="bookOpen" size={13} className="text-brand-600" /> {tr("currentlyReadingAction")}
             </p>
             <Link href={`/books/${encodeURIComponent(currentlyReading.book_slug)}`} className="mt-1 block text-lg font-bold hover:text-brand-600">
-              {currentlyReading.title || currentlyReading.book_slug}
+              <TitleTransliterated text={currentlyReading.title || currentlyReading.book_slug} />
             </Link>
-            {currentlyReading.author && <p className="text-muted text-sm">{currentlyReading.author}</p>}
+            {currentlyReading.author && <p className="text-muted text-sm"><TitleTransliterated text={currentlyReading.author} /></p>}
 
             <div className="mt-3 flex items-center gap-3">
               <input
@@ -230,7 +240,10 @@ export default function AccountPage() {
             </div>
             {currentlyReading.page_count > 0 && (
               <p className="text-muted mt-1.5 text-xs">
-                ~{Math.max(0, Math.round(((100 - (currentlyReading.progress || 0)) / 100) * currentlyReading.page_count))} pages left of {currentlyReading.page_count}
+                {tr("pagesLeftOfTotal", {
+                  left: Math.max(0, Math.round(((100 - (currentlyReading.progress || 0)) / 100) * currentlyReading.page_count)),
+                  total: currentlyReading.page_count,
+                })}
               </p>
             )}
           </div>
@@ -242,13 +255,13 @@ export default function AccountPage() {
         <div className="card mt-6 p-5 hover:!translate-y-0">
           <div className="flex items-center justify-between">
             <p className="flex items-center gap-2 text-sm font-bold">
-              <Icon name="grid" size={16} className="text-brand-600" /> Reading Preferences
+              <Icon name="grid" size={16} className="text-brand-600" /> {tr("readingPreferencesTitle")}
             </p>
             <button onClick={() => setEditingPrefs((v) => !v)} className="text-xs font-semibold text-brand-600 hover:underline">
-              {editingPrefs ? "Done" : "Edit"}
+              {editingPrefs ? tr("doneWord") : tr("edit")}
             </button>
           </div>
-          <p className="text-muted mt-1 text-xs">Used to personalize your recommendations and the Discover menu.</p>
+          <p className="text-muted mt-1 text-xs">{tr("readingPrefsSubtitle")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {(editingPrefs ? allCategories.map((c) => c.name) : prefs.genres).length ? (
               (editingPrefs ? allCategories.map((c) => c.name) : prefs.genres).map((g) => (
@@ -261,7 +274,7 @@ export default function AccountPage() {
                 </button>
               ))
             ) : (
-              <p className="text-muted text-sm">No preferences set yet — click Edit to pick your favorite genres.</p>
+              <p className="text-muted text-sm">{tr("noPreferencesYet")}</p>
             )}
           </div>
         </div>
@@ -270,11 +283,11 @@ export default function AccountPage() {
       {/* Stats */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
         {[
-          ["check", stats.read, "Books read"],
-          ["bookOpen", stats.reading, "Reading now"],
-          ["bookmark", stats.want, "Want to read"],
-          ["barChart", stats.pagesRead.toLocaleString(), "Pages read"],
-          ["star", stats.avgRating, "Avg rating"],
+          ["check", stats.read, tr("booksReadStat")],
+          ["bookOpen", stats.reading, tr("readingNowStat")],
+          ["bookmark", stats.want, tr("wantToReadStat")],
+          ["barChart", stats.pagesRead.toLocaleString(), tr("pagesReadStat")],
+          ["star", stats.avgRating, tr("avgRatingStat")],
         ].map(([icon, val, label]) => (
           <div key={label} className="card p-4 text-center hover:!translate-y-0">
             <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
@@ -299,27 +312,30 @@ export default function AccountPage() {
               <div className="bg-surface grid h-[76px] w-[76px] place-items-center rounded-full text-center">
                 <span>
                   <span className="block text-xl font-extrabold">{goal.done || 0}</span>
-                  <span className="text-muted block text-[10px]">of {goal.target}</span>
+                  <span className="text-muted block text-[10px]">{tr("ofTotal", { n: goal.target })}</span>
                 </span>
               </div>
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
-                <Icon name="calendar" size={16} className="text-brand-600" /> {goal.year} Reading Challenge
+                <Icon name="calendar" size={16} className="text-brand-600" /> {tr("readingChallengeTitle", { year: goal.year })}
               </h3>
               <p className="text-muted mt-1 text-sm">
                 {goal.done >= goal.target
-                  ? "Goal complete — you're unstoppable."
-                  : `${goal.target - goal.done} more ${goal.target - goal.done === 1 ? "book" : "books"} to reach your goal. Keep going.`}
+                  ? tr("goalCompleteMsg")
+                  : tr("moreToGoal", {
+                      n: goal.target - goal.done,
+                      word: goal.target - goal.done === 1 ? tr("bookWord") : tr("booksWord"),
+                    })}
               </p>
             </div>
           </>
         ) : (
           <div className="flex-1 text-center sm:text-left">
             <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
-              <Icon name="calendar" size={16} className="text-brand-600" /> Set your {new Date().getFullYear()} Reading Challenge
+              <Icon name="calendar" size={16} className="text-brand-600" /> {tr("setYourReadingChallenge", { year: new Date().getFullYear() })}
             </h3>
-            <p className="text-muted mt-1 text-sm">How many books will you read this year?</p>
+            <p className="text-muted mt-1 text-sm">{tr("howManyBooksThisYear")}</p>
           </div>
         )}
         <form
@@ -344,7 +360,7 @@ export default function AccountPage() {
             className="input w-24 text-center"
           />
           <button type="submit" className="btn-primary !px-4 text-sm">
-            {goal?.target ? "Update" : "Set goal"}
+            {goal?.target ? tr("updateWord") : tr("setGoalAction")}
           </button>
         </form>
       </div>
@@ -353,8 +369,8 @@ export default function AccountPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="card p-5 hover:!translate-y-0">
           <p className="mb-4 flex items-center gap-2 text-sm font-bold">
-            <Icon name="trendingUp" size={16} className="text-brand-600" /> Reading activity
-            <span className="text-muted font-normal">— books finished, last 6 months</span>
+            <Icon name="trendingUp" size={16} className="text-brand-600" /> {tr("readingActivityTitle")}
+            <span className="text-muted font-normal">{tr("booksFinishedLast6Months")}</span>
           </p>
           <div className="flex h-28 items-end gap-3">
             {activity.months.map((m) => (
@@ -372,7 +388,7 @@ export default function AccountPage() {
 
         <div className="card p-5 hover:!translate-y-0">
           <p className="mb-4 flex items-center gap-2 text-sm font-bold">
-            <Icon name="barChart" size={16} className="text-brand-600" /> Most-read genres
+            <Icon name="barChart" size={16} className="text-brand-600" /> {tr("mostReadGenres")}
           </p>
           {genres.length ? (
             <div className="flex flex-wrap gap-2">
@@ -383,7 +399,7 @@ export default function AccountPage() {
               ))}
             </div>
           ) : (
-            <p className="text-muted text-sm">Add books to your shelf to see your most-read genres.</p>
+            <p className="text-muted text-sm">{tr("addBooksToSeeGenres")}</p>
           )}
         </div>
       </div>
@@ -393,16 +409,16 @@ export default function AccountPage() {
         <div className="card mt-6 p-5 hover:!translate-y-0">
           <div className="flex items-center gap-2">
             <p className="flex items-center gap-2 text-sm font-bold">
-              <Icon name="users" size={16} className="text-brand-600" /> Your Network
+              <Icon name="users" size={16} className="text-brand-600" /> {tr("yourNetworkTitle")}
             </p>
             <div className="ml-auto flex gap-1.5">
               <button onClick={() => setNetworkTab("following")}
                 className={`pill !text-xs ${networkTab === "following" ? "!bg-brand-600 !text-white" : ""}`}>
-                Following ({network.followingCount})
+                {tr("followingCountLabel", { n: network.followingCount })}
               </button>
               <button onClick={() => setNetworkTab("followers")}
                 className={`pill !text-xs ${networkTab === "followers" ? "!bg-brand-600 !text-white" : ""}`}>
-                Followers ({network.followerCount})
+                {tr("followersCountLabel", { n: network.followerCount })}
               </button>
             </div>
           </div>
@@ -422,7 +438,7 @@ export default function AccountPage() {
             ))}
             {(networkTab === "following" ? network.following : network.followers).length === 0 && (
               <p className="text-muted text-sm">
-                {networkTab === "following" ? "You aren't following any readers yet." : "No one is following you yet."}
+                {networkTab === "following" ? tr("notFollowingAnyoneYet") : tr("noFollowersYet")}
               </p>
             )}
           </div>
@@ -431,7 +447,7 @@ export default function AccountPage() {
 
       {/* Shelf */}
       <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">My Shelf</h2>
+        <h2 className="text-2xl font-bold">{tr("myShelfHeading")}</h2>
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -447,13 +463,13 @@ export default function AccountPage() {
           <Icon name="search" size={14} className="text-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={shelfQuery} onChange={(e) => setShelfQuery(e.target.value)}
-            placeholder="Search your shelf…" className="input w-full !pl-9 text-sm"
+            placeholder={tr("searchYourShelfPlaceholder")} className="input w-full !pl-9 text-sm"
           />
         </div>
         <select value={shelfSort} onChange={(e) => setShelfSort(e.target.value)} className="input !w-auto text-sm">
-          <option value="recent">Recently updated</option>
-          <option value="title">Title A–Z</option>
-          <option value="rating">Highest rated</option>
+          <option value="recent">{tr("recentlyUpdatedSort")}</option>
+          <option value="title">{tr("sortTitleAZ")}</option>
+          <option value="rating">{tr("sortHighestRated")}</option>
         </select>
       </div>
 
@@ -473,15 +489,15 @@ export default function AccountPage() {
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
             <Icon name="book" size={24} />
           </span>
-          <p className="mt-3">Nothing here yet — open any book and mark it.</p>
-          <Link href="/books" className="btn-primary mt-4 inline-flex">Browse Books</Link>
+          <p className="mt-3">{tr("emptyShelfMsg")}</p>
+          <Link href="/books" className="btn-primary mt-4 inline-flex">{tr("browse")}</Link>
         </div>
       )}
 
       {/* Your reviews */}
       {reviews.length > 0 && (
         <>
-          <h2 className="mt-12 text-2xl font-bold">Your Reviews <span className="text-muted text-sm font-normal">({reviews.length})</span></h2>
+          <h2 className="mt-12 text-2xl font-bold">{tr("yourReviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span></h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {reviews.map((s) => (
               <Link key={s.book_slug} href={`/books/${encodeURIComponent(s.book_slug)}#reviews`} className="card flex gap-3 p-4 hover:!translate-y-0">
@@ -489,7 +505,7 @@ export default function AccountPage() {
                   <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 text-sm font-semibold">{s.title || s.book_slug}</p>
+                  <p className="line-clamp-1 text-sm font-semibold"><TitleTransliterated text={s.title || s.book_slug} /></p>
                   {s.rating ? <p className="text-xs text-amber-400">{"★".repeat(s.rating)}</p> : null}
                   <p className="text-muted mt-1 line-clamp-2 text-xs leading-relaxed">{s.review}</p>
                 </div>
@@ -502,7 +518,7 @@ export default function AccountPage() {
       {/* Wishlist */}
       {wishlist.length > 0 && (
         <>
-          <h2 className="mt-12 text-2xl font-bold">Wishlist <span className="text-muted text-sm font-normal">({wishlist.length})</span></h2>
+          <h2 className="mt-12 text-2xl font-bold">{tr("wishlist")} <span className="text-muted text-sm font-normal">({wishlist.length})</span></h2>
           <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
             {wishlist.map((b) => (
               <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group overflow-hidden">
@@ -510,7 +526,7 @@ export default function AccountPage() {
                   <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
                     imgClassName="transition group-hover:scale-105" />
                 </div>
-                <p className="line-clamp-1 p-2.5 text-xs font-semibold">{b.title}</p>
+                <p className="line-clamp-1 p-2.5 text-xs font-semibold"><TitleTransliterated text={b.title} /></p>
               </Link>
             ))}
           </div>

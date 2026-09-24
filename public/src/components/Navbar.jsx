@@ -8,6 +8,7 @@ import SearchBar from "./SearchBar";
 import Icon from "./Icon";
 import { LogoMark } from "./Logo";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { t } from "@/lib/i18n";
 
 function Dropdown({ button, children, width = "w-48" }) {
   const [open, setOpen] = useState(false);
@@ -34,6 +35,7 @@ const iconBtn =
   "grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-base shadow-sm transition hover:scale-105 hover:border-brand-500 hover:shadow-md";
 
 export default function Navbar({ lang, theme, languages, themes, labels }) {
+  const tr = t(lang);
   const [open, setOpen] = useState(false);
   const [myGenres, setMyGenres] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
@@ -82,23 +84,28 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
     };
   }, []);
 
+  // Publisher names ("Penguin Random House", "HarperCollins") and reader-
+  // picked genre names (myGenres, sourced from the catalog's category data)
+  // are left untranslated deliberately — they're real-world proper nouns /
+  // catalog data values, not UI chrome, consistent with how book titles,
+  // author names, and category filter values are handled everywhere else.
   const MENUS = [
-    { href: "/", icon: "home", label: "Home" },
+    { href: "/", icon: "home", label: tr("homeWord") },
     {
-      href: "/books", icon: "compass", label: "Discover",
+      href: "/books", icon: "compass", label: tr("navDiscover"),
       items: [
-        { href: "/books?sort=rating", icon: "trendingUp", label: "Trending" },
-        { href: "/books?sort=new", icon: "clock", label: "New Releases" },
-        { href: "/books?sort=rating", icon: "star", label: "Top Rated" },
+        { href: "/books?sort=rating", icon: "trendingUp", label: tr("trendingWord") },
+        { href: "/books?sort=new", icon: "clock", label: tr("newReleases") },
+        { href: "/books?sort=rating", icon: "star", label: tr("topRated") },
         { href: "/collections", icon: "layers", label: labels.collections },
         ...myGenres.map((g) => ({ href: `/books?category=${encodeURIComponent(g)}`, icon: "heart", label: g })),
       ],
     },
     {
-      href: "/books", icon: "book", label: "Browse",
+      href: "/books", icon: "book", label: tr("navBrowse"),
       items: [
-        { href: "/books", icon: "book", label: "All Books" },
-        { href: "/categories", icon: "grid", label: "Genres & Categories" },
+        { href: "/books", icon: "book", label: tr("allBooksMenu") },
+        { href: "/categories", icon: "grid", label: tr("genresAndCategories") },
         { href: "/tags", icon: "hash", label: labels.tags },
         { href: "/comics", icon: "zap", label: labels.comics },
       ],
@@ -107,29 +114,35 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
     {
       href: "/publications", icon: "building", label: labels.publishers,
       items: [
-        { href: "/publications", icon: "building", label: "All Publishers" },
+        { href: "/publications", icon: "building", label: tr("allPublishersMenu") },
         { href: "/publications/penguin-random-house", icon: "book", label: "Penguin Random House" },
         { href: "/publications/harpercollins", icon: "book", label: "HarperCollins" },
       ],
     },
-    { href: "/community", icon: "users", label: "Community" },
-    { href: "/leaderboard", icon: "trophy", label: "Bookworm Ranking" },
+    { href: "/community", icon: "users", label: tr("navCommunity") },
+    { href: "/leaderboard", icon: "trophy", label: tr("navBookwormRanking") },
   ];
 
-  // Multi-column mega menu ("More") — enterprise-style grouped catalog entry points
+  // Multi-column mega menu ("More") — enterprise-style grouped catalog entry
+  // points. Section titles and the generic first group are translated; the
+  // category/country/collection/format NAMES below are catalog data values
+  // that also appear literally in the query string they link to (e.g.
+  // category=Philosophy) — translating just the label would desync it from
+  // the filter it points at, so those stay in their stored English form,
+  // same rule as everywhere else data values are shown.
   const MEGA = [
     {
-      title: "Best Sellers",
+      title: tr("bestSellers"),
       links: [
-        ["Top Rated", "/books?sort=rating"],
-        ["Trending Now", "/books?sort=rating"],
-        ["New Releases", "/books?sort=new"],
-        ["All Books", "/books"],
-        ["Editors' Choice", "/books?sort=rating&rating=4.5"],
+        [tr("topRated"), "/books?sort=rating"],
+        [tr("trendingNow"), "/books?sort=rating"],
+        [tr("newReleases"), "/books?sort=new"],
+        [tr("allBooksMenu"), "/books"],
+        [tr("editorsChoice"), "/books?sort=rating&rating=4.5"],
       ],
     },
     {
-      title: "Literature Types",
+      title: tr("literatureTypes"),
       links: [
         ["Philosophy", "/books?category=Philosophy"],
         ["History", "/books?category=History"],
@@ -141,7 +154,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       ],
     },
     {
-      title: "Books by Country",
+      title: tr("booksByCountry"),
       links: [
         ["India", "/books?country=India"],
         ["USA", "/books?country=USA"],
@@ -153,22 +166,22 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       ],
     },
     {
-      title: "Special Collections",
+      title: tr("specialCollections"),
       links: [
         ["Harari Collection", "/collections/Harari%20Collection"],
         ["Stoic Classics", "/collections/Stoic%20Classics"],
         ["Dystopian Classics", "/collections/Dystopian%20Classics"],
         ["Revolutionary Classics", "/collections/Revolutionary%20Classics"],
-        ["All Collections", "/collections"],
+        [tr("allCollectionsMenu"), "/collections"],
       ],
     },
     {
-      title: "By Format",
+      title: tr("byFormat"),
       links: [
         ["Paperback", "/books?format=Paperback"],
         ["Hardcover", "/books?format=Hardcover"],
         ["EBook", "/books?format=EBook"],
-        ["Comics", "/comics"],
+        [labels.comics, "/comics"],
       ],
     },
   ];
@@ -330,7 +343,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           {/* More — full mega menu */}
           <div className="group">
             <button className="relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600">
-              <Icon name="grid" size={14} className="opacity-70" /> More
+              <Icon name="grid" size={14} className="opacity-70" /> {tr("moreWord")}
               <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />
               <span className="absolute inset-x-3 bottom-0 h-0.5 scale-x-0 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform group-hover:scale-x-100" />
             </button>
@@ -352,7 +365,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                     </div>
                   ))}
                   <div>
-                    <p className="border-line mb-3 border-b pb-2 text-sm font-bold">By Language</p>
+                    <p className="border-line mb-3 border-b pb-2 text-sm font-bold">{tr("byLanguageLabel")}</p>
                     <ul className="max-h-52 space-y-1.5 overflow-auto pr-1">
                       {languages.map((l) => (
                         <li key={l.code}>
@@ -379,13 +392,13 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
           <Link href="/compare" prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/compare" || pathname.startsWith("/compare/") ? "text-brand-600" : ""}`}>
-            <Icon name="layers" size={14} className="opacity-70" /> Compare
+            <Icon name="layers" size={14} className="opacity-70" /> {tr("compareWord")}
             <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/compare" || pathname.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
 
           <Link href="/about" prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/about" ? "text-brand-600" : ""}`}>
-            <Icon name="shieldCheck" size={14} className="opacity-70" /> About
+            <Icon name="shieldCheck" size={14} className="opacity-70" /> {tr("aboutWord")}
             <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
         </nav>
@@ -402,31 +415,31 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               </Link>
             ))}
             <Link href="/notifications" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="bell" size={15} className="text-muted" /> Notifications {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
+              <Icon name="bell" size={15} className="text-muted" /> {tr("notificationsWord")} {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
             </Link>
             <Link href="/liked" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="heart" size={15} className="text-muted" /> Liked Books
+              <Icon name="heart" size={15} className="text-muted" /> {tr("likedBooksWord")}
             </Link>
             <Link href="/compare" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="layers" size={15} className="text-muted" /> Compare
+              <Icon name="layers" size={15} className="text-muted" /> {tr("compareWord")}
             </Link>
             <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="zap" size={15} className="text-muted" /> Surprise me
+              <Icon name="zap" size={15} className="text-muted" /> {tr("navSurpriseMe")}
             </button>
             <Link href="/about" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
-              <Icon name="shieldCheck" size={15} className="text-muted" /> About
+              <Icon name="shieldCheck" size={15} className="text-muted" /> {tr("aboutWord")}
             </Link>
             <Link href="/login" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
             </Link>
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Explore</p>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("exploreSectionLabel")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {[["Top Rated", "/books?sort=rating"], ["New Releases", "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], ["Collections", "/collections"], ["Tags", "/tags"]].map(([label, href]) => (
+            {[[tr("topRated"), "/books?sort=rating"], [tr("newReleases"), "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], [labels.collections, "/collections"], [labels.tags, "/tags"]].map(([label, href]) => (
               <Link key={label} href={href} prefetch={false} onClick={() => setOpen(false)} className="pill">{label}</Link>
             ))}
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Theme</p>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navTheme")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {themes.map((t) => (
               <button key={t.id} onClick={() => setCookie("theme", t.id)}
@@ -435,7 +448,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               </button>
             ))}
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">Language</p>
+          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navLanguage")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {languages.map((l) => (
               <button key={l.code} onClick={() => setCookie("lang", l.code)}

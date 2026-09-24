@@ -5,10 +5,13 @@ import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { useToast } from "./Toast";
 import Icon from "./Icon";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 // A lightweight "commonplace book" — readers save favorite passages from a
 // book, visible to everyone here and on the saver's public profile.
 export default function QuotesSection({ bookSlug }) {
+  const tr = t(useLang());
   const toast = useToast();
   const [user, setUser] = useState(null);
   const [quotes, setQuotes] = useState([]);
@@ -42,9 +45,9 @@ export default function QuotesSection({ bookSlug }) {
       if (r.ok) {
         setText(""); setPage(""); setAdding(false);
         await load();
-        toast("Quote saved to your profile");
+        toast(tr("quoteSaved"));
       } else {
-        toast("Couldn't save that quote — try again.", "error");
+        toast(tr("quoteSaveFailed"), "error");
       }
     } finally { setBusy(false); }
   };
@@ -57,34 +60,34 @@ export default function QuotesSection({ bookSlug }) {
       body: JSON.stringify({ idToken }),
     });
     setQuotes((prev) => prev.filter((q) => q.id !== id));
-    toast("Quote removed");
+    toast(tr("quoteRemoved"));
   };
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-bold">
-          <Icon name="feather" size={18} className="text-brand-600" /> Reader Quotes
+          <Icon name="feather" size={18} className="text-brand-600" /> {tr("readerQuotes")}
           {quotes.length > 0 && <span className="text-muted text-sm font-normal">({quotes.length})</span>}
         </h2>
         {user ? (
           <button onClick={() => setAdding((v) => !v)} className="text-sm font-semibold text-brand-600 hover:underline">
-            {adding ? "Cancel" : "+ Save a quote"}
+            {adding ? tr("cancel") : tr("saveAQuote")}
           </button>
         ) : (
-          <Link href="/login" className="text-sm font-semibold text-brand-600 hover:underline">Sign in to save a quote</Link>
+          <Link href="/login" className="text-sm font-semibold text-brand-600 hover:underline">{tr("signInToSaveQuote")}</Link>
         )}
       </div>
 
       {adding && (
         <form onSubmit={submit} className="card mt-3 space-y-2 p-4 hover:!translate-y-0">
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={2000} required
-            placeholder="Type or paste the passage you want to remember…" className="input w-full resize-none" />
+            placeholder={tr("quotePlaceholder")} className="input w-full resize-none" />
           <div className="flex items-center gap-2">
             <input value={page} onChange={(e) => setPage(e.target.value)} type="number" min="1"
-              placeholder="Page (optional)" className="input w-32 text-sm" />
+              placeholder={tr("pageOptional")} className="input w-32 text-sm" />
             <button type="submit" disabled={busy || !text.trim()} className="btn-primary ml-auto text-sm disabled:cursor-not-allowed disabled:opacity-40">
-              Save Quote
+              {tr("saveQuote")}
             </button>
           </div>
         </form>
@@ -107,7 +110,7 @@ export default function QuotesSection({ bookSlug }) {
           ))}
         </div>
       ) : (
-        !adding && <p className="text-muted mt-2 text-sm">No quotes saved yet — be the first to save a favorite passage.</p>
+        !adding && <p className="text-muted mt-2 text-sm">{tr("noQuotesSavedYet")}</p>
       )}
     </div>
   );

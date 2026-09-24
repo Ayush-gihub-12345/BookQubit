@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { readWishlist } from "./WishlistButton";
 import Icon from "./Icon";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 const pill = "inline-flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition";
 const pillFilled = `${pill} w-full justify-center border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:brightness-110`;
@@ -21,6 +23,7 @@ const gridPillActive = `${gridPill} border-brand-600 bg-brand-600 text-white`;
 // full status + rating + review workflow — these are just quick shortcuts
 // into the same shelf API.
 export default function QuickActions({ book }) {
+  const tr = t(useLang());
   const [user, setUser] = useState(null);
   const [wishlisted, setWishlisted] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -130,35 +133,35 @@ export default function QuickActions({ book }) {
     <div className="mt-8 flex flex-col gap-2.5">
       {book.buyUrl && (
         <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className={pillFilled}>
-          <Icon name="cart" size={15} /> Get Book
+          <Icon name="cart" size={15} /> {tr("getBookAction")}
         </a>
       )}
 
       <div className="grid grid-cols-2 gap-2.5">
         <a href="#summary" className={gridPillOutline}>
-          <Icon name="bookOpen" size={15} /> Summary
+          <Icon name="bookOpen" size={15} /> {tr("summary")}
         </a>
         <button onClick={toggleLike} className={liked ? gridPillActive : gridPillOutline}>
-          <Icon name="heart" size={15} filled={liked} /> Like{likeCount ? ` · ${likeCount}` : ""}
+          <Icon name="heart" size={15} filled={liked} /> {tr("likeAction")}{likeCount ? ` · ${likeCount}` : ""}
         </button>
         <button onClick={toggleWishlist} className={wishlisted ? gridPillActive : gridPillOutline}>
-          <Icon name="bookmark" size={15} filled={wishlisted} /> {wishlisted ? "Wishlisted" : "Wishlist"}
+          <Icon name="bookmark" size={15} filled={wishlisted} /> {wishlisted ? tr("wishlisted") : tr("wishlist")}
         </button>
         <button onClick={share} className={gridPillOutline}>
-          <Icon name={shared ? "check" : "share"} size={15} /> {shared ? "Link copied" : "Share"}
+          <Icon name={shared ? "check" : "share"} size={15} /> {shared ? tr("linkCopied") : tr("shareAction")}
         </button>
       </div>
 
       <button disabled={busy} onClick={() => setShelfStatus("want")} className={status === "want" ? gridPillActive : gridPillOutline}>
-        <Icon name="bookmark" size={15} filled={status === "want"} /> {status === "want" ? "In My Library" : "Add to My Library"}
+        <Icon name="bookmark" size={15} filled={status === "want"} /> {status === "want" ? tr("inMyLibrary") : tr("addToMyLibrary")}
       </button>
 
       <div className="grid grid-cols-2 gap-2.5">
         <button disabled={busy} onClick={() => setShelfStatus("reading")} className={status === "reading" ? gridPillActive : gridPillOutline}>
-          <Icon name="clock" size={15} filled={status === "reading"} /> {status === "reading" ? "Currently Reading" : "Track Book"}
+          <Icon name="clock" size={15} filled={status === "reading"} /> {status === "reading" ? tr("currentlyReadingAction") : tr("trackBook")}
         </button>
         <button disabled={busy} onClick={() => setShelfStatus("read")} className={status === "read" ? gridPillActive : gridPillOutline}>
-          <Icon name="check" size={15} /> {status === "read" ? "Marked Read" : "Mark Read"}
+          <Icon name="check" size={15} /> {status === "read" ? tr("markedRead") : tr("markRead")}
         </button>
       </div>
 

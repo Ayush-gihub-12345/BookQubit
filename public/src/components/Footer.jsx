@@ -27,8 +27,8 @@ export default async function Footer({ lang = "en" }) {
         <div className="border-line border-b">
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 py-6 text-center sm:grid-cols-4">
             {[
-              [stats.books, "Books"], [stats.authors, "Authors"],
-              [stats.reviews, "Reader Reviews"], [stats.readers, "Readers"],
+              [stats.books, _("booksStat")], [stats.authors, _("authors")],
+              [stats.reviews, _("readerReviewsLabel")], [stats.readers, _("readersStat")],
             ].map(([n, label]) => (
               <div key={label}>
                 <p className="text-2xl font-extrabold text-brand-600">{n.toLocaleString()}+</p>
@@ -82,7 +82,7 @@ export default async function Footer({ lang = "en" }) {
             <li><Link href="/publications" prefetch={false} className="hover:text-brand-600">{_("publishers")}</Link></li>
             <li><Link href="/comics" prefetch={false} className="hover:text-brand-600">{_("comics")}</Link></li>
             <li><Link href="/community" prefetch={false} className="hover:text-brand-600">{_("communityTitle")}</Link></li>
-            <li><Link href="/leaderboard" prefetch={false} className="hover:text-brand-600">Bookworm Ranking</Link></li>
+            <li><Link href="/leaderboard" prefetch={false} className="hover:text-brand-600">{_("navBookwormRanking")}</Link></li>
           </ul>
         </div>
 

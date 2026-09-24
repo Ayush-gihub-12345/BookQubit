@@ -2,6 +2,8 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { getLeaderboard, getPopularReaders, facets } from "@/lib/repo";
 import { FollowButton } from "@/components/FollowButton";
+import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -14,6 +16,8 @@ const MEDAL_STYLE = ["text-amber-400", "text-muted", "text-amber-700"];
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default async function LeaderboardPage({ searchParams }) {
+  const lang = await getLang();
+  const _ = t(lang);
   const sp = await searchParams;
   const mode = sp.mode === "popular" ? "popular" : "activity";
   const year = sp.year || "";
@@ -38,19 +42,18 @@ export default async function LeaderboardPage({ searchParams }) {
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
           <Icon name="trophy" size={26} />
         </span>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight">Bookworm Ranking</h1>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight">{_("navBookwormRanking")}</h1>
         <p className="text-muted mx-auto mt-2 max-w-lg text-sm">
-          BookQubit's top readers — ranked by what they've actually read, reviewed, and discussed.
-          Not follower counts, not profiles: real reading accomplishment.
+          {_("leaderboardSubtitle")}
         </p>
         <div className="mt-5 flex justify-center gap-2">
           <Link href={withParam({ mode: "activity" })}
             className={`pill !text-sm ${mode === "activity" ? "!bg-brand-600 !text-white" : ""}`}>
-            <Icon name="trendingUp" size={14} /> Top Readers
+            <Icon name="trendingUp" size={14} /> {_("topReadersTab")}
           </Link>
           <Link href={withParam({ mode: "popular" })}
             className={`pill !text-sm ${mode === "popular" ? "!bg-brand-600 !text-white" : ""}`}>
-            <Icon name="heart" size={14} /> Popular Readers
+            <Icon name="heart" size={14} /> {_("popularReadersTab")}
           </Link>
         </div>
       </div>
@@ -78,8 +81,8 @@ export default async function LeaderboardPage({ searchParams }) {
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-semibold">{r.name}</p>
                           <p className="text-muted text-xs">
-                            <Icon name={r.level.icon} size={11} className="inline" /> {r.level.name} · {r.reads} books read
-                            {r.favoriteGenre && ` · loves ${r.favoriteGenre}`}
+                            <Icon name={r.level.icon} size={11} className="inline" /> {r.level.name} · {_("leaderboardBooksRead", { n: r.reads })}
+                            {r.favoriteGenre && _("lovesGenreSuffix", { genre: r.favoriteGenre })}
                           </p>
                           {r.badges.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -91,8 +94,8 @@ export default async function LeaderboardPage({ searchParams }) {
                         </div>
                       </Link>
                       <div className="flex shrink-0 items-center gap-2">
-                        <span className="pill !text-sm">{r.points} pts</span>
-                        <FollowButton type="reader" id={r.id} label="Follow" />
+                        <span className="pill !text-sm">{_("ptsSuffix", { n: r.points })}</span>
+                        <FollowButton type="reader" id={r.id} label={_("followLabel")} />
                       </div>
                     </div>
                   </li>
@@ -100,7 +103,7 @@ export default async function LeaderboardPage({ searchParams }) {
               </ol>
             ) : (
               <p className="text-muted mt-16 text-center">
-                No readers match these filters yet — try widening them, or be the first. Sign in and mark a book as read.
+                {_("noReadersMatchFilters")}
               </p>
             )
           ) : popular.length ? (
@@ -122,50 +125,50 @@ export default async function LeaderboardPage({ searchParams }) {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold">{r.name}</p>
-                        <p className="text-muted text-xs">{r.followers} follower{r.followers === 1 ? "" : "s"}</p>
+                        <p className="text-muted text-xs">{_("followersCountLabel", { n: r.followers })}</p>
                       </div>
                     </Link>
-                    <FollowButton type="reader" id={r.id} label="Follow" />
+                    <FollowButton type="reader" id={r.id} label={_("followLabel")} />
                   </div>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="text-muted mt-16 text-center">No one has been followed yet — be the first to follow a fellow reader.</p>
+            <p className="text-muted mt-16 text-center">{_("noOneFollowedYet")}</p>
           )}
         </div>
 
         {/* Filters — only relevant to the activity-based ranking */}
         {mode === "activity" && (
           <aside className="card h-fit space-y-5 p-5 hover:!translate-y-0">
-            <p className="text-sm font-bold">Filter readers</p>
+            <p className="text-sm font-bold">{_("filterReadersHeading")}</p>
             <form action="/leaderboard" className="space-y-4">
               <input type="hidden" name="mode" value="activity" />
               <div>
-                <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">Year</label>
+                <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">{_("yearLabel")}</label>
                 <select name="year" defaultValue={year} className="input w-full text-sm">
-                  <option value="">Any year</option>
+                  <option value="">{_("anyYearOption")}</option>
                   {Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i).map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">Minimum books read</label>
-                <input type="number" name="minBooks" min="1" defaultValue={minBooks} placeholder="e.g. 100" className="input w-full text-sm" />
+                <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">{_("minBooksReadLabel")}</label>
+                <input type="number" name="minBooks" min="1" defaultValue={minBooks} placeholder={_("minBooksPlaceholder")} className="input w-full text-sm" />
               </div>
               <div>
-                <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">Favorite genre</label>
+                <label className="text-muted mb-1.5 block text-xs font-semibold uppercase tracking-wide">{_("favoriteGenreLabel")}</label>
                 <select name="genre" defaultValue={genre} className="input w-full text-sm">
-                  <option value="">Any genre</option>
+                  <option value="">{_("anyGenreOption")}</option>
                   {f.categories.map((c) => (
                     <option key={c.name} value={c.name}>{c.name}</option>
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn-primary w-full text-sm">Apply filters</button>
+              <button type="submit" className="btn-primary w-full text-sm">{_("applyFiltersButton")}</button>
               {(year || minBooks || genre) && (
-                <Link href="/leaderboard" className="text-muted block text-center text-xs hover:text-brand-600">Clear filters</Link>
+                <Link href="/leaderboard" className="text-muted block text-center text-xs hover:text-brand-600">{_("clearFiltersLink")}</Link>
               )}
             </form>
           </aside>
@@ -173,11 +176,11 @@ export default async function LeaderboardPage({ searchParams }) {
       </div>
 
       <div className="text-muted mt-10 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
-        <span>+10 per book read</span>
-        <span>+5 per review</span>
-        <span>+3 per discussion started</span>
-        <span>+2 per rating</span>
-        <span>+1 per reply</span>
+        <span>{_("pointsPerBookRead")}</span>
+        <span>{_("pointsPerReview")}</span>
+        <span>{_("pointsPerDiscussion")}</span>
+        <span>{_("pointsPerRating")}</span>
+        <span>{_("pointsPerReply")}</span>
       </div>
     </div>
   );

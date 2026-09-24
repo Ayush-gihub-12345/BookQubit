@@ -8,6 +8,7 @@ import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
 import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
+import TitleTransliterated from "@/components/TitleTransliterated";
 import HScrollRow from "@/components/HScrollRow";
 import Logo from "@/components/Logo";
 import {
@@ -66,10 +67,10 @@ export default async function Home() {
   );
 
   const HUB = [
-    { icon: "compass", title: "Explore Library", desc: "Discover new worlds and hidden literary gems", href: "/books", color: "from-sky-500 to-blue-600" },
-    { icon: "headphones", title: "Audiobooks", desc: "Listen to your favorite books on the go", href: "/books", color: "from-fuchsia-500 to-purple-600" },
-    { icon: "zap", title: "Comics", desc: "Legendary issues and timeless adventures", href: "/comics", color: "from-amber-500 to-orange-600" },
-    { icon: "users", title: "Community", desc: "Join discussions and connect with readers", href: "/community", color: "from-emerald-500 to-teal-600" },
+    { icon: "compass", title: _("exploreLibraryTitle"), desc: _("exploreLibraryDesc"), href: "/books", color: "from-sky-500 to-blue-600" },
+    { icon: "headphones", title: _("audiobooksTitle"), desc: _("audiobooksDesc"), href: "/books", color: "from-fuchsia-500 to-purple-600" },
+    { icon: "zap", title: _("comics"), desc: _("comicsHubDesc"), href: "/comics", color: "from-amber-500 to-orange-600" },
+    { icon: "users", title: _("navCommunity"), desc: _("communityHubDesc"), href: "/community", color: "from-emerald-500 to-teal-600" },
   ];
 
   return (
@@ -77,7 +78,12 @@ export default async function Home() {
       {/* Hero slider */}
       <section className="mx-auto max-w-7xl px-4 pt-8">
         <HeroSlider books={heroBooks.length ? heroBooks : topRated.slice(0, 5)}
-          labels={{ summary: _("summary"), getBook: _("getBook"), keyFeatures: _("keyFeatures") }} />
+          labels={{
+            summary: _("summary"), getBook: _("getBook"), keyFeatures: _("keyFeatures"),
+            byWord: _("byWord"), pages: _("pagesLabel"), published: _("publishedLabel"),
+            previous: _("previousLabel"), next: _("nextLabel"),
+            slideLabel: _("slideLabel"),
+          }} />
       </section>
 
       {/* Continue Reading (signed-in users) */}
@@ -92,7 +98,7 @@ export default async function Home() {
       <RecentlyViewed />
 
       {/* Trending Now */}
-      <Section title={_("trending")} subtitle={_("trendingSub")} href="/books?sort=rating">
+      <Section title={_("trending")} subtitle={_("trendingSub")} viewAllLabel={_("viewAll")} href="/books?sort=rating">
         <HScrollRow>
           {topRated.map((b, i) => (
             <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-40 overflow-hidden sm:w-44">
@@ -104,9 +110,9 @@ export default async function Home() {
                 </span>
               </div>
               <div className="p-3">
-                <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600">{b.title}</p>
-                <p className="text-muted line-clamp-1 text-xs">{b.author}</p>
-                <p className="mt-1 text-xs text-emerald-500">📈 Trending · ★ {b.rating}</p>
+                <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
+                <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={b.author} /></p>
+                <p className="mt-1 text-xs text-emerald-500">📈 {_("trendingWord")} · ★ {b.rating}</p>
               </div>
             </Link>
           ))}
@@ -126,11 +132,11 @@ export default async function Home() {
             <Link href="/books" className="btn-primary">{_("browse")}</Link>
             {surprise && (
               <Link href={`/books/${encodeURIComponent(surprise.slug)}`} className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
-                <Icon name="zap" size={15} /> Surprise me
+                <Icon name="zap" size={15} /> {_("navSurpriseMe")}
               </Link>
             )}
             <Link href="/leaderboard" className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
-              <Icon name="trophy" size={15} /> Bookworm Ranking
+              <Icon name="trophy" size={15} /> {_("navBookwormRanking")}
             </Link>
           </div>
         </div>
@@ -155,7 +161,7 @@ export default async function Home() {
               </span>
               <h3 className="mt-4 font-bold group-hover:text-brand-600">{h.title}</h3>
               <p className="text-muted mt-1 text-sm">{h.desc}</p>
-              <p className="mt-3 text-xs font-semibold text-brand-600">Open Section →</p>
+              <p className="mt-3 text-xs font-semibold text-brand-600">{_("openSection")}</p>
             </Link>
           ))}
         </div>
@@ -163,7 +169,7 @@ export default async function Home() {
 
       {/* Browse by Mood — how readers actually felt, not just genre */}
       {moods.length >= 3 && (
-        <Section title="What Are You in the Mood For?" subtitle="Discover books by how readers actually felt reading them">
+        <Section title={_("moodQuestionTitle")} subtitle={_("moodQuestionSub")}>
           <div className="flex flex-wrap gap-2.5">
             {moods.slice(0, 10).map((m) => (
               <Link key={m.name} href={`/books?mood=${encodeURIComponent(m.name)}`}
@@ -176,7 +182,7 @@ export default async function Home() {
       )}
 
       {/* Explore Books */}
-      <Section title={_("featured")} subtitle="Dive into our curated selection of must-read titles" href="/books">
+      <Section title={_("featured")} subtitle={_("exploreBooksSub")} viewAllLabel={_("viewAll")} href="/books">
         <HScrollRow>
           {exploreBooks.map((b) => (
             <div key={b.id} className="w-40 sm:w-44"><BookCard book={b} /></div>
@@ -186,13 +192,13 @@ export default async function Home() {
 
       {/* Featured Collections */}
       {collectionsWithBooks.length > 0 && (
-        <Section title="Featured Collections" subtitle="Curated book collections handpicked by our editors" href="/collections">
+        <Section title={_("featuredCollectionsTitle")} subtitle={_("featuredCollectionsSub")} viewAllLabel={_("viewAll")} href="/collections">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {collectionsWithBooks.map((c) => (
               <div key={c.name} className="card p-5 hover:!translate-y-0">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-brand-600">{c.name}</h3>
-                  <span className="pill">{c.count} books</span>
+                  <span className="pill">{c.count} {_("booksWord")}</span>
                 </div>
                 <div className="mt-4 space-y-3">
                   {c.books.map((b) => (
@@ -202,14 +208,14 @@ export default async function Home() {
                         <img src={b.cover_url} alt="" className="h-14 w-10 rounded object-cover shadow" loading="lazy" />
                       )}
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium group-hover:text-brand-600">{b.title}</span>
-                        <span className="text-muted block text-xs">{b.author} · ★ {b.rating}</span>
+                        <span className="block truncate text-sm font-medium group-hover:text-brand-600"><TitleTransliterated text={b.title} /></span>
+                        <span className="text-muted block text-xs"><TitleTransliterated text={b.author} /> · ★ {b.rating}</span>
                       </span>
                     </Link>
                   ))}
                 </div>
                 <Link href={`/collections/${encodeURIComponent(c.name)}`} className="mt-4 block text-xs font-semibold text-brand-600 hover:underline">
-                  View all in this collection →
+                  {_("viewAllInCollection")}
                 </Link>
               </div>
             ))}
@@ -218,7 +224,7 @@ export default async function Home() {
       )}
 
       {/* New Releases */}
-      <Section title={_("newReleases")} subtitle={_("newReleasesSub")} href="/books?sort=new">
+      <Section title={_("newReleases")} subtitle={_("newReleasesSub")} viewAllLabel={_("viewAll")} href="/books?sort=new">
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
           {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
@@ -226,7 +232,7 @@ export default async function Home() {
 
       {/* Featured Authors */}
       {authors.length > 0 && (
-        <Section title="Featured Authors" subtitle="Our most influential writers and thinkers" href="/authors">
+        <Section title={_("featuredAuthorsTitle")} subtitle={_("featuredAuthorsSub")} viewAllLabel={_("viewAll")} href="/authors">
           <HScrollRow>
             {authors.slice(0, 12).map((a) => (
               <Link key={a.id} href={`/authors/${a.slug}`} prefetch={false} className="card w-44 p-5 text-center">
@@ -236,9 +242,9 @@ export default async function Home() {
                 ) : (
                   <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-brand-600/15 text-2xl font-bold text-brand-600">{a.name[0]}</span>
                 )}
-                <p className="mt-3 line-clamp-1 font-semibold">{a.name}</p>
+                <p className="mt-3 line-clamp-1 font-semibold"><TitleTransliterated text={a.name} /></p>
                 <p className="text-muted line-clamp-1 text-xs">{a.country}</p>
-                <p className="mt-2 text-xs font-semibold text-brand-600">Know More →</p>
+                <p className="mt-2 text-xs font-semibold text-brand-600">{_("knowMore")}</p>
               </Link>
             ))}
           </HScrollRow>
@@ -247,7 +253,7 @@ export default async function Home() {
 
       {/* Publishers */}
       {pubs.length > 0 && (
-        <Section title="Explore Publishers" subtitle="Renowned publishing houses from around the world" href="/publications">
+        <Section title={_("explorePublishersTitle")} subtitle={_("explorePublishersSub")} viewAllLabel={_("viewAll")} href="/publications">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {pubs.slice(0, 4).map((p) => (
               <Link key={p.id} href={`/publications/${p.slug}`} prefetch={false} className="card p-5 text-center">
@@ -257,7 +263,7 @@ export default async function Home() {
                 ) : (
                   <span className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-brand-600/15 text-xl font-bold text-brand-600">{p.name[0]}</span>
                 )}
-                <p className="mt-3 line-clamp-1 text-sm font-semibold">{p.name}</p>
+                <p className="mt-3 line-clamp-1 text-sm font-semibold"><TitleTransliterated text={p.name} /></p>
                 <p className="text-muted line-clamp-1 text-xs">{p.headquarters}</p>
               </Link>
             ))}
@@ -267,7 +273,7 @@ export default async function Home() {
 
       {/* Comics */}
       {comics.length > 0 && (
-        <Section title="Explore Comics" subtitle="Legendary issues and timeless adventures" href="/comics">
+        <Section title={_("exploreComicsTitle")} subtitle={_("comicsHubDesc")} viewAllLabel={_("viewAll")} href="/comics">
           <HScrollRow>
             {comics.slice(0, 12).map((c) => (
               <Link key={c.id} href={`/comics/${c.slug}`} prefetch={false} className="card group w-40 overflow-hidden sm:w-44">
@@ -276,8 +282,8 @@ export default async function Home() {
                     imgClassName="transition duration-500 group-hover:scale-105" />
                 </div>
                 <div className="p-3">
-                  <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600">{c.title}</p>
-                  <p className="text-muted line-clamp-1 text-xs">{c.publisher}</p>
+                  <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600"><TitleTransliterated text={c.title} /></p>
+                  <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={c.publisher} /></p>
                   <Rating value={c.rating} />
                 </div>
               </Link>
@@ -288,11 +294,11 @@ export default async function Home() {
 
       {/* Recently added — trust signal: the catalog is actively growing */}
       {recentlyAdded.length > 0 && (
-        <Section title="Recently Added" subtitle="Freshly added to the BookQubit library" href="/books">
+        <Section title={_("recentlyAddedTitle")} subtitle={_("recentlyAddedSub")} viewAllLabel={_("viewAll")} href="/books">
           <HScrollRow>
             {recentlyAdded.map((b) => (
               <div key={b.id} className="relative w-40 sm:w-44">
-                <span className="absolute left-2 top-2 z-10 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">NEW</span>
+                <span className="absolute left-2 top-2 z-10 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">{_("newBadge")}</span>
                 <BookCard book={b} />
               </div>
             ))}
@@ -302,7 +308,7 @@ export default async function Home() {
 
       {/* Popular tags */}
       {f.tags.length > 0 && (
-        <Section title={_("popularTags")} href="/tags">
+        <Section title={_("popularTags")} viewAllLabel={_("viewAll")} href="/tags">
           <div className="flex flex-wrap gap-2">
             {f.tags.slice(0, 24).map((tg) => (
               <Link key={tg.name} href={`/books?tag=${encodeURIComponent(tg.name)}`} className="pill">
@@ -315,11 +321,10 @@ export default async function Home() {
 
       {/* Brand strip */}
       <section className="border-line border-t py-14 text-center">
-        <p className="pill !px-4 !py-1.5">The Future of Reading</p>
+        <p className="pill !px-4 !py-1.5">{_("futureOfReadingPill")}</p>
         <div className="mt-4 flex justify-center"><Logo size={40} /></div>
         <p className="text-muted mx-auto mt-2 max-w-xl px-4 text-sm">
-          Your quantum leap into the world of literature — timeless wisdom, modern intelligence,
-          and a reading ecosystem that grows with your mind.
+          {_("brandStripParagraph")}
         </p>
       </section>
     </>

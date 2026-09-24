@@ -5,6 +5,9 @@ import Link from "next/link";
 import BookCover from "./BookCover";
 import Icon from "./Icon";
 import HScrollRow from "./HScrollRow";
+import TitleTransliterated from "./TitleTransliterated";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 const KEY = "bq_recent_books";
 const read = () => {
@@ -26,6 +29,7 @@ export function TrackView({ book }) {
 
 // Homepage strip of recently viewed books.
 export default function RecentlyViewed() {
+  const tr = t(useLang());
   const [items, setItems] = useState([]);
   useEffect(() => { setItems(read()); }, []);
   if (items.length < 2) return null;
@@ -34,7 +38,7 @@ export default function RecentlyViewed() {
     <section className="mx-auto max-w-7xl px-4 py-10">
       <div className="mb-4 flex items-center gap-2">
         <Icon name="clock" size={18} className="text-brand-600" />
-        <h2 className="text-2xl font-bold">Recently Viewed</h2>
+        <h2 className="text-2xl font-bold">{tr("recentlyViewedTitle")}</h2>
       </div>
       <HScrollRow>
         {items.map((b) => (
@@ -43,7 +47,7 @@ export default function RecentlyViewed() {
               <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
                 imgClassName="transition duration-500 group-hover:scale-105" />
             </div>
-            <p className="line-clamp-2 min-h-[2.2em] p-2.5 text-xs font-semibold leading-snug group-hover:text-brand-600">{b.title}</p>
+            <p className="line-clamp-2 min-h-[2.2em] p-2.5 text-xs font-semibold leading-snug group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
           </Link>
         ))}
       </HScrollRow>

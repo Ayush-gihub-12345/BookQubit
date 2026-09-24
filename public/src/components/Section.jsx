@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export default function Section({ id, title, subtitle, href, children }) {
+export default function Section({ id, title, subtitle, href, viewAllLabel = "View all", children }) {
   return (
     <section id={id} className="mx-auto max-w-7xl scroll-mt-24 px-4 py-10">
       <div className="mb-6 flex items-end justify-between">
@@ -10,7 +10,7 @@ export default function Section({ id, title, subtitle, href, children }) {
         </div>
         {href && (
           <Link href={href} className="text-sm font-semibold text-brand-600 hover:underline">
-            View all →
+            {viewAllLabel} →
           </Link>
         )}
       </div>

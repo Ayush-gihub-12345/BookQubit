@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "./Icon";
 import BookCover from "./BookCover";
+import TitleTransliterated from "./TitleTransliterated";
+import { t } from "@/lib/i18n";
 
 // One search-and-pick slot. Debounced live search against /api/suggest
 // (the same endpoint the Ctrl+K search bar uses), showing book results only.
 function BookSlot({ lang, index, picked, onPick, onClear }) {
+  const tr = t(lang);
   const [q, setQ] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,10 +33,10 @@ function BookSlot({ lang, index, picked, onPick, onClear }) {
           <BookCover title={picked.title} author={picked.author} cover_url={picked.cover_url} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-1 text-sm font-semibold">{picked.title}</p>
-          <p className="text-muted line-clamp-1 text-xs">{picked.author}</p>
+          <p className="line-clamp-1 text-sm font-semibold"><TitleTransliterated text={picked.title} /></p>
+          <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={picked.author} /></p>
         </div>
-        <button onClick={onClear} aria-label="Remove" className="text-muted shrink-0 hover:text-red-500">
+        <button onClick={onClear} aria-label={tr("removeLabel")} className="text-muted shrink-0 hover:text-red-500">
           <Icon name="x" size={16} />
         </button>
       </div>
@@ -48,13 +51,13 @@ function BookSlot({ lang, index, picked, onPick, onClear }) {
         </span>
         <input
           value={q} onChange={(e) => onChange(e.target.value)}
-          placeholder="Search for a book…" className="flex-1 bg-transparent text-sm outline-none"
+          placeholder={tr("searchForBookPlaceholder")} className="flex-1 bg-transparent text-sm outline-none"
         />
       </div>
       {q.trim().length >= 2 && (
         <div className="bg-surface border-line absolute left-0 right-0 top-full z-20 mt-1.5 max-h-64 overflow-auto rounded-xl border shadow-xl">
-          {loading && <p className="text-muted px-3 py-3 text-sm">Searching…</p>}
-          {!loading && results.length === 0 && <p className="text-muted px-3 py-3 text-sm">No matches</p>}
+          {loading && <p className="text-muted px-3 py-3 text-sm">{tr("searchingLabel")}</p>}
+          {!loading && results.length === 0 && <p className="text-muted px-3 py-3 text-sm">{tr("noMatchesLabel")}</p>}
           {results.map((b) => (
             <button
               key={b.slug}
@@ -65,8 +68,8 @@ function BookSlot({ lang, index, picked, onPick, onClear }) {
                 <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
               </div>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">{b.title}</span>
-                <span className="text-muted block truncate text-xs">{b.author}</span>
+                <span className="block truncate text-sm font-medium"><TitleTransliterated text={b.title} /></span>
+                <span className="text-muted block truncate text-xs"><TitleTransliterated text={b.author} /></span>
               </span>
             </button>
           ))}
@@ -79,6 +82,7 @@ function BookSlot({ lang, index, picked, onPick, onClear }) {
 // Builds a /compare/{slug}-vs-{slug} URL from up to 4 picked books — matching
 // the exact search-phrase pattern ("X vs Y") this page type is meant to rank for.
 export default function ComparePicker({ lang, suggestions = [] }) {
+  const tr = t(lang);
   const [picks, setPicks] = useState([null, null]);
   const router = useRouter();
 
@@ -107,20 +111,20 @@ export default function ComparePicker({ lang, suggestions = [] }) {
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {picks.length < 4 && (
           <button onClick={addSlot} className="btn-ghost !py-2 text-sm">
-            <Icon name="check" size={14} /> Add another book
+            <Icon name="check" size={14} /> {tr("addAnotherBookLabel")}
           </button>
         )}
         <button onClick={go} disabled={readyCount < 2} className="btn-primary !py-2 text-sm disabled:cursor-not-allowed disabled:opacity-40">
-          <Icon name="layers" size={14} /> Compare {readyCount >= 2 ? `${readyCount} books` : ""}
+          <Icon name="layers" size={14} /> {readyCount >= 2 ? tr("compareCountLabel", { n: readyCount }) : tr("compareLabel")}
         </button>
       </div>
 
       {suggestions.length > 0 && (
         <div className="mt-10">
-          <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Popular comparisons</p>
+          <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("popularComparisonsLabel")}</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
-              <a key={s.href} href={s.href} className="pill">{s.label}</a>
+              <a key={s.href} href={s.href} className="pill"><TitleTransliterated text={s.label} /></a>
             ))}
           </div>
         </div>

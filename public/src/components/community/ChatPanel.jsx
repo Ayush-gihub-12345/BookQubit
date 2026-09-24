@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/Icon";
+import TitleTransliterated from "@/components/TitleTransliterated";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 const POLL_MS = 4000;
 
@@ -11,6 +14,7 @@ const POLL_MS = 4000;
 // not a member (show Join), locked out (exited twice, can only read), and
 // an active member (can send + leave + archive).
 export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange }) {
+  const tr = t(useLang());
   const [thread, setThread] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
@@ -64,7 +68,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
     })();
   }, [discussionId, thread?.membership?.active, user]);
 
-  if (!thread) return <div className="text-muted grid flex-1 place-items-center text-sm">Loading…</div>;
+  if (!thread) return <div className="text-muted grid flex-1 place-items-center text-sm">{tr("loading")}</div>;
 
   const membership = thread.membership;
   const isMember = membership?.active;
@@ -81,7 +85,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
         body: JSON.stringify({ idToken, ...extra }),
       });
       const d = await r.json();
-      if (!r.ok) { setError(d.error || "Something went wrong"); return; }
+      if (!r.ok) { setError(d.error || tr("somethingWentWrongMsg")); return; }
       await load();
       if (path === "leave") onLeft?.();
       if (path === "archive") onArchiveChange?.();
@@ -118,21 +122,21 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
           <p className="text-muted flex flex-wrap items-center gap-x-2 text-xs">
             {thread.book_slug && (
               <Link href={`/books/${encodeURIComponent(thread.book_slug)}`} className="hover:text-brand-600">
-                <Icon name="book" size={11} className="inline" /> {thread.book_title || thread.book_slug}
+                <Icon name="book" size={11} className="inline" /> <TitleTransliterated text={thread.book_title || thread.book_slug} />
               </Link>
             )}
-            {thread.author_name && <span><Icon name="feather" size={11} className="inline" /> {thread.author_name}</span>}
-            <span>Started by <Link href={`/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-600 hover:underline">{thread.name}</Link></span>
+            {thread.author_name && <span><Icon name="feather" size={11} className="inline" /> <TitleTransliterated text={thread.author_name} /></span>}
+            <span>{tr("startedByLabel")} <Link href={`/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-600 hover:underline">{thread.name}</Link></span>
           </p>
         </div>
         {isMember && (
           <div className="flex shrink-0 gap-2">
             <button disabled={busy} onClick={() => act("archive", { archived: !membership.archived })}
-              className="btn-ghost !px-3 text-xs" title={membership.archived ? "Unarchive" : "Archive"}>
+              className="btn-ghost !px-3 text-xs" title={membership.archived ? tr("unarchiveLabel") : tr("archiveLabel")}>
               <Icon name={membership.archived ? "arrowRight" : "eyeOff"} size={13} />
             </button>
             <button disabled={busy} onClick={() => act("leave")} className="btn-ghost !px-3 text-xs text-red-500">
-              <Icon name="logout" size={13} /> Leave
+              <Icon name="logout" size={13} /> {tr("leaveLabel")}
             </button>
           </div>
         )}
@@ -148,7 +152,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {thread.body && (
           <div className="card !border-brand-500/20 bg-brand-600/5 p-3 text-sm hover:!translate-y-0">
-            <p className="text-muted mb-1 text-[11px] font-semibold uppercase tracking-wide">Discussion topic</p>
+            <p className="text-muted mb-1 text-[11px] font-semibold uppercase tracking-wide">{tr("discussionTopicLabel")}</p>
             <p className="whitespace-pre-line leading-relaxed">{thread.body}</p>
           </div>
         )}
@@ -169,7 +173,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
               <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-brand-600 text-white" : "bg-black/5 dark:bg-white/5"}`}>
                 <Link href={`/readers/${m.slug || m.user_id}`}
                   className={`mb-0.5 block text-[11px] font-semibold hover:underline ${mine ? "text-white/80" : "opacity-70"}`}>
-                  {mine ? "You" : m.name}
+                  {mine ? tr("youLabel") : m.name}
                 </Link>
                 <p className="whitespace-pre-line leading-relaxed">{m.body}</p>
                 <p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-muted"}`}>
@@ -179,7 +183,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
             </div>
           );
         })}
-        {!messages.length && <p className="text-muted text-center text-sm">No messages yet — say hello.</p>}
+        {!messages.length && <p className="text-muted text-center text-sm">{tr("noMessagesYetSayHello")}</p>}
       </div>
 
       {error && <p className="px-4 pb-1 text-xs text-red-500">{error}</p>}
@@ -189,7 +193,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
         <form onSubmit={send} className="border-line flex gap-2 border-t p-3">
           <input
             value={text} onChange={(e) => setText(e.target.value)}
-            placeholder="Message…" className="input flex-1"
+            placeholder={tr("messagePlaceholder")} className="input flex-1"
           />
           <button type="submit" disabled={!text.trim()} className="btn-primary !px-4 disabled:cursor-not-allowed disabled:opacity-40">
             <Icon name="arrowRight" size={16} />
@@ -197,13 +201,13 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
         </form>
       ) : lockedOut ? (
         <div className="border-line border-t p-4 text-center">
-          <p className="text-muted text-sm">You've left this discussion twice already and can't rejoin.</p>
+          <p className="text-muted text-sm">{tr("leftDiscussionTwiceMsg")}</p>
         </div>
       ) : (
         <div className="border-line flex items-center justify-between gap-3 border-t p-4">
-          <p className="text-muted text-sm">Join this discussion to read and send messages.</p>
+          <p className="text-muted text-sm">{tr("joinToReadSendMsg")}</p>
           <button disabled={busy} onClick={() => act("join")} className="btn-primary text-sm">
-            <Icon name="users" size={14} /> Join Discussion
+            <Icon name="users" size={14} /> {tr("joinDiscussionLabel")}
           </button>
         </div>
       )}

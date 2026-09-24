@@ -24,10 +24,10 @@ export default function HeroSlider({ books, labels }) {
       {/* Mobile: small corner buttons, clear of both the cover and the text */}
       {n > 1 && (
         <div className="absolute right-4 top-4 z-10 flex gap-2 md:hidden">
-          <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous" className="icon-btn icon-btn-sm">
+          <button onClick={() => setI((i - 1 + n) % n)} aria-label={labels.previous} className="icon-btn icon-btn-sm">
             <Icon name="chevronDown" size={15} className="rotate-90" strokeWidth={2.5} />
           </button>
-          <button onClick={() => setI((i + 1) % n)} aria-label="Next" className="icon-btn icon-btn-sm">
+          <button onClick={() => setI((i + 1) % n)} aria-label={labels.next} className="icon-btn icon-btn-sm">
             <Icon name="chevronDown" size={15} className="-rotate-90" strokeWidth={2.5} />
           </button>
         </div>
@@ -46,13 +46,13 @@ export default function HeroSlider({ books, labels }) {
           <h2 className="mt-3 text-2xl font-extrabold sm:text-4xl">
             <Link href={`/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600"><TitleTransliterated text={b.title} /></Link>
           </h2>
-          <p className="text-muted mt-1">by <span className="font-medium text-brand-600">{b.author}</span></p>
+          <p className="text-muted mt-1">{labels.byWord} <span className="font-medium text-brand-600"><TitleTransliterated text={b.author} /></span></p>
 
           <div className="text-muted mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs">
             {b.rating && <span className="text-amber-400">{"★".repeat(Math.round(b.rating))} <span className="text-muted">({b.rating})</span></span>}
-            {b.page_count && <span><b className="text-[var(--fg)]">{b.page_count}</b> pages</span>}
+            {b.page_count && <span><b className="text-[var(--fg)]">{b.page_count}</b> {labels.pages}</span>}
             {b.language && <span>{b.language}</span>}
-            {b.published && <span>Published {b.published}</span>}
+            {b.published && <span>{labels.published} {b.published}</span>}
           </div>
 
           {b.keyPoints?.length > 0 && (
@@ -79,10 +79,10 @@ export default function HeroSlider({ books, labels }) {
         <>
           {/* Desktop: original edge-of-card arrows */}
           <div className="hidden md:block">
-            <button onClick={() => setI((i - 1 + n) % n)} aria-label="Previous" className="icon-btn hscroll-btn hscroll-btn-left">
+            <button onClick={() => setI((i - 1 + n) % n)} aria-label={labels.previous} className="icon-btn hscroll-btn hscroll-btn-left">
               <Icon name="chevronDown" size={18} className="rotate-90" strokeWidth={2.5} />
             </button>
-            <button onClick={() => setI((i + 1) % n)} aria-label="Next" className="icon-btn hscroll-btn hscroll-btn-right">
+            <button onClick={() => setI((i + 1) % n)} aria-label={labels.next} className="icon-btn hscroll-btn hscroll-btn-right">
               <Icon name="chevronDown" size={18} className="-rotate-90" strokeWidth={2.5} />
             </button>
           </div>
@@ -90,7 +90,7 @@ export default function HeroSlider({ books, labels }) {
           <div className="mt-6 flex items-center justify-center gap-3">
             <div className="flex gap-1.5">
               {books.map((_, d) => (
-                <button key={d} onClick={() => setI(d)} aria-label={`Slide ${d + 1}`}
+                <button key={d} onClick={() => setI(d)} aria-label={labels.slideLabel?.replace("{n}", d + 1)}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     d === i
                       ? "w-7 bg-gradient-to-r from-brand-500 to-brand-600 shadow-[0_0_8px_rgba(79,70,229,0.5)]"

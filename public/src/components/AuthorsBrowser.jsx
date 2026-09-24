@@ -7,11 +7,11 @@ import SortDropdown from "./SortDropdown";
 import EmptyState from "./EmptyState";
 import { t } from "@/lib/i18n";
 
-const SORTS = [
-  { value: "name", label: "Name A–Z" },
-  { value: "name-desc", label: "Name Z–A" },
-  { value: "recent", label: "Recently Added" },
-  { value: "birth", label: "Birth Year" },
+const sortsOf = (tr) => [
+  { value: "name", label: tr("sortNameAZ") },
+  { value: "name-desc", label: tr("sortNameZA") },
+  { value: "recent", label: tr("sortRecentlyAdded") },
+  { value: "birth", label: tr("sortBirthYear") },
 ];
 
 const PER_PAGE = 60;
@@ -30,6 +30,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 // queryAuthors() in repo.js for the full story.
 export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, countries }) {
   const tr = t(lang);
+  const SORTS = sortsOf(tr);
   const [q, setQ] = useState("");
   const [country, setCountry] = useState("");
   const [sort, setSort] = useState("name");
@@ -77,9 +78,9 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
     <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Authors</h1>
+          <h1 className="text-3xl font-bold">{tr("authors")}</h1>
           <p className="text-muted mt-1 text-sm">
-            {authors.length}{hasMore ? "+" : ""} authors{country ? ` in ${country}` : ""}{q.trim() ? ` matching "${q.trim()}"` : ""}
+            {authors.length}{hasMore ? "+" : ""} {tr("authors").toLowerCase()}{country ? ` ${tr("inCountryPhrase", { country })}` : ""}{q.trim() ? ` ${tr("matchingWord", { query: q.trim() })}` : ""}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -87,7 +88,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
             <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Search authors…" className="input !py-2 !pl-9 text-sm"
+              placeholder={tr("searchAuthors")} className="input !py-2 !pl-9 text-sm"
             />
           </div>
           <SortDropdown value={sort} options={SORTS} onChange={setSort} />
@@ -104,7 +105,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
           ))}
           {country && (
             <button onClick={() => setCountry("")} className="pill group whitespace-nowrap">
-              Clear <Icon name="x" size={11} className="ml-1.5 opacity-60 group-hover:opacity-100" />
+              {tr("searchClear")} <Icon name="x" size={11} className="ml-1.5 opacity-60 group-hover:opacity-100" />
             </button>
           )}
         </div>
@@ -146,9 +147,9 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
         <div className="mt-10 flex flex-col items-center gap-2">
           <button onClick={loadMore} disabled={loadingMore} className="btn-primary !px-8">
             {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}
-            {loadingMore ? "Loading…" : "Load More"}
+            {loadingMore ? tr("loading") : tr("loadMore")}
           </button>
-          <p className="text-muted text-xs">{authors.length} loaded</p>
+          <p className="text-muted text-xs">{tr("loadedCount", { count: authors.length })}</p>
         </div>
       )}
     </div>

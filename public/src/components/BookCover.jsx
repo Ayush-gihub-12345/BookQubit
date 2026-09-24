@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TitleTransliterated from "./TitleTransliterated";
 
 // Renders the real cover image, or a designed placeholder "cover" with the
 // book's title and author on a gradient picked deterministically from the title.
@@ -51,7 +52,7 @@ export default function BookCover({ title, author, cover_url, className = "", im
         fetchPriority={priority ? "high" : undefined}
         decoding={priority ? "sync" : "async"}
         onError={() => setBroken(true)}
-        className={`h-full w-full object-cover ${imgClassName}`}
+        className={`h-full w-full max-w-full object-cover ${imgClassName}`}
       />
     );
   }
@@ -66,11 +67,11 @@ export default function BookCover({ title, author, cover_url, className = "", im
       <span className="absolute inset-y-0 left-0 w-[6%] bg-black/25" />
       <span className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/15 to-transparent" />
       <span className="mt-[10%] block border-y border-white/40 py-[6%] text-center font-[var(--font-display)] font-bold leading-snug [font-size:clamp(10px,10cqw,20px)]">
-        <span className="line-clamp-4">{title}</span>
+        <span className="line-clamp-4"><TitleTransliterated text={title} /></span>
       </span>
       {author && (
         <span className="block truncate pl-[8%] text-center italic opacity-90 [font-size:clamp(8px,7cqw,13px)]">
-          {author}
+          <TitleTransliterated text={author} />
         </span>
       )}
     </div>

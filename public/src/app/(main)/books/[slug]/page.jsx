@@ -112,25 +112,25 @@ export default async function BookPage({ params }) {
   const readingMinutes = book.page_count ? Math.max(5, Math.round(book.page_count * 1.2)) : null;
   const readingTime = readingMinutes
     ? readingMinutes >= 60
-      ? `${Math.floor(readingMinutes / 60)} hr ${readingMinutes % 60 ? `${readingMinutes % 60} min` : ""}`.trim()
-      : `${readingMinutes} min`
+      ? `${Math.floor(readingMinutes / 60)} ${_("hourAbbrev")} ${readingMinutes % 60 ? `${readingMinutes % 60} ${_("minuteAbbrev")}` : ""}`.trim()
+      : `${readingMinutes} ${_("minuteAbbrev")}`
     : null;
 
   const difficulty = book.page_count
-    ? book.page_count < 180 ? "Easy read" : book.page_count < 400 ? "Moderate" : "Deep read"
+    ? book.page_count < 180 ? _("easyRead") : book.page_count < 400 ? _("moderateRead") : _("deepRead")
     : null;
 
   const meta = [
-    ["Publisher", book.publisher],
-    ["Published", book.published],
-    ["Language", book.language],
-    ["Pages", book.page_count],
-    ["Reading time", readingTime && `~${readingTime}`],
-    ["Difficulty", difficulty],
-    ["Format", book.format],
-    ["ISBN", book.isbn],
-    ["Country", book.country],
-    ["Genres", book.genres?.length > 0 && book.genres.join(", ")],
+    [_("metaPublisher"), book.publisher],
+    [_("metaPublished"), book.published],
+    [_("metaLanguage"), book.language],
+    [_("metaPages"), book.page_count],
+    [_("metaReadingTime"), readingTime && `~${readingTime}`],
+    [_("metaDifficulty"), difficulty],
+    [_("metaFormat"), book.format],
+    [_("metaISBN"), book.isbn],
+    [_("metaCountry"), book.country],
+    [_("metaGenres"), book.genres?.length > 0 && book.genres.join(", ")],
   ].filter(([, v]) => v);
 
   return (
@@ -141,7 +141,7 @@ export default async function BookPage({ params }) {
 
       <div className="mx-auto max-w-7xl px-4 py-10">
         <nav className="text-muted mb-6 text-sm">
-          <Link href="/books" className="hover:text-brand-600">Books</Link>
+          <Link href="/books" className="hover:text-brand-600">{_("books")}</Link>
           {book.category && (
             <>
               {" / "}
@@ -153,8 +153,15 @@ export default async function BookPage({ params }) {
           {" / "}<span className="text-[var(--fg)]">{book.title}</span>
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
-          <div>
+        {/* min-w-0 on both grid children: without it, a grid item's implicit
+            min-width is "auto", which factors in a replaced element's (img)
+            intrinsic size — so a cover whose real dimensions are unusually
+            large/wide can force this column, and the whole grid, wider than
+            the viewport, squeezing the rest of the page into a narrow strip
+            beside empty space. w-full/object-cover on the <img> itself don't
+            prevent this; the fix has to be on the grid item. */}
+        <div className="grid min-w-0 gap-10 lg:grid-cols-[300px_1fr]">
+          <div className="min-w-0">
             <div className="card aspect-[2/3] overflow-hidden !shadow-xl hover:!translate-y-0">
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
@@ -164,13 +171,13 @@ export default async function BookPage({ params }) {
             {related.length > 0 && (
               <div className="mt-5 border-t border-line pt-4">
                 <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
-                  <Icon name="layers" size={14} /> Browse Similar Books
+                  <Icon name="layers" size={14} /> {_("browseSimilarBooks")}
                 </a>
               </div>
             )}
 
             <div className="mt-2 border-t border-line pt-4">
-              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Read with others</p>
+              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">{_("readWithOthers")}</p>
               {bookDiscussions.map((d) => (
                 <Link key={d.id} href={`/community?open=${d.id}`}
                   className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
@@ -183,20 +190,20 @@ export default async function BookPage({ params }) {
                 href={`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`}
                 className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600"
               >
-                <Icon name="feather" size={14} /> Start a discussion
+                <Icon name="feather" size={14} /> {_("startDiscussion")}
               </Link>
             </div>
 
             <div className="mt-2 border-t border-line pt-4">
-              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Book information</p>
+              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">{_("bookInformation")}</p>
               <ReportIssueButton bookSlug={book.slug} />
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <h1 className="text-3xl font-bold sm:text-4xl"><TitleTransliterated text={book.title} /></h1>
             <p className="text-muted mt-2 text-lg">
-              by{" "}
+              {_("byWord")}{" "}
               {/* One link per co-author. Anyone with a real profile goes to
                   their author page; anyone without one falls back to a search
                   so the name is still clickable rather than dead text. */}
@@ -217,7 +224,7 @@ export default async function BookPage({ params }) {
             </p>
             {/* Compact meta line — StoryGraph-style at-a-glance facts */}
             <p className="text-muted mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              {[book.page_count && `${book.page_count} pages`, book.format, book.published && `first pub. ${book.published}`]
+              {[book.page_count && _("pagesSuffix", { count: book.page_count }), book.format, book.published && _("firstPub", { year: book.published })]
                 .filter(Boolean)
                 .map((part, i) => <span key={i}>{i > 0 && <span className="mx-1 opacity-50">·</span>}{part}</span>)}
             </p>
@@ -235,10 +242,10 @@ export default async function BookPage({ params }) {
               <Rating value={book.rating} />
               {community.reviews.length > 0 && (
                 <a href="#reviews" className="text-muted hover:text-brand-600">
-                  {community.reviews.length} {community.reviews.length === 1 ? "review" : "reviews"}
+                  {community.reviews.length} {community.reviews.length === 1 ? _("reviewWord") : _("reviewsWord")}
                 </a>
               )}
-              {readingTime && <span className="text-muted">~{readingTime} read</span>}
+              {readingTime && <span className="text-muted">~{readingTime} {_("readWord")}</span>}
               {book.collection && (
                 <Link href={`/collections/${encodeURIComponent(book.collection)}`} className="pill">
                   {book.collection}
@@ -249,7 +256,7 @@ export default async function BookPage({ params }) {
             {moreInCollectionFiltered.length > 0 && (
               <div className="mt-5">
                 <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">
-                  More from {book.collection}
+                  {_("moreFromCollection", { collection: book.collection })}
                 </p>
                 <HScrollRow>
                   {moreInCollectionFiltered.map((b) => (
@@ -271,11 +278,14 @@ export default async function BookPage({ params }) {
 
             {(book.category || book.subjects?.length > 0) && (
               <div className="tint-brand mt-6 rounded-xl p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Who's it for</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-600">{_("whosItFor")}</p>
                 <p className="mt-2 text-sm leading-relaxed">
-                  A good fit for readers who enjoy {book.category ? <strong>{book.category.toLowerCase()}</strong> : "this genre"}
-                  {book.subjects?.length > 0 && <> and want to explore {book.subjects.slice(0, 2).join(" and ")}</>}
-                  {readingTime && <> — a {readingTime} read{difficulty ? ` at a "${difficulty.toLowerCase()}" level` : ""}</>}.
+                  {_("whosItForBody", {
+                    category: book.category ? book.category.toLowerCase() : _("thisGenre"),
+                    subjects: book.subjects?.length > 0 ? book.subjects.slice(0, 2).join(" & ") : _("thisGenre"),
+                    time: readingTime || "",
+                    level: difficulty ? difficulty.toLowerCase() : "",
+                  })}
                 </p>
               </div>
             )}
@@ -347,7 +357,7 @@ export default async function BookPage({ params }) {
                 <div>
                   {community.moods.length > 0 && (
                     <div className="mb-5">
-                      <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">Moods</p>
+                      <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">{_("moodsLabel")}</p>
                       <div className="space-y-1">
                         {community.moods.slice(0, 5).map((m) => {
                           const moodTotal = community.moods.reduce((n, x) => n + x.n, 0);
@@ -367,7 +377,7 @@ export default async function BookPage({ params }) {
                   )}
                   {community.pace.length > 0 && (
                     <div className="mb-5 flex items-center gap-2 text-xs">
-                      <span className="text-muted w-24 shrink-0">Pace</span>
+                      <span className="text-muted w-24 shrink-0">{_("paceLabel")}</span>
                       <span className="pill !bg-emerald-500/15 !text-emerald-600">{community.pace[0].name}</span>
                     </div>
                   )}
@@ -398,6 +408,7 @@ export default async function BookPage({ params }) {
                       review={r.review}
                       spoiler={r.spoiler}
                       updatedAt={r.updated_at}
+                      spoilerLabel={_("spoilerClickToReveal")}
                       reviewer={{ name: r.name, photo_url: r.photo_url, slug: r.slug, user_id: r.user_id }}
                     />
                   ))}

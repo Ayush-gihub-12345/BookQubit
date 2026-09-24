@@ -1,10 +1,11 @@
 import Link from "next/link";
+import TitleTransliterated from "./TitleTransliterated";
 
 // Extracted from the inline review block that used to live only in
 // books/[slug]/page.jsx. Pass `reviewer` on a book page (who wrote this),
 // `book` on a reader profile (which book this is about) — whichever context
 // the page is already showing doesn't need repeating.
-export default function ReviewCard({ rating, review, spoiler, updatedAt, reviewer, book }) {
+export default function ReviewCard({ rating, review, spoiler, updatedAt, reviewer, book, spoilerLabel = "⚠ This review contains spoilers — click to reveal" }) {
   return (
     <div className="card p-5 hover:!translate-y-0">
       <div className="flex items-center gap-3">
@@ -26,7 +27,7 @@ export default function ReviewCard({ rating, review, spoiler, updatedAt, reviewe
           )}
           {book && (
             <Link href={`/books/${encodeURIComponent(book.slug)}`} className="line-clamp-1 text-sm font-semibold hover:text-brand-600">
-              {book.title}
+              <TitleTransliterated text={book.title} />
             </Link>
           )}
           {updatedAt && <p className="text-muted text-xs">{updatedAt.slice(0, 10)}</p>}
@@ -36,7 +37,7 @@ export default function ReviewCard({ rating, review, spoiler, updatedAt, reviewe
       {spoiler ? (
         <details className="mt-3">
           <summary className="text-muted cursor-pointer text-xs font-semibold hover:text-brand-600">
-            ⚠ This review contains spoilers — click to reveal
+            {spoilerLabel}
           </summary>
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{review}</p>
         </details>

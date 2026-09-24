@@ -4,19 +4,23 @@ import { useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
 import Icon from "./Icon";
-
-const STATUSES = [
-  { id: "want", label: "Want", icon: "bookmark" },
-  { id: "reading", label: "Reading", icon: "bookOpen" },
-  { id: "read", label: "Read", icon: "check" },
-];
+import TitleTransliterated from "./TitleTransliterated";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 // Editable shelf card for the dashboard: change status, track reading
 // progress, and rate — all inline, no need to open the book page.
 export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
+  const tr = t(useLang());
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const s = entry;
+
+  const STATUSES = [
+    { id: "want", label: tr("statusWant"), icon: "bookmark" },
+    { id: "reading", label: tr("statusReading"), icon: "bookOpen" },
+    { id: "read", label: tr("statusRead"), icon: "check" },
+  ];
 
   const patch = async (fields) => {
     setBusy(true);
@@ -37,12 +41,12 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
           <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url}
             imgClassName="transition group-hover:scale-105" />
           <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white">
-            {s.status === "read" ? "Read" : s.status === "reading" ? `Reading · ${s.progress || 0}%` : "Want to read"}
+            {s.status === "read" ? tr("statusRead") : s.status === "reading" ? tr("readingProgressBadge", { pct: s.progress || 0 }) : tr("wantToReadBadge")}
           </span>
         </div>
         <div className="p-3 pb-2">
-          <p className="line-clamp-1 text-sm font-semibold">{s.title || s.book_slug}</p>
-          <p className="text-muted line-clamp-1 text-xs">{s.author}</p>
+          <p className="line-clamp-1 text-sm font-semibold"><TitleTransliterated text={s.title || s.book_slug} /></p>
+          <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={s.author} /></p>
           {s.rating ? <p className="mt-0.5 text-xs text-amber-400">{"★".repeat(s.rating)}</p> : null}
         </div>
       </Link>
@@ -52,7 +56,7 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
         className="text-muted flex w-full items-center justify-center gap-1 border-t border-line px-2 py-1.5 text-[11px] font-medium hover:text-brand-600"
       >
         <Icon name={editing ? "chevronDown" : "chevronDown"} size={11} className={editing ? "rotate-180" : ""} />
-        {editing ? "Close" : "Edit"}
+        {editing ? tr("closeWord") : tr("edit")}
       </button>
 
       {editing && (
@@ -75,7 +79,7 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
           {s.status === "reading" && (
             <div>
               <div className="text-muted mb-1 flex justify-between text-[10px]">
-                <span>Progress</span><span>{s.progress || 0}%</span>
+                <span>{tr("progressLabel")}</span><span>{s.progress || 0}%</span>
               </div>
               <input
                 type="range" min="0" max="100" step="5"
@@ -91,7 +95,7 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
               <button key={n} disabled={busy}
                 onClick={() => patch({ rating: n, status: s.status || "read" })}
                 className={`text-base transition hover:scale-125 ${(s.rating || 0) >= n ? "text-amber-400" : "text-muted opacity-30"}`}
-                aria-label={`Rate ${n} stars`}
+                aria-label={tr("rateNStars", { n })}
               >★</button>
             ))}
           </div>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { useToast } from "./Toast";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 const MOODS = ["✨ inspiring", "🌧️ emotional", "😂 funny", "🌑 dark", "🧠 informative", "🫀 hopeful", "😰 tense", "🕯️ reflective"];
 const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
@@ -13,6 +15,7 @@ const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
 // page — publishing a review here just makes sure the book is on the shelf
 // (defaults to "read" if it isn't shelved yet at all).
 export default function ShelfControls({ slug }) {
+  const tr = t(useLang());
   const toast = useToast();
   const [user, setUser] = useState(null);
   const [entry, setEntry] = useState(null);
@@ -43,7 +46,7 @@ export default function ShelfControls({ slug }) {
   if (!user) {
     return (
       <Link href="/login" className="btn-ghost w-full text-sm">
-        ✍️ Sign in to write a review
+        {tr("signInToWriteReview")}
       </Link>
     );
   }
@@ -62,13 +65,13 @@ export default function ShelfControls({ slug }) {
   };
 
   const deleteReview = async () => {
-    if (!confirm("Delete your review?")) return;
+    if (!confirm(tr("deleteReviewConfirm"))) return;
     await update({ review: "", spoiler: false });
     setReviewText("");
     setSpoiler(false);
     setReviewOpen(true);
     setReviewSaved(false);
-    toast("Review deleted");
+    toast(tr("reviewDeleted"));
   };
 
   const selectedMoods = entry?.moods ? JSON.parse(entry.moods) : [];
@@ -76,19 +79,19 @@ export default function ShelfControls({ slug }) {
   return (
     <div className="card space-y-3 p-4 hover:!translate-y-0">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{entry?.review ? "Your review" : "Write a review"}</p>
+        <p className="text-sm font-semibold">{entry?.review ? tr("yourReview") : tr("writeAReview")}</p>
         {entry?.review && (
           <div className="flex items-center gap-3 text-xs">
             <button onClick={() => setReviewOpen(!reviewOpen)} className="font-medium text-brand-600 hover:underline">
-              {reviewOpen ? "Cancel" : "Edit"}
+              {reviewOpen ? tr("cancel") : tr("edit")}
             </button>
-            <button onClick={deleteReview} className="font-medium text-red-500 hover:underline">Delete</button>
+            <button onClick={deleteReview} className="font-medium text-red-500 hover:underline">{tr("delete")}</button>
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-center gap-1">
-        <span className="text-muted mr-2 text-xs font-medium">Your rating</span>
+        <span className="text-muted mr-2 text-xs font-medium">{tr("yourRating")}</span>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -97,7 +100,7 @@ export default function ShelfControls({ slug }) {
             className={`text-xl transition hover:scale-125 ${
               (entry?.rating || 0) >= n ? "text-amber-400" : "text-muted opacity-40"
             }`}
-            aria-label={`Rate ${n} stars`}
+            aria-label={tr("rateNStars", { n })}
           >
             ★
           </button>
@@ -111,7 +114,7 @@ export default function ShelfControls({ slug }) {
       {reviewOpen && (
         <div className="space-y-3">
           <div>
-            <p className="text-muted text-xs font-semibold uppercase tracking-wide">How does it feel?</p>
+            <p className="text-muted text-xs font-semibold uppercase tracking-wide">{tr("howDoesItFeel")}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {MOODS.map((m) => {
                 const selected = selectedMoods.includes(m);
@@ -143,13 +146,13 @@ export default function ShelfControls({ slug }) {
             onChange={(e) => { setReviewText(e.target.value); setReviewSaved(false); }}
             rows={5}
             maxLength={2000}
-            placeholder="What did you think of this book?"
+            placeholder={tr("whatDidYouThink")}
             className="input resize-y text-sm"
           />
           <label className="text-muted flex items-center gap-2 text-xs">
             <input type="checkbox" checked={spoiler} onChange={(e) => setSpoiler(e.target.checked)}
               className="accent-[var(--color-brand-600)]" />
-            This review contains spoilers
+            {tr("reviewContainsSpoilers")}
           </label>
           <div className="flex items-center justify-between">
             <span className="text-muted text-xs">{reviewText.length}/2000</span>
@@ -159,11 +162,11 @@ export default function ShelfControls({ slug }) {
                 await update({ review: reviewText.trim(), spoiler, status: entry?.status || "read" });
                 setReviewSaved(true);
                 setReviewOpen(false);
-                toast("Review published");
+                toast(tr("reviewPublished"));
               }}
               className="btn-primary !px-4 !py-1.5 text-xs"
             >
-              {reviewSaved ? "✓ Published" : "Publish review"}
+              {reviewSaved ? `✓ ${tr("published")}` : tr("publishReview")}
             </button>
           </div>
         </div>

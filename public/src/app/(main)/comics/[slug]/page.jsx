@@ -7,22 +7,26 @@ import ShelfControls from "@/components/ShelfControls";
 import ReviewCard from "@/components/ReviewCard";
 import BookCover from "@/components/BookCover";
 import QuickActions from "@/components/QuickActions";
+import TitleTransliterated from "@/components/TitleTransliterated";
 import { getComic, relatedComics, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const comic = await getComic(slug, await getLang());
+  const lang = await getLang();
+  const comic = await getComic(slug, lang);
   return comic
     ? { title: comic.title, description: comic.description?.slice(0, 160), alternates: { canonical: `/comics/${comic.slug}` } }
-    : { title: "Comic Not Found", robots: { index: false } };
+    : { title: t(lang)("comicNotFound"), robots: { index: false } };
 }
 
 export default async function ComicPage({ params }) {
   const { slug } = await params;
   const lang = await getLang();
+  const _ = t(lang);
   const comic = await getComic(slug, lang);
   if (!comic) notFound();
 
@@ -35,18 +39,18 @@ export default async function ComicPage({ params }) {
   ]);
 
   const meta = [
-    ["Publisher", comic.publisher],
-    ["Published", comic.publication_date],
-    ["Cover Price", comic.cover_price],
-    ["Format", comic.format],
-    ["Value Today", comic.value_today],
+    [_("metaPublisher"), comic.publisher],
+    [_("publishedLabel"), comic.publication_date],
+    [_("coverPriceLabel"), comic.cover_price],
+    [_("formatLabel"), comic.format],
+    [_("valueTodayLabel"), comic.value_today],
   ].filter(([, v]) => v);
 
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 py-10">
         <nav className="text-muted mb-6 text-sm">
-          <Link href="/comics" className="hover:text-brand-600">Comics</Link>
+          <Link href="/comics" className="hover:text-brand-600">{_("comicsLink")}</Link>
           {comic.category && (
             <>
               {" / "}
@@ -55,8 +59,11 @@ export default async function ComicPage({ params }) {
           )}
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
-          <div>
+        {/* min-w-0 on both grid children — see books/[slug]/page.jsx for why:
+            without it, a cover with unusually large intrinsic dimensions can
+            force this column (and the whole grid) wider than the viewport. */}
+        <div className="grid min-w-0 gap-10 lg:grid-cols-[300px_1fr]">
+          <div className="min-w-0">
             <div className="card aspect-[2/3] overflow-hidden !shadow-xl hover:!translate-y-0">
               <BookCover title={comic.title} author={comic.publisher} cover_url={comic.cover_url} />
             </div>
@@ -67,9 +74,9 @@ export default async function ComicPage({ params }) {
             <QuickActions book={{ ...comic, author: comic.publisher }} />
           </div>
 
-          <div>
-            <h1 className="text-3xl font-bold sm:text-4xl">{comic.title}</h1>
-            {comic.publisher && <p className="text-muted mt-2 text-lg">{comic.publisher}</p>}
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold sm:text-4xl"><TitleTransliterated text={comic.title} /></h1>
+            {comic.publisher && <p className="text-muted mt-2 text-lg"><TitleTransliterated text={comic.publisher} /></p>}
 
             <div className="mt-3 flex flex-wrap gap-1.5">
               {comic.category && <span className="pill !text-[11px]">{comic.category}</span>}
@@ -79,7 +86,7 @@ export default async function ComicPage({ params }) {
               <Rating value={comic.rating} />
               {community.reviews.length > 0 && (
                 <a href="#reviews" className="text-muted hover:text-brand-600">
-                  {community.reviews.length} {community.reviews.length === 1 ? "review" : "reviews"}
+                  {community.reviews.length} {community.reviews.length === 1 ? _("reviewWord") : _("reviewsWord")}
                 </a>
               )}
             </div>
@@ -88,7 +95,7 @@ export default async function ComicPage({ params }) {
 
             {meta.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">Details</h2>
+                <h2 className="text-xl font-bold">{_("details")}</h2>
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                   {meta.map(([k, v]) => (
                     <div key={k}>
@@ -102,7 +109,7 @@ export default async function ComicPage({ params }) {
 
             {comic.characters.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">Characters Introduced</h2>
+                <h2 className="text-xl font-bold">{_("charactersIntroducedLabel")}</h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {comic.characters.map((ch) => <span key={ch} className="pill">{ch}</span>)}
                 </div>
@@ -111,7 +118,7 @@ export default async function ComicPage({ params }) {
 
             {comic.creators.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">Creators</h2>
+                <h2 className="text-xl font-bold">{_("creatorsLabel")}</h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {comic.creators.map((c) => <span key={c} className="pill">{c}</span>)}
                 </div>
@@ -120,7 +127,7 @@ export default async function ComicPage({ params }) {
 
             {comic.fun_fact && (
               <div className="mt-8 tint-brand rounded-2xl border-l-4 border-brand-500 p-5">
-                <p className="text-sm font-semibold text-brand-700 dark:text-brand-100">💡 Fun Fact</p>
+                <p className="text-sm font-semibold text-brand-700 dark:text-brand-100">💡 {_("funFactLabel")}</p>
                 <p className="mt-1 text-sm leading-relaxed">{comic.fun_fact}</p>
               </div>
             )}
@@ -130,12 +137,12 @@ export default async function ComicPage({ params }) {
             </div>
 
             <div id="reviews" className="mt-10 scroll-mt-24">
-              <h2 className="text-xl font-bold">Community</h2>
+              <h2 className="text-xl font-bold">{_("communityTitle")}</h2>
               <div className="mt-4 grid gap-6 sm:grid-cols-[220px_1fr]">
                 <div className="card p-5 text-center hover:!translate-y-0">
                   <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
                   <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
-                  <p className="text-muted mt-1 text-xs">{community.rating_count} ratings from readers</p>
+                  <p className="text-muted mt-1 text-xs">{_("ratingsFromReaders", { n: community.rating_count })}</p>
                 </div>
                 <div className="space-y-1.5">
                   {community.distribution.map((d) => {
@@ -155,7 +162,7 @@ export default async function ComicPage({ params }) {
 
               {community.reviews.length > 0 && (
                 <div className="mt-6 space-y-4">
-                  <h3 className="font-bold">Reader Reviews ({community.reviews.length})</h3>
+                  <h3 className="font-bold">{_("readerReviewsLabel")} ({community.reviews.length})</h3>
                   {community.reviews.map((r) => (
                     <ReviewCard
                       key={`${r.user_id}-${r.updated_at}`}
@@ -164,6 +171,7 @@ export default async function ComicPage({ params }) {
                       spoiler={r.spoiler}
                       updatedAt={r.updated_at}
                       reviewer={{ name: r.name, photo_url: r.photo_url, slug: r.slug, user_id: r.user_id }}
+                      spoilerLabel={_("spoilerClickToReveal")}
                     />
                   ))}
                 </div>
@@ -174,7 +182,7 @@ export default async function ComicPage({ params }) {
       </div>
 
       {related.length > 0 && (
-        <Section id="related" title="You Might Also Like">
+        <Section id="related" title={_("youMightAlsoLike")}>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
             {related.map((c) => <BookCard key={c.id} book={c} hrefBase="/comics" />)}
           </div>

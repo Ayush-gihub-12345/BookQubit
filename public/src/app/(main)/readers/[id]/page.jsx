@@ -5,19 +5,25 @@ import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import { FollowButton } from "@/components/FollowButton";
 import ReviewCard from "@/components/ReviewCard";
+import TitleTransliterated from "@/components/TitleTransliterated";
+import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const profile = await getUserProfile(id);
+  const lang = await getLang();
   return profile
     ? { title: `${profile.user.name} — Reader Profile`, robots: { index: false } }
-    : { title: "Reader Not Found", robots: { index: false } };
+    : { title: t(lang)("readerNotFound"), robots: { index: false } };
 }
 
 export default async function ReaderProfilePage({ params }) {
   const { id } = await params;
+  const lang = await getLang();
+  const _ = t(lang);
   const profile = await getUserProfile(id);
   if (!profile) notFound();
   const { user, shelf } = profile;
@@ -32,9 +38,9 @@ export default async function ReaderProfilePage({ params }) {
   const level = levelFor(points);
 
   const GROUPS = [
-    ["bookOpen", "Currently Reading", reading],
-    ["check", "Read", read],
-    ["bookmark", "Want to Read", shelf.filter((s) => s.status === "want")],
+    ["bookOpen", _("currentlyReadingLabel"), reading],
+    ["check", _("readHeadingLabel"), read],
+    ["bookmark", _("wantToReadLabel"), shelf.filter((s) => s.status === "want")],
   ];
 
   return (
@@ -50,15 +56,15 @@ export default async function ReaderProfilePage({ params }) {
         )}
         <div className="text-center sm:text-left">
           <h1 className="text-2xl font-bold">{user.name}</h1>
-          <p className="text-muted text-sm">Reader since {user.created_at?.slice(0, 10)}</p>
+          <p className="text-muted text-sm">{_("readerSince", { date: user.created_at?.slice(0, 10) })}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
             <span className="pill"><Icon name={level.icon} size={13} /> {level.name}</span>
-            <span className="pill"><Icon name="zap" size={13} /> {points} pts</span>
-            <span className="pill"><Icon name="check" size={13} /> {read.length} read</span>
-            <span className="pill"><Icon name="feather" size={13} /> {reviews.length} reviews</span>
+            <span className="pill"><Icon name="zap" size={13} /> {_("ptsSuffix", { n: points })}</span>
+            <span className="pill"><Icon name="check" size={13} /> {_("readCountLabel", { n: read.length })}</span>
+            <span className="pill"><Icon name="feather" size={13} /> {_("reviewsCountLabel", { n: reviews.length })}</span>
           </div>
           <div className="mt-4 flex justify-center sm:justify-start">
-            <FollowButton type="reader" id={user.id} label="Follow" />
+            <FollowButton type="reader" id={user.id} label={_("followLabel")} />
           </div>
         </div>
       </div>
@@ -66,7 +72,7 @@ export default async function ReaderProfilePage({ params }) {
       {unlockedAchievements.length > 0 && (
         <div>
           <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-            <Icon name="award" size={18} className="text-brand-600" /> Achievements <span className="text-muted text-sm font-normal">({unlockedAchievements.length})</span>
+            <Icon name="award" size={18} className="text-brand-600" /> {_("achievementsLabel")} <span className="text-muted text-sm font-normal">({unlockedAchievements.length})</span>
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {unlockedAchievements.map((a) => (
@@ -81,7 +87,7 @@ export default async function ReaderProfilePage({ params }) {
       {reviews.length > 0 && (
         <div>
           <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-            <Icon name="feather" size={18} className="text-brand-600" /> Reviews <span className="text-muted text-sm font-normal">({reviews.length})</span>
+            <Icon name="feather" size={18} className="text-brand-600" /> {_("reviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span>
           </h2>
           <div className="mt-4 space-y-4">
             {reviews.map((s) => (
@@ -92,6 +98,7 @@ export default async function ReaderProfilePage({ params }) {
                 spoiler={s.spoiler}
                 updatedAt={s.updated_at}
                 book={{ slug: s.book_slug, title: s.title || s.book_slug }}
+                spoilerLabel={_("spoilerClickToReveal")}
               />
             ))}
           </div>
@@ -101,14 +108,14 @@ export default async function ReaderProfilePage({ params }) {
       {quotes.length > 0 && (
         <div>
           <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-            <Icon name="feather" size={18} className="text-brand-600" /> Favorite Quotes
+            <Icon name="feather" size={18} className="text-brand-600" /> {_("favoriteQuotesLabel")}
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {quotes.map((q) => (
               <Link key={q.id} href={`/books/${encodeURIComponent(q.book_slug)}`}
                 className="card !border-brand-500/20 bg-brand-600/5 p-4 hover:!translate-y-0">
                 <p className="whitespace-pre-line text-sm italic leading-relaxed">"{q.text}"</p>
-                <p className="text-muted mt-2 text-xs">— {q.title || q.book_slug}{q.page ? `, p. ${q.page}` : ""}</p>
+                <p className="text-muted mt-2 text-xs">— <TitleTransliterated text={q.title || q.book_slug} />{q.page ? _("quotePageAbbrev", { page: q.page }) : ""}</p>
               </Link>
             ))}
           </div>
@@ -129,7 +136,7 @@ export default async function ReaderProfilePage({ params }) {
                       imgClassName="transition group-hover:scale-105" />
                   </div>
                   <div className="p-2.5">
-                    <p className="line-clamp-1 text-xs font-semibold">{s.title || s.book_slug}</p>
+                    <p className="line-clamp-1 text-xs font-semibold"><TitleTransliterated text={s.title || s.book_slug} /></p>
                     {s.rating && <p className="text-[10px] text-amber-400">{"★".repeat(s.rating)}</p>}
                   </div>
                 </Link>
@@ -139,7 +146,7 @@ export default async function ReaderProfilePage({ params }) {
         ) : null
       )}
 
-      {!shelf.length && <p className="text-muted mt-16 text-center">This reader's shelf is empty so far.</p>}
+      {!shelf.length && <p className="text-muted mt-16 text-center">{_("emptyShelfMessage")}</p>}
     </div>
   );
 }

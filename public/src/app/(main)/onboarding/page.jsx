@@ -7,6 +7,7 @@ import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import Logo from "@/components/Logo";
+import TitleTransliterated from "@/components/TitleTransliterated";
 
 const STEPS = ["Genres", "Reading Goal", "Authors", "Rate Books", "Done"];
 const RATE_TARGET = 5;
@@ -341,7 +342,7 @@ export default function OnboardingPage() {
                           {a.name?.[0]}
                         </span>
                       )}
-                      <span className="line-clamp-1 text-sm font-semibold">{a.name}</span>
+                      <span className="line-clamp-1 text-sm font-semibold"><TitleTransliterated text={a.name} /></span>
                       <span className={`pill !px-3 !py-1 !text-[11px] ${following ? "!bg-brand-600 !text-white" : ""}`}>
                         {following ? <><Icon name="check" size={11} /> Following</> : "Follow"}
                       </span>
@@ -397,8 +398,8 @@ export default function OnboardingPage() {
                   <div className="aspect-[2/3] overflow-hidden rounded-lg bg-black/5">
                     <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
                   </div>
-                  <p className="mt-2 line-clamp-1 text-xs font-semibold">{b.title}</p>
-                  <p className="text-muted line-clamp-1 text-[11px]">{b.author}</p>
+                  <p className="mt-2 line-clamp-1 text-xs font-semibold"><TitleTransliterated text={b.title} /></p>
+                  <p className="text-muted line-clamp-1 text-[11px]"><TitleTransliterated text={b.author} /></p>
                   <div className="mt-1.5 flex items-center justify-center gap-0.5">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button key={n} onClick={() => rate(b, n)} aria-label={`Rate ${n} stars`}
@@ -460,7 +461,7 @@ export default function OnboardingPage() {
                       <div className="aspect-[2/3] overflow-hidden bg-black/5">
                         <BookCover title={b.title} author={b.author} cover_url={b.cover_url} imgClassName="transition group-hover:scale-105" />
                       </div>
-                      <p className="line-clamp-1 p-2 text-xs font-semibold">{b.title}</p>
+                      <p className="line-clamp-1 p-2 text-xs font-semibold"><TitleTransliterated text={b.title} /></p>
                     </Link>
                   ))}
                 </div>

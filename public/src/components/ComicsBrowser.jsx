@@ -7,16 +7,18 @@ import BookCover from "./BookCover";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
 import EmptyState from "./EmptyState";
+import TitleTransliterated from "./TitleTransliterated";
 import { t } from "@/lib/i18n";
 
-const SORTS = [
-  { value: "title", label: "Title A–Z" },
-  { value: "rating", label: "Highest Rated" },
-  { value: "recent", label: "Recently Added" },
+const sortsOf = (tr) => [
+  { value: "title", label: tr("sortTitleAZ") },
+  { value: "rating", label: tr("sortHighestRated") },
+  { value: "recent", label: tr("sortRecentlyAdded") },
 ];
 
 export default function ComicsBrowser({ comics, lang }) {
   const tr = t(lang);
+  const SORTS = sortsOf(tr);
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("title");
@@ -45,15 +47,15 @@ export default function ComicsBrowser({ comics, lang }) {
     <div className="mx-auto max-w-7xl px-4 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Comics</h1>
-          <p className="text-muted mt-1 text-sm">{filtered.length} of {comics.length} comics</p>
+          <h1 className="text-3xl font-bold">{tr("comics")}</h1>
+          <p className="text-muted mt-1 text-sm">{tr("filteredOfTotalComics", { filtered: filtered.length, total: comics.length })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full sm:w-64">
             <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Search comics or publishers…" className="input !py-2 !pl-9 text-sm"
+              placeholder={tr("searchComicsOrPublishers")} className="input !py-2 !pl-9 text-sm"
             />
           </div>
           <SortDropdown value={sort} options={SORTS} onChange={setSort} />
@@ -70,7 +72,7 @@ export default function ComicsBrowser({ comics, lang }) {
           ))}
           {category && (
             <button onClick={() => setCategory("")} className="pill group whitespace-nowrap">
-              Clear <Icon name="x" size={11} className="ml-1.5 opacity-60 group-hover:opacity-100" />
+              {tr("searchClear")} <Icon name="x" size={11} className="ml-1.5 opacity-60 group-hover:opacity-100" />
             </button>
           )}
         </div>
@@ -89,8 +91,8 @@ export default function ComicsBrowser({ comics, lang }) {
               )}
             </div>
             <div className="p-4">
-              <h2 className="line-clamp-1 font-semibold group-hover:text-brand-600">{c.title}</h2>
-              <p className="text-muted line-clamp-1 text-sm">{c.publisher}</p>
+              <h2 className="line-clamp-1 font-semibold group-hover:text-brand-600"><TitleTransliterated text={c.title} /></h2>
+              <p className="text-muted line-clamp-1 text-sm"><TitleTransliterated text={c.publisher} /></p>
               <div className="mt-2"><Rating value={c.rating} /></div>
             </div>
           </Link>

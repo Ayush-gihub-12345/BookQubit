@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BookCard from "./BookCard";
 import BookCover from "./BookCover";
+import TitleTransliterated from "./TitleTransliterated";
 import Rating from "./Rating";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
@@ -18,13 +19,23 @@ const LOCAL_CACHE_MS = 5 * 60 * 1000;
 
 const PER_PAGE = 20;
 
-const SORTS = [
-  ["", "Relevance"],
-  ["rating", "Top Rated"],
-  ["new", "Newest"],
-  ["title", "Title A–Z"],
+// Sort/rating labels depend on the active language, so these build off the
+// per-render `tr` translator instead of being a fixed module-level array.
+// FORMATS is intentionally left untranslated — "Paperback"/"Hardcover"/
+// "EBook" are catalog data values (the same strings stored on book.format
+// and shown as-is on the book detail page), so translating just the filter
+// label here would make it inconsistent with the value it filters by.
+const sortsOf = (tr) => [
+  ["", tr("sortRelevance")],
+  ["rating", tr("topRated")],
+  ["new", tr("sortNewest")],
+  ["title", tr("sortTitleAZ")],
 ];
-const RATINGS = [["4.5", "4.5 & up"], ["4", "4.0 & up"], ["3", "3.0 & up"]];
+const ratingsOf = (tr) => [
+  ["4.5", tr("ratingAndUp", { rating: "4.5" })],
+  ["4", tr("ratingAndUp", { rating: "4.0" })],
+  ["3", tr("ratingAndUp", { rating: "3.0" })],
+];
 const FORMATS = ["Paperback", "Hardcover", "EBook"];
 
 // Instant, client-side catalog browser: filter/sort clicks apply immediately
@@ -33,6 +44,8 @@ const FORMATS = ["Paperback", "Hardcover", "EBook"];
 // list, so changing a filter never silently pulls hundreds of rows at once.
 export default function BooksBrowser({ lang, initialParams, initialData, facets }) {
   const tr = t(lang);
+  const SORTS = sortsOf(tr);
+  const RATINGS = ratingsOf(tr);
   const { page: _ignoredPage, ...initialFilters } = initialParams;
   const [params, setParams] = useState(initialFilters);
   const [books, setBooks] = useState(initialData.books);
@@ -128,22 +141,22 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <nav className="text-muted text-xs">
-        <Link href="/" className="hover:text-brand-600">Home</Link>
+        <Link href="/" className="hover:text-brand-600">{tr("homeWord")}</Link>
         <span className="mx-1.5">/</span>
-        <span>Books</span>
+        <span>{tr("books")}</span>
         {category && (<><span className="mx-1.5">/</span><span className="text-brand-600">{category}</span></>)}
       </nav>
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {q ? `Results for “${q}”` : category || collection || (tag && `#${tag}`) || "All Books"}
+            {q ? tr("resultsForQuery", { query: q }) : category || collection || (tag && `#${tag}`) || tr("allBooksHeading")}
           </h1>
           <p className="text-muted mt-1 text-sm">
             {hasMore
-              ? `Showing ${books.length} of many`
-              : `${books.length} ${books.length === 1 ? "book" : "books"}`}
-            {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-600"><span className="spinner" /> updating</span>}
+              ? tr("showingOfMany", { count: books.length })
+              : `${books.length} ${books.length === 1 ? tr("bookWord") : tr("booksWord")}`}
+            {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-600"><span className="spinner" /> {tr("updating")}</span>}
           </p>
         </div>
 
@@ -151,7 +164,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           <div className="relative w-52">
             <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
             <input value={searchInput} onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search this list…" className="input !py-2 !pl-9 text-sm" />
+              placeholder={tr("searchThisList")} className="input !py-2 !pl-9 text-sm" />
           </div>
           <div className="border-line bg-surface hidden rounded-xl border p-1 text-xs font-semibold sm:flex">
             {SORTS.map(([v, label]) => (
@@ -162,11 +175,11 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             ))}
           </div>
           <div className="border-line bg-surface flex rounded-xl border p-1">
-            <button onClick={() => apply({ view: undefined })} aria-label="Grid view"
+            <button onClick={() => apply({ view: undefined })} aria-label={tr("gridView")}
               className={`rounded-lg px-2.5 py-1.5 ${!isList ? "bg-brand-600 text-white" : "text-muted hover:text-brand-600"}`}>
               <Icon name="grid" size={14} />
             </button>
-            <button onClick={() => apply({ view: "list" })} aria-label="List view"
+            <button onClick={() => apply({ view: "list" })} aria-label={tr("listView")}
               className={`rounded-lg px-2.5 py-1.5 ${isList ? "bg-brand-600 text-white" : "text-muted hover:text-brand-600"}`}>
               <Icon name="menu" size={14} />
             </button>
@@ -192,7 +205,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             </button>
           ))}
           <button onClick={() => { setSearchInput(""); setParams({}); }} className="text-xs font-semibold text-brand-600 hover:underline">
-            Clear all
+            {tr("clearAll")}
           </button>
         </div>
       )}
@@ -209,7 +222,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
       <div className="mt-6 grid gap-8 lg:grid-cols-[240px_1fr]">
         <aside className="hidden space-y-7 lg:block">
           <div>
-            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Categories</p>
+            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("categories")}</p>
             <ul className="space-y-1">
               {facets.categories.map((c) => (
                 <li key={c.name}>
@@ -223,7 +236,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </div>
 
           <div>
-            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Rating</p>
+            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("ratingLabel")}</p>
             <ul className="space-y-1">
               {RATINGS.map(([v, label]) => (
                 <li key={v}>
@@ -237,7 +250,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </div>
 
           <div>
-            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Format</p>
+            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("formatLabel")}</p>
             <ul className="space-y-1">
               {FORMATS.map((fmt) => (
                 <li key={fmt}>
@@ -251,7 +264,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
           {facets.moods?.length > 0 && (
             <div>
-              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Mood</p>
+              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("moodLabel")}</p>
               <ul className="space-y-1">
                 {facets.moods.slice(0, 8).map((m) => (
                   <li key={m.name}>
@@ -267,7 +280,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
           {facets.collections.length > 0 && (
             <div>
-              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">Collections</p>
+              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("collections")}</p>
               <ul className="space-y-1">
                 {facets.collections.slice(0, 8).map((c) => (
                   <li key={c.name}>
@@ -286,7 +299,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           {books.length === 0 ? (
             <EmptyState title={tr("noResults")} subtitle={tr("noResultsTryAdjusting")}>
               <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">{tr("searchClear")}</button>
-              <Link href="/request-a-book" className="btn-ghost inline-flex">Can't find it? Request it</Link>
+              <Link href="/request-a-book" className="btn-ghost inline-flex">{tr("cantFindRequestIt")}</Link>
             </EmptyState>
           ) : isList ? (
             <div className="space-y-4">
@@ -297,8 +310,8 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
                     <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-bold hover:text-brand-600">{b.title}</h2>
-                    <p className="text-muted text-sm">{b.author}</p>
+                    <h2 className="font-bold hover:text-brand-600"><TitleTransliterated text={b.title} /></h2>
+                    <p className="text-muted text-sm"><TitleTransliterated text={b.author} /></p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
                       <Rating value={b.rating} />
                       {b.category && <span className="pill !text-[10px]">{b.category}</span>}
@@ -320,9 +333,9 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             <div className="mt-10 flex flex-col items-center gap-2">
               <button onClick={loadMore} disabled={loadingMore} className="btn-primary !px-8">
                 {loadingMore ? <span className="spinner" /> : <Icon name="chevronDown" size={14} />}
-                {loadingMore ? "Loading…" : "Load More"}
+                {loadingMore ? tr("loading") : tr("loadMore")}
               </button>
-              <p className="text-muted text-xs">{books.length} loaded</p>
+              <p className="text-muted text-xs">{tr("loadedCount", { count: books.length })}</p>
             </div>
           )}
         </div>

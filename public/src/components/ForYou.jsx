@@ -6,6 +6,8 @@ import { getFirebaseAuth } from "@/lib/firebase";
 import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
+import TitleTransliterated from "./TitleTransliterated";
+import { t } from "@/lib/i18n";
 
 // Real personalization: the heavy lifting (scoring against the reader's
 // full shelf history + onboarding genre picks, not just one random "seed"
@@ -19,6 +21,7 @@ import Icon from "./Icon";
 // mislabeling it would be a small but real trust cost on exactly the section
 // meant to build trust in the platform's recommendations.
 export default function ForYou({ lang, fallbackBooks = [] }) {
+  const tr = t(lang);
   const [data, setData] = useState(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
 
@@ -48,11 +51,11 @@ export default function ForYou({ lang, fallbackBooks = [] }) {
       <div className="mb-4 flex items-center gap-2">
         <Icon name="compass" size={18} className="text-brand-600" />
         <div>
-          <h2 className="text-2xl font-bold">{personalized ? "Picked for you" : "Popular right now"}</h2>
+          <h2 className="text-2xl font-bold">{personalized ? tr("pickedForYou") : tr("popularRightNow")}</h2>
           <p className="text-muted mt-0.5 text-sm">
             {personalized
-              ? (data.basis ? <>Based on your reading history in <span className="font-medium text-brand-600">{data.basis}</span> and more</> : "Based on your reading history")
-              : "Highly-rated books other readers are enjoying"}
+              ? (data.basis ? <>{tr("basedOnReadingHistoryIn")} <span className="font-medium text-brand-600">{data.basis}</span> {tr("andMore")}</> : tr("basedOnReadingHistory"))
+              : tr("highlyRatedEnjoying")}
           </p>
         </div>
       </div>
@@ -64,8 +67,8 @@ export default function ForYou({ lang, fallbackBooks = [] }) {
                 imgClassName="transition duration-500 group-hover:scale-105" />
             </div>
             <div className="p-3">
-              <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600">{b.title}</p>
-              <p className="text-muted line-clamp-1 text-xs">{b.author}</p>
+              <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
+              <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={b.author} /></p>
               <div className="mt-1"><Rating value={b.rating} /></div>
               {b.reason && <p className="text-muted mt-1.5 line-clamp-1 text-[11px] italic">{b.reason}</p>}
             </div>
