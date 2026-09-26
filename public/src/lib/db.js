@@ -554,7 +554,7 @@ export async function getCatalogDb() {
 // deploy. A version bump makes every old entry unreachable instantly across
 // all three tiers, instead of relying on remembering to pick a brand-new key
 // string by hand every time a function here changes its return shape.
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 
 // How long an entry is physically retained beyond its logical TTL, to be
 // available as a stale-while-revalidate fallback. A day means a query that
