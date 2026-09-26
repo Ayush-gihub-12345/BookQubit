@@ -41,7 +41,7 @@ export default function AdminReviewsPage() {
               <div className="text-sm">
                 <span className="font-semibold text-white">{r.name}</span>
                 <span className="text-muted"> on </span>
-                <Link href={`/books/${encodeURIComponent(r.book_slug)}`} target="_blank" className="text-brand-400 hover:underline">{r.title || r.book_slug}</Link>
+                <Link href={`/en/books/${encodeURIComponent(r.book_slug)}`} target="_blank" className="text-brand-400 hover:underline">{r.title || r.book_slug}</Link>
                 {r.rating && <span className="ml-2 text-amber-400">{"★".repeat(r.rating)}</span>}
                 {r.spoiler ? <span className="ml-2 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] text-red-400">SPOILER</span> : null}
               </div>

@@ -19,6 +19,7 @@ export default async function Footer({ lang = "en" }) {
     getSiteSettings().catch(() => ({})),
   ]);
   const socialLinks = SOCIALS.filter(([key]) => settings[key]);
+  const withLang = (href) => `/${lang}${href}`;
 
   return (
     <footer className="border-line bg-surface mt-16 border-t">
@@ -67,32 +68,32 @@ export default async function Footer({ lang = "en" }) {
         <div>
           <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerExplore")}</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/books" prefetch={false} className="hover:text-brand-600">{_("browse")}</Link></li>
-            <li><Link href="/books?sort=rating" prefetch={false} className="hover:text-brand-600">{_("topRated")}</Link></li>
-            <li><Link href="/books?sort=new" prefetch={false} className="hover:text-brand-600">{_("newReleases")}</Link></li>
-            <li><Link href="/collections" prefetch={false} className="hover:text-brand-600">{_("collections")}</Link></li>
-            <li><Link href="/tags" prefetch={false} className="hover:text-brand-600">{_("tags")}</Link></li>
+            <li><Link href={withLang("/books")} prefetch={false} className="hover:text-brand-600">{_("browse")}</Link></li>
+            <li><Link href={withLang("/books?sort=rating")} prefetch={false} className="hover:text-brand-600">{_("topRated")}</Link></li>
+            <li><Link href={withLang("/books?sort=new")} prefetch={false} className="hover:text-brand-600">{_("newReleases")}</Link></li>
+            <li><Link href={withLang("/collections")} prefetch={false} className="hover:text-brand-600">{_("collections")}</Link></li>
+            <li><Link href={withLang("/tags")} prefetch={false} className="hover:text-brand-600">{_("tags")}</Link></li>
           </ul>
         </div>
 
         <div>
           <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerBrowse")}</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/authors" prefetch={false} className="hover:text-brand-600">{_("authors")}</Link></li>
-            <li><Link href="/publications" prefetch={false} className="hover:text-brand-600">{_("publishers")}</Link></li>
-            <li><Link href="/comics" prefetch={false} className="hover:text-brand-600">{_("comics")}</Link></li>
-            <li><Link href="/community" prefetch={false} className="hover:text-brand-600">{_("communityTitle")}</Link></li>
-            <li><Link href="/leaderboard" prefetch={false} className="hover:text-brand-600">{_("navBookwormRanking")}</Link></li>
+            <li><Link href={withLang("/authors")} prefetch={false} className="hover:text-brand-600">{_("authors")}</Link></li>
+            <li><Link href={withLang("/publications")} prefetch={false} className="hover:text-brand-600">{_("publishers")}</Link></li>
+            <li><Link href={withLang("/comics")} prefetch={false} className="hover:text-brand-600">{_("comics")}</Link></li>
+            <li><Link href={withLang("/community")} prefetch={false} className="hover:text-brand-600">{_("communityTitle")}</Link></li>
+            <li><Link href={withLang("/leaderboard")} prefetch={false} className="hover:text-brand-600">{_("navBookwormRanking")}</Link></li>
           </ul>
         </div>
 
         <div>
           <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerCompany")}</p>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/about" prefetch={false} className="hover:text-brand-600">{_("footerAbout")}</Link></li>
-            <li><Link href="/contact" prefetch={false} className="hover:text-brand-600">{_("footerContact")}</Link></li>
-            <li><Link href="/privacy" prefetch={false} className="hover:text-brand-600">{_("footerPrivacy")}</Link></li>
-            <li><Link href="/terms" prefetch={false} className="hover:text-brand-600">{_("footerTerms")}</Link></li>
+            <li><Link href={withLang("/about")} prefetch={false} className="hover:text-brand-600">{_("footerAbout")}</Link></li>
+            <li><Link href={withLang("/contact")} prefetch={false} className="hover:text-brand-600">{_("footerContact")}</Link></li>
+            <li><Link href={withLang("/privacy")} prefetch={false} className="hover:text-brand-600">{_("footerPrivacy")}</Link></li>
+            <li><Link href={withLang("/terms")} prefetch={false} className="hover:text-brand-600">{_("footerTerms")}</Link></li>
           </ul>
         </div>
       </div>

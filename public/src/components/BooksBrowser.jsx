@@ -64,6 +64,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   const reqId = useRef(0);
 
   const apply = (patch) => setParams((prev) => ({ ...prev, ...patch }));
+  const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
 
   // Filter/sort change -> reset to page 1 and replace the list
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
       setPage(1);
       setLoading(false);
       const url = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v)));
-      window.history.replaceState(null, "", `/books${url.size ? `?${url}` : ""}`);
+      window.history.replaceState(null, "", `/${lang}/books${url.size ? `?${url}` : ""}`);
     };
     const cacheKey = `books:${qs.toString()}`;
     const cachedResult = readLocalCache(cacheKey, LOCAL_CACHE_MS);
@@ -142,7 +143,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <nav className="text-muted text-xs">
-        <Link href="/" className="hover:text-brand-600">{tr("homeWord")}</Link>
+        <Link href={withLang("/")} className="hover:text-brand-600">{tr("homeWord")}</Link>
         <span className="mx-1.5">/</span>
         <span>{tr("books")}</span>
         {category && (<><span className="mx-1.5">/</span><span className="text-brand-600">{category}</span></>)}
@@ -300,12 +301,12 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           {books.length === 0 ? (
             <EmptyState title={tr("noResults")} subtitle={tr("noResultsTryAdjusting")}>
               <button onClick={() => { setSearchInput(""); setParams({}); }} className="btn-primary inline-flex">{tr("searchClear")}</button>
-              <Link href="/request-a-book" className="btn-ghost inline-flex">{tr("cantFindRequestIt")}</Link>
+              <Link href={withLang("/request-a-book")} className="btn-ghost inline-flex">{tr("cantFindRequestIt")}</Link>
             </EmptyState>
           ) : isList ? (
             <div className="space-y-4">
               {books.map((b) => (
-                <Link key={b.id} href={`/books/${encodeURIComponent(b.slug)}`}
+                <Link key={b.id} href={`/${lang}/books/${encodeURIComponent(b.slug)}`}
                   className="card flex gap-5 p-4 hover:!translate-y-0">
                   <div className="h-36 w-24 shrink-0 overflow-hidden rounded-lg shadow">
                     <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />

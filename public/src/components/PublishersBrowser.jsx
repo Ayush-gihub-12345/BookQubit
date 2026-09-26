@@ -113,7 +113,7 @@ export default function PublishersBrowser({ lang, initialPublications, initialHa
       ) : (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {publications.map((p) => (
-            <Link key={p.id} href={`/publications/${p.slug}`} prefetch={false} className="card p-5">
+            <Link key={p.id} href={`/${lang}/publications/${p.slug}`} prefetch={false} className="card p-5">
               <div className="flex items-center gap-4">
                 {p.logo_url && (
                   // eslint-disable-next-line @next/next/no-img-element

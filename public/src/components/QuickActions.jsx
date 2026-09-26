@@ -23,7 +23,8 @@ const gridPillActive = `${gridPill} border-brand-600 bg-brand-600 text-white`;
 // full status + rating + review workflow — these are just quick shortcuts
 // into the same shelf API.
 export default function QuickActions({ book }) {
-  const tr = t(useLang());
+  const lang = useLang();
+  const tr = t(lang);
   const [user, setUser] = useState(null);
   const [wishlisted, setWishlisted] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -67,7 +68,7 @@ export default function QuickActions({ book }) {
   };
 
   const toggleLike = async () => {
-    if (!user) { router.push("/login"); return; }
+    if (!user) { router.push(`/${lang}/login`); return; }
     const next = !liked;
     setLiked(next);
     setLikeCount((c) => (c ?? 0) + (next ? 1 : -1));
@@ -91,7 +92,7 @@ export default function QuickActions({ book }) {
   // Clicking an already-active status un-shelves the book entirely (real
   // toggle, persisted to D1 via DELETE); clicking a different status sets it.
   const setShelfStatus = async (next) => {
-    if (!user) { router.push("/login"); return; }
+    if (!user) { router.push(`/${lang}/login`); return; }
     setBusy(true);
     const removing = status === next;
     setStatus(removing ? null : next);

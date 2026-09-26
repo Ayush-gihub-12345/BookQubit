@@ -11,7 +11,8 @@ import { t } from "@/lib/i18n";
 // Editable shelf card for the dashboard: change status, track reading
 // progress, and rate — all inline, no need to open the book page.
 export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
-  const tr = t(useLang());
+  const lang = useLang();
+  const tr = t(lang);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const s = entry;
@@ -36,7 +37,7 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
 
   return (
     <div className="card overflow-hidden">
-      <Link href={`/books/${encodeURIComponent(s.book_slug)}`} className="group block">
+      <Link href={`/${lang}/books/${encodeURIComponent(s.book_slug)}`} className="group block">
         <div className="relative aspect-[2/3] overflow-hidden bg-black/5">
           <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url}
             imgClassName="transition group-hover:scale-105" />

@@ -29,7 +29,8 @@ export function TrackView({ book }) {
 
 // Homepage strip of recently viewed books.
 export default function RecentlyViewed() {
-  const tr = t(useLang());
+  const lang = useLang();
+  const tr = t(lang);
   const [items, setItems] = useState([]);
   useEffect(() => { setItems(read()); }, []);
   if (items.length < 2) return null;
@@ -42,7 +43,7 @@ export default function RecentlyViewed() {
       </div>
       <HScrollRow>
         {items.map((b) => (
-          <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group w-36 overflow-hidden sm:w-40">
+          <Link key={b.slug} href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="card group w-36 overflow-hidden sm:w-40">
             <div className="aspect-[2/3] overflow-hidden">
               <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
                 imgClassName="transition duration-500 group-hover:scale-105" />

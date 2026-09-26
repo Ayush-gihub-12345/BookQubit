@@ -1,34 +1,19 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
-export const LANGUAGES = [
-  { code: "en", name: "English" },
-  // Popular Indian languages
-  { code: "hi", name: "हिंदी" },
-  { code: "bn", name: "বাংলা" },
-  { code: "te", name: "తెలుగు" },
-  { code: "mr", name: "मराठी" },
-  { code: "ta", name: "தமிழ்" },
-  { code: "gu", name: "ગુજરાતી" },
-  { code: "kn", name: "ಕನ್ನಡ" },
-  { code: "ml", name: "മലയാളം" },
-  { code: "pa", name: "ਪੰਜਾਬੀ" },
-  { code: "ur", name: "اردو" },
-  // Popular world languages
-  { code: "es", name: "Español" },
-  { code: "fr", name: "Français" },
-  { code: "de", name: "Deutsch" },
-  { code: "pt", name: "Português" },
-  { code: "it", name: "Italiano" },
-  { code: "ru", name: "Русский" },
-  { code: "zh", name: "中文" },
-  { code: "ja", name: "日本語" },
-  { code: "ko", name: "한국어" },
-  { code: "ar", name: "العربية" },
-];
+export { LANGUAGES, RTL } from "./languages";
+import { LANGUAGES } from "./languages";
 
-export const RTL = ["ur", "ar", "fa", "ps"];
-
+// middleware.js resolves the language from the URL's /xx/ segment and hands
+// it to this same request via the `x-bq-lang` header — reading the header
+// (not just the cookie it also sets) matters because a middleware-set cookie
+// only becomes visible on the *next* request; without this, the very
+// request that changed language would still render with the old cookie
+// value. The cookie stays as a fallback for anything that calls getLang()
+// outside middleware's matcher.
 export async function getLang() {
+  const h = await headers();
+  const fromHeader = h.get("x-bq-lang");
+  if (LANGUAGES.some((l) => l.code === fromHeader)) return fromHeader;
   const store = await cookies();
   const code = store.get("lang")?.value;
   return LANGUAGES.some((l) => l.code === code) ? code : "en";

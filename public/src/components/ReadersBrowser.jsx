@@ -55,7 +55,7 @@ export default function ReadersBrowser({ topReaders, popularReaders, lang }) {
           {filtered.map((r, i) => (
             <li key={r.id}>
               <div className="card flex items-center gap-4 p-4 hover:!translate-y-0">
-                <Link href={`/readers/${r.slug || r.id}`} className="flex min-w-0 flex-1 items-center gap-4">
+                <Link href={`/${lang}/readers/${r.slug || r.id}`} className="flex min-w-0 flex-1 items-center gap-4">
                   <span className={`flex w-9 shrink-0 items-center justify-center text-lg font-bold ${i < 3 ? MEDAL_STYLE[i] : "text-muted"}`}>
                     {i < 3 ? <Icon name="award" size={22} /> : `#${i + 1}`}
                   </span>

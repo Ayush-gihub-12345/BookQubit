@@ -15,7 +15,8 @@ const PACES = ["🐢 slow", "🚶 medium", "⚡ fast"];
 // page — publishing a review here just makes sure the book is on the shelf
 // (defaults to "read" if it isn't shelved yet at all).
 export default function ShelfControls({ slug }) {
-  const tr = t(useLang());
+  const lang = useLang();
+  const tr = t(lang);
   const toast = useToast();
   const [user, setUser] = useState(null);
   const [entry, setEntry] = useState(null);
@@ -45,7 +46,7 @@ export default function ShelfControls({ slug }) {
 
   if (!user) {
     return (
-      <Link href="/login" className="btn-ghost w-full text-sm">
+      <Link href={`/${lang}/login`} className="btn-ghost w-full text-sm">
         {tr("signInToWriteReview")}
       </Link>
     );

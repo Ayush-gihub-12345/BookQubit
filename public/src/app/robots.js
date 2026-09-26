@@ -1,8 +1,10 @@
 import { SITE_URL } from "@/lib/site";
 const BASE = SITE_URL;
 
-// Private/auth-only areas — never useful in a search index.
-const PRIVATE = ["/account", "/login", "/admin", "/liked"];
+// Private/auth-only areas — never useful in a search index. `/*/` matches
+// any single language segment (public pages all live under /en/, /hi/,
+// etc. now) — `/admin` is unprefixed by design and stays a literal path.
+const PRIVATE = ["/*/account", "/*/login", "/admin", "/*/liked"];
 
 // Commercial SEO-analytics crawlers (backlink/keyword databases). These are
 // NOT search engines — blocking them costs zero Google/Bing ranking, they
@@ -47,7 +49,7 @@ const SEO_CRAWLERS = [
 // publisher and comic already has its own canonical URL listed individually
 // in sitemap.xml, so search engines reach all the real content directly
 // without needing to crawl filter permutations to find it.
-const FACETED = ["/books?*", "/comics?*", "/authors?*", "/publications?*", "/collections?*"];
+const FACETED = ["/*/books?*", "/*/comics?*", "/*/authors?*", "/*/publications?*", "/*/collections?*"];
 
 // Deliberate, temporary policy: organic crawling is limited to book pages
 // for now. The core hub pages (/, /books, /about, etc.) are being submitted
@@ -62,7 +64,7 @@ const FACETED = ["/books?*", "/comics?*", "/authors?*", "/publications?*", "/col
 // book pages are unrestricted precisely because that's the content worth
 // showing up in search for.
 const LONG_TAIL_DETAIL_PAGES = [
-  "/authors/*", "/publications/*", "/collections/*", "/comics/*", "/readers/*",
+  "/*/authors/*", "/*/publications/*", "/*/collections/*", "/*/comics/*", "/*/readers/*",
 ];
 
 export default function robots() {

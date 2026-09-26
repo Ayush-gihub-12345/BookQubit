@@ -52,7 +52,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
     try {
       const r = await fetch(`/api/random-book?lang=${lang}`);
       const d = await r.json();
-      if (d.slug) router.push(`/books/${encodeURIComponent(d.slug)}`);
+      if (d.slug) router.push(`/${lang}/books/${encodeURIComponent(d.slug)}`);
     } finally {
       setSurprising(false);
     }
@@ -188,19 +188,34 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
   const setCookie = (name, value) => {
     document.cookie = `${name}=${value};path=/;max-age=31536000`;
-    if (name === "lang") {
-      // A full reload (not router.refresh()) so every part of the site —
-      // not just the current route's server tree — re-renders in the new
-      // language on the very next paint, matching what a returning visit
-      // would look like instead of leaving some already-mounted client
-      // state behind in the old language.
-      window.location.reload();
-      return;
-    }
     router.refresh();
+  };
+  // Language is now a real URL segment (see middleware.js) — switching it
+  // means navigating to the same path with that segment swapped, not just
+  // setting a cookie. A cookie-only switch would silently no-op here:
+  // middleware treats the URL as authoritative and rewrites the `lang`
+  // cookie to match it on every request, so reloading the *same* URL after
+  // setting the cookie would just have middleware immediately overwrite it
+  // back. A full navigation (not router.push) so every part of the site —
+  // not just the current route's server tree — re-renders in the new
+  // language on the very next paint, matching what a returning visit would
+  // look like instead of leaving some already-mounted client state behind
+  // in the old language.
+  const switchLang = (code) => {
+    const parts = pathname.split("/");
+    parts[1] = code;
+    window.location.href = parts.join("/") || `/${code}`;
   };
   const currentTheme = themes.find((t) => t.id === theme) || themes[0];
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
+  // Every href in MENUS/MEGA/etc. below is written unprefixed on purpose —
+  // this one helper adds the current language segment at render time, so
+  // the route data itself doesn't need to duplicate `lang` into every entry.
+  const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
+  // pathname is now lang-prefixed (e.g. "/hi/compare") — strip that segment
+  // back off before comparing against the unprefixed reference paths used
+  // for active-link highlighting below.
+  const relPath = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
 
   return (
     <header ref={headerRef} className="border-line bg-surface/85 relative z-50 border-b shadow-sm backdrop-blur-xl lg:sticky lg:top-0">
@@ -214,7 +229,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             Lighthouse reported as "links do not have a discernible name" on
             mobile only. The label also covers the icon-only rendering for
             screen-reader users on any width. */}
-        <Link href="/" prefetch={false} aria-label="BookQubit — home" className="flex shrink-0 items-center gap-2">
+        <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex shrink-0 items-center gap-2">
           <LogoMark size={36} />
           <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
             Book<span className="text-brand-600">Qubit</span>
@@ -238,7 +253,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         </button>
 
         {/* Notifications */}
-        <Link href="/notifications" prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label={labels.notifications} title={labels.notifications}>
+        <Link href={withLang("/notifications")} prefetch={false} className={`${iconBtn} relative hidden sm:grid`} aria-label={labels.notifications} title={labels.notifications}>
           <Icon name="bell" size={17} />
           {notifCount > 0 && (
             <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[9px] font-bold text-white">
@@ -248,7 +263,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         </Link>
 
         {/* Liked books */}
-        <Link href="/liked" prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label={labels.likedBooks} title={labels.likedBooks}>
+        <Link href={withLang("/liked")} prefetch={false} className={`${iconBtn} hidden sm:grid`} aria-label={labels.likedBooks} title={labels.likedBooks}>
           <Icon name="heart" size={17} />
         </Link>
 
@@ -291,7 +306,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.language}</p>
             <div className="max-h-72 overflow-auto">
               {languages.map((l) => (
-                <button key={l.code} onClick={() => setCookie("lang", l.code)}
+                <button key={l.code} onClick={() => switchLang(l.code)}
                   className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${l.code === lang ? "font-bold text-brand-600" : ""}`}>
                   <span className="text-muted w-7 text-xs font-bold uppercase">{l.code}</span> {l.name}
                   {l.code === lang && <span className="ml-auto text-brand-600">✓</span>}
@@ -315,10 +330,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       <div className="border-line relative hidden border-t lg:block">
         <nav className="mx-auto flex max-w-7xl items-center justify-center px-4">
           {MENUS.map((m) => {
-            const active = m.href === "/" ? pathname === "/" : pathname.startsWith(m.href.split("?")[0]);
+            const active = m.href === "/" ? relPath === "/" : relPath.startsWith(m.href.split("?")[0]);
             return (
               <div key={m.label} className="group relative">
-                <Link href={m.href} prefetch={false}
+                <Link href={withLang(m.href)} prefetch={false}
                   className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${active ? "text-brand-600" : ""}`}>
                   <Icon name={m.icon} size={14} className="opacity-70" /> {m.label}
                   {m.items && <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />}
@@ -328,7 +343,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                   <div className="invisible absolute left-1/2 top-full z-50 w-60 -translate-x-1/2 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                     <div className="bg-surface border-line overflow-hidden rounded-2xl border shadow-2xl">
                       {m.items.map((it) => (
-                        <Link key={it.label} href={it.href} prefetch={false}
+                        <Link key={it.label} href={withLang(it.href)} prefetch={false}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-white/5">
                           <Icon name={it.icon} size={14} className="text-muted" /> {it.label}
                         </Link>
@@ -356,7 +371,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                       <ul className="space-y-1.5">
                         {col.links.map(([label, href]) => (
                           <li key={label}>
-                            <Link href={href} prefetch={false} className="text-muted block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600">
+                            <Link href={withLang(href)} prefetch={false} className="text-muted block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600">
                               {label}
                             </Link>
                           </li>
@@ -369,7 +384,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                     <ul className="max-h-52 space-y-1.5 overflow-auto pr-1">
                       {languages.map((l) => (
                         <li key={l.code}>
-                          <button onClick={() => setCookie("lang", l.code)}
+                          <button onClick={() => switchLang(l.code)}
                             className={`block text-[13px] transition hover:translate-x-0.5 hover:text-brand-600 ${l.code === lang ? "font-bold text-brand-600" : "text-muted"}`}>
                             {l.name}
                           </button>
@@ -379,10 +394,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                   </div>
                 </div>
                 <div className="border-line flex justify-center gap-3 border-t p-4">
-                  <Link href="/categories" prefetch={false} className="btn-primary !py-2 text-sm">
+                  <Link href={withLang("/categories")} prefetch={false} className="btn-primary !py-2 text-sm">
                     Browse All Categories <Icon name="arrowRight" size={14} />
                   </Link>
-                  <Link href="/request-a-book" prefetch={false} className="btn-ghost !py-2 text-sm">
+                  <Link href={withLang("/request-a-book")} prefetch={false} className="btn-ghost !py-2 text-sm">
                     <Icon name="bookmark" size={14} /> Request a Book
                   </Link>
                 </div>
@@ -390,16 +405,16 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             </div>
           </div>
 
-          <Link href="/compare" prefetch={false}
-            className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/compare" || pathname.startsWith("/compare/") ? "text-brand-600" : ""}`}>
+          <Link href={withLang("/compare")} prefetch={false}
+            className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${relPath === "/compare" || relPath.startsWith("/compare/") ? "text-brand-600" : ""}`}>
             <Icon name="layers" size={14} className="opacity-70" /> {tr("compareWord")}
-            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/compare" || pathname.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
+            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${relPath === "/compare" || relPath.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
 
-          <Link href="/about" prefetch={false}
-            className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${pathname === "/about" ? "text-brand-600" : ""}`}>
+          <Link href={withLang("/about")} prefetch={false}
+            className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${relPath === "/about" ? "text-brand-600" : ""}`}>
             <Icon name="shieldCheck" size={14} className="opacity-70" /> {tr("aboutWord")}
-            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${pathname === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
+            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${relPath === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
         </nav>
       </div>
@@ -409,34 +424,34 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         <div className="border-line border-t px-4 py-4 lg:hidden">
           <div className="grid grid-cols-2 gap-2">
             {MENUS.map((m) => (
-              <Link key={m.label} href={m.href} prefetch={false} onClick={() => setOpen(false)}
+              <Link key={m.label} href={withLang(m.href)} prefetch={false} onClick={() => setOpen(false)}
                 className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
                 <Icon name={m.icon} size={15} className="text-muted" /> {m.label}
               </Link>
             ))}
-            <Link href="/notifications" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/notifications")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="bell" size={15} className="text-muted" /> {tr("notificationsWord")} {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
             </Link>
-            <Link href="/liked" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/liked")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="heart" size={15} className="text-muted" /> {tr("likedBooksWord")}
             </Link>
-            <Link href="/compare" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/compare")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="layers" size={15} className="text-muted" /> {tr("compareWord")}
             </Link>
             <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="zap" size={15} className="text-muted" /> {tr("navSurpriseMe")}
             </button>
-            <Link href="/about" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/about")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="shieldCheck" size={15} className="text-muted" /> {tr("aboutWord")}
             </Link>
-            <Link href="/login" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/login")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
             </Link>
           </div>
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("exploreSectionLabel")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[[tr("topRated"), "/books?sort=rating"], [tr("newReleases"), "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], [labels.collections, "/collections"], [labels.tags, "/tags"]].map(([label, href]) => (
-              <Link key={label} href={href} prefetch={false} onClick={() => setOpen(false)} className="pill">{label}</Link>
+              <Link key={label} href={withLang(href)} prefetch={false} onClick={() => setOpen(false)} className="pill">{label}</Link>
             ))}
           </div>
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navTheme")}</p>
@@ -451,7 +466,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navLanguage")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {languages.map((l) => (
-              <button key={l.code} onClick={() => setCookie("lang", l.code)}
+              <button key={l.code} onClick={() => switchLang(l.code)}
                 className={`pill ${l.code === lang ? "!bg-brand-600 !text-white" : ""}`}>
                 {l.name}
               </button>

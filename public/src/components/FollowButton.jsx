@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "./Icon";
+import { useLang } from "@/lib/useLang";
 
 export function FollowButton({ type, id, label = "Follow" }) {
+  const lang = useLang();
   const [user, setUser] = useState(null);
   const [count, setCount] = useState(null);
   const [following, setFollowing] = useState(false);
@@ -42,7 +44,7 @@ export function FollowButton({ type, id, label = "Follow" }) {
 
   if (!user) {
     return (
-      <Link href="/login" className="btn-ghost text-sm">
+      <Link href={`/${lang}/login`} className="btn-ghost text-sm">
         <Icon name="heart" size={15} /> {label}{count ? ` · ${count}` : ""}
       </Link>
     );

@@ -93,7 +93,7 @@ export default function ComparePicker({ lang, suggestions = [] }) {
   const go = () => {
     const slugs = picks.filter(Boolean).map((b) => b.slug);
     if (slugs.length < 2) return;
-    router.push(`/compare/${slugs.join("-vs-")}`);
+    router.push(`/${lang}/compare/${slugs.join("-vs-")}`);
   };
 
   return (

@@ -1,11 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import Rating from "./Rating";
 import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
+import { useLang } from "@/lib/useLang";
 
-export default function BookCard({ book, hrefBase = "/books" }) {
+// `hrefBase` defaults to the current language's /books — derived via
+// useLang() (URL-based, works with zero setup) rather than a hardcoded
+// "/books", so callers that don't explicitly override it (most of them)
+// still link to a correctly language-prefixed book page.
+export default function BookCard({ book, hrefBase }) {
+  const lang = useLang();
+  const base = hrefBase ?? `/${lang}/books`;
   return (
-    <Link href={`${hrefBase}/${encodeURIComponent(book.slug)}`} prefetch={false} className="card group block overflow-hidden">
+    <Link href={`${base}/${encodeURIComponent(book.slug)}`} prefetch={false} className="card group block overflow-hidden">
       <div className="relative aspect-[2/3] overflow-hidden bg-black/5 dark:bg-white/5">
         <BookCover title={book.title} author={book.author} cover_url={book.cover_url}
           imgClassName="transition duration-500 group-hover:scale-105" />

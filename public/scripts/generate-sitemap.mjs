@@ -88,6 +88,15 @@ const url = (loc, { lastmod, changefreq, priority }) =>
 const lastmodOf = (createdAt) =>
   typeof createdAt === "string" && createdAt.length >= 10 ? createdAt.slice(0, 10) : undefined;
 
+// The site now serves every public page under a /xx/ language segment (see
+// middleware.js) — the catalog queries above are still English-only
+// (WHERE lang='en'), so every URL this script emits is prefixed with the
+// English segment to match that content's actual, current canonical
+// location. This does NOT yet emit per-language variants/hreflang: that
+// needs a real decision on whether/how non-English catalog rows get
+// indexed at all, since translation today is client-side only — a
+// deliberate, separate follow-up, not bundled into this routing change.
+const LANG_PREFIX = "/en";
 const CORE = ["", "/books", "/authors", "/publications", "/comics", "/collections", "/categories", "/tags", "/compare"];
 const SECONDARY = ["/community", "/leaderboard", "/about", "/contact", "/privacy", "/terms"];
 
@@ -101,18 +110,18 @@ function main() {
   );
 
   const entries = [
-    ...CORE.map((p) => url(`${BASE}${p}`, { changefreq: "weekly", priority: p === "" ? "1.0" : "0.8" })),
-    ...SECONDARY.map((p) => url(`${BASE}${p}`, { changefreq: "monthly", priority: "0.4" })),
+    ...CORE.map((p) => url(`${BASE}${LANG_PREFIX}${p}`, { changefreq: "weekly", priority: p === "" ? "1.0" : "0.8" })),
+    ...SECONDARY.map((p) => url(`${BASE}${LANG_PREFIX}${p}`, { changefreq: "monthly", priority: "0.4" })),
     ...data.books.map((b) =>
-      url(`${BASE}/books/${b.slug}`, {
+      url(`${BASE}${LANG_PREFIX}/books/${b.slug}`, {
         lastmod: lastmodOf(b.created_at),
         changefreq: "weekly",
         priority: "0.9",
       })
     ),
-    ...data.authors.map((a) => url(`${BASE}/authors/${a.slug}`, { changefreq: "monthly", priority: "0.7" })),
-    ...data.publications.map((p) => url(`${BASE}/publications/${p.slug}`, { changefreq: "monthly", priority: "0.6" })),
-    ...data.comics.map((c) => url(`${BASE}/comics/${c.slug}`, { changefreq: "monthly", priority: "0.7" })),
+    ...data.authors.map((a) => url(`${BASE}${LANG_PREFIX}/authors/${a.slug}`, { changefreq: "monthly", priority: "0.7" })),
+    ...data.publications.map((p) => url(`${BASE}${LANG_PREFIX}/publications/${p.slug}`, { changefreq: "monthly", priority: "0.6" })),
+    ...data.comics.map((c) => url(`${BASE}${LANG_PREFIX}/comics/${c.slug}`, { changefreq: "monthly", priority: "0.7" })),
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

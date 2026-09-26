@@ -99,7 +99,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
     if (label) pushRecent(label);
     setOpen(false); setQ(""); setRes(null); setActive(-1);
     onNavigate?.();
-    router.push(href);
+    router.push(`/${lang}${href}`);
   };
 
   const onKeyDown = (e) => {

@@ -6,8 +6,10 @@ import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
 import Translated from "./Translated";
 import Icon from "./Icon";
+import { useLang } from "@/lib/useLang";
 
 export default function HeroSlider({ books, labels }) {
+  const lang = useLang();
   const [i, setI] = useState(0);
   const n = books.length;
 
@@ -35,7 +37,7 @@ export default function HeroSlider({ books, labels }) {
       )}
 
       <div className="grid items-center gap-8 md:grid-cols-[240px_1fr]">
-        <Link href={`/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
+        <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
           <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
             style={{ animation: "fadeIn .5s ease" }}>
             <BookCover title={b.title} author={b.author} cover_url={b.cover_url} priority />
@@ -45,7 +47,7 @@ export default function HeroSlider({ books, labels }) {
         <div>
           {b.category && <span className="pill">{b.category}</span>}
           <h2 className="mt-3 text-2xl font-extrabold sm:text-4xl">
-            <Link href={`/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600"><TitleTransliterated text={b.title} /></Link>
+            <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600"><TitleTransliterated text={b.title} /></Link>
           </h2>
           <p className="text-muted mt-1">{labels.byWord} <span className="font-medium text-brand-600"><TitleTransliterated text={b.author} /></span></p>
 
@@ -71,7 +73,7 @@ export default function HeroSlider({ books, labels }) {
             {b.buyUrl && (
               <a href={b.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-primary text-sm">🛒 {labels.getBook}</a>
             )}
-            <Link href={`/books/${encodeURIComponent(b.slug)}`} className="btn-ghost text-sm">📄 {labels.summary}</Link>
+            <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="btn-ghost text-sm">📄 {labels.summary}</Link>
           </div>
         </div>
       </div>

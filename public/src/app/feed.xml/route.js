@@ -14,8 +14,8 @@ export async function GET() {
   const items = books.map((b) => `
     <item>
       <title>${escapeXml(b.title)}</title>
-      <link>${BASE}/books/${encodeURIComponent(b.slug)}</link>
-      <guid>${BASE}/books/${encodeURIComponent(b.slug)}</guid>
+      <link>${BASE}/en/books/${encodeURIComponent(b.slug)}</link>
+      <guid>${BASE}/en/books/${encodeURIComponent(b.slug)}</guid>
       <description>${escapeXml(b.description?.slice(0, 300) || `${b.title} by ${b.author || "Unknown"}`)}</description>
       <pubDate>${new Date(b.created_at || Date.now()).toUTCString()}</pubDate>
     </item>`).join("");
@@ -24,7 +24,7 @@ export async function GET() {
 <rss version="2.0">
   <channel>
     <title>BookQubit — New Releases</title>
-    <link>${BASE}</link>
+    <link>${BASE}/en</link>
     <description>Freshly added books on BookQubit — summaries, key insights, and reader reviews.</description>
     <language>en</language>${items}
   </channel>

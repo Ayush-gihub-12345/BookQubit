@@ -1,11 +1,13 @@
 import Link from "next/link";
 import TitleTransliterated from "./TitleTransliterated";
+import { getLang } from "@/lib/lang";
 
 // Extracted from the inline review block that used to live only in
 // books/[slug]/page.jsx. Pass `reviewer` on a book page (who wrote this),
 // `book` on a reader profile (which book this is about) — whichever context
 // the page is already showing doesn't need repeating.
-export default function ReviewCard({ rating, review, spoiler, updatedAt, reviewer, book, spoilerLabel = "⚠ This review contains spoilers — click to reveal" }) {
+export default async function ReviewCard({ rating, review, spoiler, updatedAt, reviewer, book, spoilerLabel = "⚠ This review contains spoilers — click to reveal" }) {
+  const lang = await getLang();
   return (
     <div className="card p-5 hover:!translate-y-0">
       <div className="flex items-center gap-3">
@@ -21,12 +23,12 @@ export default function ReviewCard({ rating, review, spoiler, updatedAt, reviewe
         )}
         <div className="min-w-0 flex-1">
           {reviewer && (
-            <Link href={`/readers/${reviewer.slug || reviewer.user_id}`} className="text-sm font-semibold hover:text-brand-600">
+            <Link href={`/${lang}/readers/${reviewer.slug || reviewer.user_id}`} className="text-sm font-semibold hover:text-brand-600">
               {reviewer.name}
             </Link>
           )}
           {book && (
-            <Link href={`/books/${encodeURIComponent(book.slug)}`} className="line-clamp-1 text-sm font-semibold hover:text-brand-600">
+            <Link href={`/${lang}/books/${encodeURIComponent(book.slug)}`} className="line-clamp-1 text-sm font-semibold hover:text-brand-600">
               <TitleTransliterated text={book.title} />
             </Link>
           )}

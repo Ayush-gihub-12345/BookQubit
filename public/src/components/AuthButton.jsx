@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "./Icon";
+import { useLang } from "@/lib/useLang";
 
 // Beyond the account/sign-out links this dropdown already had, these give
 // quick access to a reader's other saved state without navigating through
@@ -15,6 +16,7 @@ const QUICK_LINKS = [
 ];
 
 export default function AuthButton({ labels }) {
+  const lang = useLang();
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -45,7 +47,7 @@ export default function AuthButton({ labels }) {
 
   if (!user) {
     return (
-      <Link href="/login" className="btn-ghost hidden px-4 py-2 text-sm sm:inline-flex">
+      <Link href={`/${lang}/login`} className="btn-ghost hidden px-4 py-2 text-sm sm:inline-flex">
         {labels.signIn}
       </Link>
     );
@@ -68,12 +70,12 @@ export default function AuthButton({ labels }) {
           <p className="truncate border-b border-line px-4 py-3 text-sm font-medium">
             {user.displayName || user.email}
           </p>
-          <Link href="/account" onClick={() => setOpen(false)}
+          <Link href={`/${lang}/account`} onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5">
             <Icon name="user" size={15} className="text-muted" /> {labels.account}
           </Link>
           {QUICK_LINKS.map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
+            <Link key={l.href} href={`/${lang}${l.href}`} onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name={l.icon} size={15} className="text-muted" /> {l.label}
             </Link>

@@ -1,0 +1,539 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { readWishlist } from "@/components/WishlistButton";
+import BookCover from "@/components/BookCover";
+import Icon from "@/components/Icon";
+import ShelfItemCard from "@/components/ShelfItemCard";
+import TitleTransliterated from "@/components/TitleTransliterated";
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
+
+function getTabs(tr) {
+  return [
+    { id: "all", label: tr("tabAll") },
+    { id: "reading", icon: "bookOpen", label: tr("statusReading") },
+    { id: "read", icon: "check", label: tr("statusRead") },
+    { id: "want", icon: "bookmark", label: tr("wantToReadTab") },
+  ];
+}
+
+function getLevels(tr) {
+  return [
+    { min: 400, name: tr("levelGrandLibrarian"), icon: "award" },
+    { min: 150, name: tr("levelBibliophile"), icon: "layers" },
+    { min: 50, name: tr("levelBookworm"), icon: "book" },
+    { min: 10, name: tr("levelPageTurner"), icon: "bookOpen" },
+    { min: 0, name: tr("levelNewReader"), icon: "compass" },
+  ];
+}
+
+export default function AccountPage() {
+  const lang = useLang();
+  const tr = t(lang);
+  const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
+  const TABS = useMemo(() => getTabs(tr), [tr]);
+  const LEVELS = useMemo(() => getLevels(tr), [tr]);
+  const router = useRouter();
+  const [user, setUser] = useState(undefined);
+  const [shelf, setShelf] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [tab, setTab] = useState("all");
+  const [rank, setRank] = useState(null);
+  const [goal, setGoal] = useState(null);
+  const [goalInput, setGoalInput] = useState("");
+  const [prefs, setPrefs] = useState(null);
+  const [allCategories, setAllCategories] = useState([]);
+  const [editingPrefs, setEditingPrefs] = useState(false);
+  const [network, setNetwork] = useState(null);
+  const [networkTab, setNetworkTab] = useState("following");
+
+  useEffect(() => {
+    setWishlist(readWishlist());
+    fetch("/api/categories").then((r) => r.json()).then((d) => setAllCategories(d.categories || []));
+    const auth = getFirebaseAuth();
+    if (!auth) { setUser(null); return; }
+    return auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (!u) { router.push(withLang("/login")); return; }
+      const [shelfRes, lbRes, goalRes, prefsRes, networkRes] = await Promise.all([
+        fetch(`/api/shelf?uid=${u.uid}`).then((r) => r.json()),
+        fetch("/api/leaderboard").then((r) => r.json()).catch(() => ({ readers: [] })),
+        fetch(`/api/goal?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
+        fetch(`/api/preferences?uid=${u.uid}`).then((r) => r.json()).catch(() => ({ genres: [], onboarded: true })),
+        fetch(`/api/network?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
+      ]);
+      setShelf(shelfRes.shelf || []);
+      setGoal(goalRes);
+      setPrefs(prefsRes);
+      setNetwork(networkRes);
+      const i = (lbRes.readers || []).findIndex((r) => r.id === u.uid);
+      if (i >= 0) setRank({ position: i + 1, ...lbRes.readers[i] });
+    });
+  }, [router]);
+
+  const toggleGenre = async (g) => {
+    const next = prefs.genres.includes(g) ? prefs.genres.filter((x) => x !== g) : [...prefs.genres, g];
+    setPrefs((p) => ({ ...p, genres: next }));
+    await fetch("/api/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: await user.getIdToken(), genres: next }),
+    });
+  };
+
+  const [shelfQuery, setShelfQuery] = useState("");
+  const [shelfSort, setShelfSort] = useState("recent");
+
+  const stats = useMemo(() => {
+    const read = shelf.filter((s) => s.status === "read");
+    const reading = shelf.filter((s) => s.status === "reading");
+    const want = shelf.filter((s) => s.status === "want");
+    const rated = shelf.filter((s) => s.rating);
+    const pagesRead = read.reduce((n, s) => n + (s.page_count || 0), 0);
+    const points = read.length * 10 + rated.length * 2;
+    return {
+      read: read.length, reading: reading.length, want: want.length,
+      pagesRead,
+      avgRating: rated.length ? (rated.reduce((n, s) => n + s.rating, 0) / rated.length).toFixed(1) : "—",
+      points,
+      level: LEVELS.find((l) => points >= l.min),
+    };
+  }, [shelf, LEVELS]);
+
+  // Books finished per month, last 6 months — pure client-side aggregation, no new API.
+  const activity = useMemo(() => {
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString(undefined, { month: "short" }), count: 0 };
+    });
+    shelf.forEach((s) => {
+      if (s.status !== "read" || !s.finished_at) return;
+      const d = new Date(s.finished_at);
+      const m = months.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
+      if (m) m.count++;
+    });
+    const max = Math.max(1, ...months.map((m) => m.count));
+    return { months, max };
+  }, [shelf]);
+
+  // Top genres across the whole shelf, by book category.
+  const genres = useMemo(() => {
+    const counts = new Map();
+    shelf.forEach((s) => { if (s.category) counts.set(s.category, (counts.get(s.category) || 0) + 1); });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [shelf]);
+
+  const reviews = useMemo(
+    () => shelf.filter((s) => s.review && s.review.trim()).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)),
+    [shelf]
+  );
+
+  const currentlyReading = useMemo(
+    () => shelf.filter((s) => s.status === "reading").sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0] || null,
+    [shelf]
+  );
+
+  const updateProgress = async (value) => {
+    setShelf((prev) => prev.map((s) => (s.book_slug === currentlyReading.book_slug ? { ...s, progress: value } : s)));
+    await fetch("/api/shelf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: await user.getIdToken(), slug: currentlyReading.book_slug, status: "reading", progress: value }),
+    });
+  };
+
+  if (!firebaseEnabled) return <div className="text-muted grid min-h-[50vh] place-items-center">{tr("signInNotConfigured")}</div>;
+  if (user === undefined) {
+    return (
+      <div className="mx-auto max-w-7xl animate-pulse px-4 py-10">
+        <div className="card h-[140px] hover:!translate-y-0" />
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="card h-24 hover:!translate-y-0" />)}
+        </div>
+        <div className="card mt-6 h-24 hover:!translate-y-0" />
+      </div>
+    );
+  }
+  if (!user) return null;
+
+  let visible = tab === "all" ? shelf : shelf.filter((s) => s.status === tab);
+  if (shelfQuery.trim()) {
+    const q = shelfQuery.trim().toLowerCase();
+    visible = visible.filter((s) => (s.title || "").toLowerCase().includes(q) || (s.author || "").toLowerCase().includes(q));
+  }
+  visible = [...visible].sort((a, b) => {
+    if (shelfSort === "title") return (a.title || "").localeCompare(b.title || "");
+    if (shelfSort === "rating") return (b.rating || 0) - (a.rating || 0);
+    return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+  });
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10">
+      {/* Onboarding nudge — only shown until profile setup is completed */}
+      {prefs && !prefs.onboarded && (
+        <div className="card mb-6 flex flex-col items-center gap-4 border-brand-500/30 p-5 hover:!translate-y-0 sm:flex-row">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+            <Icon name="compass" size={20} />
+          </span>
+          <div className="flex-1 text-center sm:text-left">
+            <p className="font-semibold">{tr("finishProfileSetup")}</p>
+            <p className="text-muted text-sm">{tr("finishProfileSetupBody")}</p>
+          </div>
+          <Link href={withLang("/onboarding")} className="btn-primary shrink-0 text-sm">{tr("completeSetup")}</Link>
+        </div>
+      )}
+
+      {/* Profile + level */}
+      <div className="card flex flex-col items-center gap-6 p-8 hover:!translate-y-0 sm:flex-row">
+        {user.photoURL ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.photoURL} alt="" className="h-20 w-20 rounded-full ring-4 ring-brand-500/30" />
+        ) : (
+          <span className="grid h-20 w-20 place-items-center rounded-full bg-brand-600 text-3xl font-bold text-white">
+            {(user.displayName || user.email)[0].toUpperCase()}
+          </span>
+        )}
+        <div className="flex-1 text-center sm:text-left">
+          <h1 className="text-2xl font-bold">{user.displayName || tr("readerFallback")}</h1>
+          <p className="text-muted text-sm">{user.email}</p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <span className="pill !text-sm"><Icon name={stats.level.icon} size={13} /> {stats.level.name}</span>
+            <span className="pill !text-sm"><Icon name="zap" size={13} /> {tr("ptsSuffix", { n: stats.points })}</span>
+            {goal?.streak > 0 && (
+              <span className="pill !bg-orange-500/15 !text-sm !text-orange-500"><Icon name="flame" size={13} /> {tr("dayStreakSuffix", { n: goal.streak })}</span>
+            )}
+            {rank && <Link href={withLang("/leaderboard")} className="pill !text-sm"><Icon name="trophy" size={13} /> {tr("rankHash", { n: rank.position })}</Link>}
+          </div>
+        </div>
+        <Link href={withLang("/wrapped")} className="btn-ghost text-sm"><Icon name="zap" size={15} /> {tr("yourYearInBooks")}</Link>
+        <Link href={withLang("/achievements")} className="btn-ghost text-sm"><Icon name="award" size={15} /> {tr("achievementsWord")}</Link>
+        <Link href={withLang("/leaderboard")} className="btn-ghost text-sm"><Icon name="trophy" size={15} /> {tr("navBookwormRanking")}</Link>
+        <Link href={withLang("/community")} className="btn-ghost text-sm"><Icon name="users" size={15} /> {tr("navCommunity")}</Link>
+      </div>
+
+      {/* Currently reading spotlight */}
+      {currentlyReading && (
+        <div className="card mt-6 flex flex-col gap-5 p-6 hover:!translate-y-0 sm:flex-row">
+          <Link href={withLang(`/books/${encodeURIComponent(currentlyReading.book_slug)}`)} className="mx-auto h-40 w-28 shrink-0 overflow-hidden rounded-xl shadow-lg sm:mx-0">
+            <BookCover title={currentlyReading.title || currentlyReading.book_slug} author={currentlyReading.author} cover_url={currentlyReading.cover_url} />
+          </Link>
+          <div className="flex-1">
+            <p className="text-muted flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+              <Icon name="bookOpen" size={13} className="text-brand-600" /> {tr("currentlyReadingAction")}
+            </p>
+            <Link href={withLang(`/books/${encodeURIComponent(currentlyReading.book_slug)}`)} className="mt-1 block text-lg font-bold hover:text-brand-600">
+              <TitleTransliterated text={currentlyReading.title || currentlyReading.book_slug} />
+            </Link>
+            {currentlyReading.author && <p className="text-muted text-sm"><TitleTransliterated text={currentlyReading.author} /></p>}
+
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                type="range" min="0" max="100" step="5"
+                value={currentlyReading.progress || 0}
+                onChange={(e) => updateProgress(Number(e.target.value))}
+                className="accent-brand-600 h-1.5 flex-1"
+              />
+              <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums">{currentlyReading.progress || 0}%</span>
+            </div>
+            {currentlyReading.page_count > 0 && (
+              <p className="text-muted mt-1.5 text-xs">
+                {tr("pagesLeftOfTotal", {
+                  left: Math.max(0, Math.round(((100 - (currentlyReading.progress || 0)) / 100) * currentlyReading.page_count)),
+                  total: currentlyReading.page_count,
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reading preferences — editable any time, seeded during onboarding */}
+      {prefs && (
+        <div className="card mt-6 p-5 hover:!translate-y-0">
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <Icon name="grid" size={16} className="text-brand-600" /> {tr("readingPreferencesTitle")}
+            </p>
+            <button onClick={() => setEditingPrefs((v) => !v)} className="text-xs font-semibold text-brand-600 hover:underline">
+              {editingPrefs ? tr("doneWord") : tr("edit")}
+            </button>
+          </div>
+          <p className="text-muted mt-1 text-xs">{tr("readingPrefsSubtitle")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(editingPrefs ? allCategories.map((c) => c.name) : prefs.genres).length ? (
+              (editingPrefs ? allCategories.map((c) => c.name) : prefs.genres).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => editingPrefs && toggleGenre(g)}
+                  className={`pill !text-xs ${prefs.genres.includes(g) ? "!bg-brand-600 !text-white" : ""} ${!editingPrefs ? "cursor-default" : ""}`}
+                >
+                  {g}
+                </button>
+              ))
+            ) : (
+              <p className="text-muted text-sm">{tr("noPreferencesYet")}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+        {[
+          ["check", stats.read, tr("booksReadStat")],
+          ["bookOpen", stats.reading, tr("readingNowStat")],
+          ["bookmark", stats.want, tr("wantToReadStat")],
+          ["barChart", stats.pagesRead.toLocaleString(), tr("pagesReadStat")],
+          ["star", stats.avgRating, tr("avgRatingStat")],
+        ].map(([icon, val, label]) => (
+          <div key={label} className="card p-4 text-center hover:!translate-y-0">
+            <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+              <Icon name={icon} size={18} />
+            </span>
+            <p className="mt-2 text-2xl font-extrabold">{val}</p>
+            <p className="text-muted text-xs">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Reading goal */}
+      <div className="card mt-6 flex flex-col items-center gap-6 p-6 hover:!translate-y-0 sm:flex-row">
+        {goal?.target ? (
+          <>
+            <div
+              className="grid h-24 w-24 shrink-0 place-items-center rounded-full"
+              style={{
+                background: `conic-gradient(var(--color-brand-600) ${Math.min(100, Math.round(((goal.done || 0) / goal.target) * 100)) * 3.6}deg, color-mix(in srgb, var(--color-brand-600) 15%, transparent) 0deg)`,
+              }}
+            >
+              <div className="bg-surface grid h-[76px] w-[76px] place-items-center rounded-full text-center">
+                <span>
+                  <span className="block text-xl font-extrabold">{goal.done || 0}</span>
+                  <span className="text-muted block text-[10px]">{tr("ofTotal", { n: goal.target })}</span>
+                </span>
+              </div>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
+                <Icon name="calendar" size={16} className="text-brand-600" /> {tr("readingChallengeTitle", { year: goal.year })}
+              </h3>
+              <p className="text-muted mt-1 text-sm">
+                {goal.done >= goal.target
+                  ? tr("goalCompleteMsg")
+                  : tr("moreToGoal", {
+                      n: goal.target - goal.done,
+                      word: goal.target - goal.done === 1 ? tr("bookWord") : tr("booksWord"),
+                    })}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 text-center sm:text-left">
+            <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
+              <Icon name="calendar" size={16} className="text-brand-600" /> {tr("setYourReadingChallenge", { year: new Date().getFullYear() })}
+            </h3>
+            <p className="text-muted mt-1 text-sm">{tr("howManyBooksThisYear")}</p>
+          </div>
+        )}
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const target = Number(goalInput);
+            if (!target) return;
+            await fetch("/api/goal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken: await user.getIdToken(), target }),
+            });
+            setGoal((g) => ({ ...(g || { year: new Date().getFullYear(), done: 0 }), target }));
+            setGoalInput("");
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="number" min="1" max="1000" value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            placeholder={goal?.target ? String(goal.target) : "24"}
+            className="input w-24 text-center"
+          />
+          <button type="submit" className="btn-primary !px-4 text-sm">
+            {goal?.target ? tr("updateWord") : tr("setGoalAction")}
+          </button>
+        </form>
+      </div>
+
+      {/* Activity + genres */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <div className="card p-5 hover:!translate-y-0">
+          <p className="mb-4 flex items-center gap-2 text-sm font-bold">
+            <Icon name="trendingUp" size={16} className="text-brand-600" /> {tr("readingActivityTitle")}
+            <span className="text-muted font-normal">{tr("booksFinishedLast6Months")}</span>
+          </p>
+          <div className="flex h-28 items-end gap-3">
+            {activity.months.map((m) => (
+              <div key={m.key} className="flex flex-1 flex-col items-center gap-1.5">
+                <span className="text-xs font-semibold">{m.count > 0 ? m.count : ""}</span>
+                <div
+                  className="w-full rounded-t-md bg-brand-600/80 transition-all"
+                  style={{ height: `${Math.max(4, (m.count / activity.max) * 80)}px` }}
+                />
+                <span className="text-muted text-[11px]">{m.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p-5 hover:!translate-y-0">
+          <p className="mb-4 flex items-center gap-2 text-sm font-bold">
+            <Icon name="barChart" size={16} className="text-brand-600" /> {tr("mostReadGenres")}
+          </p>
+          {genres.length ? (
+            <div className="flex flex-wrap gap-2">
+              {genres.map(([g, n]) => (
+                <Link key={g} href={withLang(`/books?category=${encodeURIComponent(g)}`)} className="pill !text-xs">
+                  {g} <span className="text-muted">· {n}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted text-sm">{tr("addBooksToSeeGenres")}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Your network */}
+      {network && (network.followingCount > 0 || network.followerCount > 0) && (
+        <div className="card mt-6 p-5 hover:!translate-y-0">
+          <div className="flex items-center gap-2">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <Icon name="users" size={16} className="text-brand-600" /> {tr("yourNetworkTitle")}
+            </p>
+            <div className="ml-auto flex gap-1.5">
+              <button onClick={() => setNetworkTab("following")}
+                className={`pill !text-xs ${networkTab === "following" ? "!bg-brand-600 !text-white" : ""}`}>
+                {tr("followingCountLabel", { n: network.followingCount })}
+              </button>
+              <button onClick={() => setNetworkTab("followers")}
+                className={`pill !text-xs ${networkTab === "followers" ? "!bg-brand-600 !text-white" : ""}`}>
+                {tr("followersCountLabel", { n: network.followerCount })}
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-4">
+            {(networkTab === "following" ? network.following : network.followers).map((r) => (
+              <Link key={r.id} href={withLang(`/readers/${r.slug || r.id}`)} className="group flex w-16 flex-col items-center gap-1.5 text-center">
+                {r.photo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={r.photo_url} alt="" className="h-12 w-12 rounded-full ring-2 ring-transparent transition group-hover:ring-brand-500" />
+                ) : (
+                  <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white ring-2 ring-transparent transition group-hover:ring-brand-500">
+                    {(r.name || "R")[0].toUpperCase()}
+                  </span>
+                )}
+                <span className="line-clamp-1 text-[11px] font-medium group-hover:text-brand-600">{r.name}</span>
+              </Link>
+            ))}
+            {(networkTab === "following" ? network.following : network.followers).length === 0 && (
+              <p className="text-muted text-sm">
+                {networkTab === "following" ? tr("notFollowingAnyoneYet") : tr("noFollowersYet")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Shelf */}
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold">{tr("myShelfHeading")}</h2>
+        <div className="flex flex-wrap gap-2">
+          {TABS.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`pill flex items-center gap-1.5 ${tab === t.id ? "!bg-brand-600 !text-white" : ""}`}>
+              {t.icon && <Icon name={t.icon} size={13} />} {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Icon name="search" size={14} className="text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            value={shelfQuery} onChange={(e) => setShelfQuery(e.target.value)}
+            placeholder={tr("searchYourShelfPlaceholder")} className="input w-full !pl-9 text-sm"
+          />
+        </div>
+        <select value={shelfSort} onChange={(e) => setShelfSort(e.target.value)} className="input !w-auto text-sm">
+          <option value="recent">{tr("recentlyUpdatedSort")}</option>
+          <option value="title">{tr("sortTitleAZ")}</option>
+          <option value="rating">{tr("sortHighestRated")}</option>
+        </select>
+      </div>
+
+      {visible.length ? (
+        <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+          {visible.map((s) => (
+            <ShelfItemCard
+              key={s.book_slug}
+              entry={s}
+              getIdToken={() => user.getIdToken()}
+              onUpdate={(updated) => setShelf((prev) => prev.map((x) => (x.book_slug === updated.book_slug ? updated : x)))}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-muted mt-10 text-center">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+            <Icon name="book" size={24} />
+          </span>
+          <p className="mt-3">{tr("emptyShelfMsg")}</p>
+          <Link href={withLang("/books")} className="btn-primary mt-4 inline-flex">{tr("browse")}</Link>
+        </div>
+      )}
+
+      {/* Your reviews */}
+      {reviews.length > 0 && (
+        <>
+          <h2 className="mt-12 text-2xl font-bold">{tr("yourReviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span></h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {reviews.map((s) => (
+              <Link key={s.book_slug} href={withLang(`/books/${encodeURIComponent(s.book_slug)}#reviews`)} className="card flex gap-3 p-4 hover:!translate-y-0">
+                <div className="h-20 w-14 shrink-0 overflow-hidden rounded-lg bg-black/5">
+                  <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-1 text-sm font-semibold"><TitleTransliterated text={s.title || s.book_slug} /></p>
+                  {s.rating ? <p className="text-xs text-amber-400">{"★".repeat(s.rating)}</p> : null}
+                  <p className="text-muted mt-1 line-clamp-2 text-xs leading-relaxed">{s.review}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Wishlist */}
+      {wishlist.length > 0 && (
+        <>
+          <h2 className="mt-12 text-2xl font-bold">{tr("wishlist")} <span className="text-muted text-sm font-normal">({wishlist.length})</span></h2>
+          <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+            {wishlist.map((b) => (
+              <Link key={b.slug} href={withLang(`/books/${encodeURIComponent(b.slug)}`)} className="card group overflow-hidden">
+                <div className="aspect-[2/3] overflow-hidden bg-black/5">
+                  <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
+                    imgClassName="transition group-hover:scale-105" />
+                </div>
+                <p className="line-clamp-1 p-2.5 text-xs font-semibold"><TitleTransliterated text={b.title} /></p>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

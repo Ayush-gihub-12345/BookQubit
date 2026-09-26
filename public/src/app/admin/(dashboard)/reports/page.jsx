@@ -44,7 +44,7 @@ export default function AdminReportsPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm">
                 {r.book_slug ? (
-                  <Link href={`/books/${encodeURIComponent(r.book_slug)}`} target="_blank" className="font-semibold text-brand-400 hover:underline">
+                  <Link href={`/en/books/${encodeURIComponent(r.book_slug)}`} target="_blank" className="font-semibold text-brand-400 hover:underline">
                     {r.book_title || r.book_slug}
                   </Link>
                 ) : (

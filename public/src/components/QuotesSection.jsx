@@ -11,7 +11,8 @@ import { t } from "@/lib/i18n";
 // A lightweight "commonplace book" — readers save favorite passages from a
 // book, visible to everyone here and on the saver's public profile.
 export default function QuotesSection({ bookSlug }) {
-  const tr = t(useLang());
+  const lang = useLang();
+  const tr = t(lang);
   const toast = useToast();
   const [user, setUser] = useState(null);
   const [quotes, setQuotes] = useState([]);
@@ -75,7 +76,7 @@ export default function QuotesSection({ bookSlug }) {
             {adding ? tr("cancel") : tr("saveAQuote")}
           </button>
         ) : (
-          <Link href="/login" className="text-sm font-semibold text-brand-600 hover:underline">{tr("signInToSaveQuote")}</Link>
+          <Link href={`/${lang}/login`} className="text-sm font-semibold text-brand-600 hover:underline">{tr("signInToSaveQuote")}</Link>
         )}
       </div>
 
@@ -99,7 +100,7 @@ export default function QuotesSection({ bookSlug }) {
             <div key={q.id} className="card !border-brand-500/20 bg-brand-600/5 p-4 hover:!translate-y-0">
               <p className="whitespace-pre-line text-sm italic leading-relaxed">"{q.text}"</p>
               <div className="text-muted mt-2 flex items-center justify-between text-xs">
-                <Link href={`/readers/${q.slug || q.user_id}`} className="hover:text-brand-600">
+                <Link href={`/${lang}/readers/${q.slug || q.user_id}`} className="hover:text-brand-600">
                   — {q.name}{q.page ? `, p. ${q.page}` : ""}
                 </Link>
                 {user?.uid === q.user_id && (

@@ -43,7 +43,7 @@ export default function AdminDiscussionsPage() {
             ) : rows.map((d) => (
               <tr key={d.id} className="hover:bg-white/5">
                 <td className="max-w-xs truncate px-4 py-3 text-slate-300">
-                  <Link href={`/community/${d.id}`} target="_blank" className="hover:text-brand-400">{d.title}</Link>
+                  <Link href={`/en/community/${d.id}`} target="_blank" className="hover:text-brand-400">{d.title}</Link>
                 </td>
                 <td className="px-4 py-3 text-slate-400">{d.name}</td>
                 <td className="px-4 py-3 text-slate-400">{d.replies}</td>

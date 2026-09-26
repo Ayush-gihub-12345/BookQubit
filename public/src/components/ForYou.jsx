@@ -61,7 +61,7 @@ export default function ForYou({ lang, fallbackBooks = [] }) {
       </div>
       <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((b) => (
-          <Link key={b.slug} href={`/books/${encodeURIComponent(b.slug)}`} className="card group overflow-hidden">
+          <Link key={b.slug} href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="card group overflow-hidden">
             <div className="aspect-[2/3] overflow-hidden">
               <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
                 imgClassName="transition duration-500 group-hover:scale-105" />

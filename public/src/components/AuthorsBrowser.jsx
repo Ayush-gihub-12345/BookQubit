@@ -121,7 +121,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
       ) : (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {authors.map((a) => (
-            <Link key={a.id} href={`/authors/${a.slug}`} prefetch={false} className="card flex gap-4 p-5">
+            <Link key={a.id} href={`/${lang}/authors/${a.slug}`} prefetch={false} className="card flex gap-4 p-5">
               {a.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={a.image_url} alt={a.name} className="h-20 w-20 rounded-full object-cover" loading="lazy" />
