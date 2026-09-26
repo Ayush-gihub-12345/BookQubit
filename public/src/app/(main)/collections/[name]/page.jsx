@@ -36,7 +36,7 @@ export default async function CollectionPage({ params }) {
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="text-3xl font-bold">{collection}</h1>
       <p className="text-muted mt-1 text-sm">
-        {hasMore ? `Showing ${books.length} of many` : `${books.length} ${books.length === 1 ? "book" : "books"} in this collection`}
+        {hasMore ? _("showingOfMany", { count: books.length }) : _("bookCountInCollection", { n: books.length, word: books.length === 1 ? _("bookWord") : _("booksWord") })}
       </p>
       <div className="mt-6">
         <FilterableBookGrid books={books} emptyMessage={_("noResultsTryAdjusting")} />
@@ -44,7 +44,7 @@ export default async function CollectionPage({ params }) {
       {hasMore && (
         <div className="mt-8 text-center">
           <Link href={`/books?collection=${encodeURIComponent(collection)}`} prefetch={false} className="btn-primary inline-flex">
-            Browse all books in this collection <Icon name="arrowRight" size={15} />
+            {_("browseAllInCollectionLabel")} <Icon name="arrowRight" size={15} />
           </Link>
         </div>
       )}

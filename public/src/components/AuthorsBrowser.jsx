@@ -5,6 +5,7 @@ import Link from "next/link";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
 import EmptyState from "./EmptyState";
+import TitleTransliterated from "./TitleTransliterated";
 import { t } from "@/lib/i18n";
 
 const sortsOf = (tr) => [
@@ -130,7 +131,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="font-semibold">{a.name}</h2>
+                <h2 className="font-semibold"><TitleTransliterated text={a.name} /></h2>
                 <p className="text-muted text-xs">{[a.country, a.birth_year].filter(Boolean).join(" · ")}</p>
                 <p className="text-muted mt-1 line-clamp-2 text-sm">{a.bio}</p>
               </div>

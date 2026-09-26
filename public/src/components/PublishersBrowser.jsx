@@ -5,6 +5,7 @@ import Link from "next/link";
 import Icon from "./Icon";
 import SortDropdown from "./SortDropdown";
 import EmptyState from "./EmptyState";
+import TitleTransliterated from "./TitleTransliterated";
 import { t } from "@/lib/i18n";
 
 const sortsOf = (tr) => [
@@ -118,7 +119,7 @@ export default function PublishersBrowser({ lang, initialPublications, initialHa
                   <img src={p.logo_url} alt={p.name} className="h-14 w-14 rounded-xl object-cover" loading="lazy" />
                 )}
                 <div>
-                  <h2 className="font-semibold">{p.name}</h2>
+                  <h2 className="font-semibold"><TitleTransliterated text={p.name} /></h2>
                   <p className="text-muted text-xs">{[p.type, p.headquarters].filter(Boolean).join(" · ")}</p>
                 </div>
               </div>

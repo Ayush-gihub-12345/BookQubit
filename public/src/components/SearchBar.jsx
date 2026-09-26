@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "./Icon";
+import TitleTransliterated from "./TitleTransliterated";
 import { readLocalCache, writeLocalCache } from "@/lib/localCache";
 import { t } from "@/lib/i18n";
 
@@ -190,7 +191,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
                     ) : <span className="grid h-12 w-8 place-items-center rounded bg-black/10 text-xs">📕</span>}
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">{mark(b.title)}</span>
-                      <span className="text-muted block truncate text-xs">{b.author} {b.rating ? `· ★ ${b.rating}` : ""}</span>
+                      <span className="text-muted block truncate text-xs"><TitleTransliterated text={b.author} /> {b.rating ? `· ★ ${b.rating}` : ""}</span>
                     </span>
                   </button>
                 );

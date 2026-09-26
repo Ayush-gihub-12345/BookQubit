@@ -82,7 +82,7 @@ export default async function PublicationPage({ params }) {
             <div className="mt-6">
               <p className="text-xs uppercase tracking-wide text-muted">{_("notableAuthorsLabel")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {pub.notable_authors.map((a) => <span key={a} className="pill">{a}</span>)}
+                {pub.notable_authors.map((a) => <span key={a} className="pill"><TitleTransliterated text={a} /></span>)}
               </div>
             </div>
           )}
@@ -91,7 +91,7 @@ export default async function PublicationPage({ params }) {
             <div className="mt-4">
               <p className="text-xs uppercase tracking-wide text-muted">{_("imprintsLabel")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {pub.imprints.map((i) => <span key={i} className="pill">{i}</span>)}
+                {pub.imprints.map((i) => <span key={i} className="pill"><TitleTransliterated text={i} /></span>)}
               </div>
             </div>
           )}
@@ -99,7 +99,10 @@ export default async function PublicationPage({ params }) {
       </div>
 
       {books.length > 0 && (
-        <Section title={_("booksFromName", { name: pub.name })}>
+        <Section title={(() => {
+          const [before, after] = _("booksFromName").split("{name}");
+          return <>{before}<TitleTransliterated text={pub.name} />{after}</>;
+        })()}>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
             {books.map((b) => <BookCard key={b.id} book={b} />)}
           </div>

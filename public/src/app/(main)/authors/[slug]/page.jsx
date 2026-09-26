@@ -85,7 +85,10 @@ export default async function AuthorPage({ params }) {
       </div>
 
       {books.length > 0 && (
-        <Section title={_("booksByName", { name: author.name })}>
+        <Section title={(() => {
+          const [before, after] = _("booksByName").split("{name}");
+          return <>{before}<TitleTransliterated text={author.name} />{after}</>;
+        })()}>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
             {books.map((b) => <BookCard key={b.id} book={b} />)}
           </div>

@@ -4,19 +4,21 @@ import { useMemo, useState } from "react";
 import BookCard from "./BookCard";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
-
-const SORTS = [
-  ["", "Default"],
-  ["rating", "Top Rated"],
-  ["new", "Newest"],
-  ["title", "Title A–Z"],
-];
-const RATINGS = [["", "Any rating"], ["4.5", "4.5+"], ["4", "4.0+"], ["3", "3.0+"]];
+import { useLang } from "@/lib/useLang";
+import { t } from "@/lib/i18n";
 
 // Instant in-browser filter/sort bar for already-fetched, page-scoped book
 // lists (collections, category/tag results) — zero network latency since the
 // full list is already on the client; filtering is pure JS.
-export default function FilterableBookGrid({ books, emptyMessage = "No books found." }) {
+export default function FilterableBookGrid({ books, emptyMessage }) {
+  const tr = t(useLang());
+  const SORTS = [
+    ["", tr("sortDefault")],
+    ["rating", tr("sortHighestRated")],
+    ["new", tr("sortNewest")],
+    ["title", tr("sortTitleAZ")],
+  ];
+  const RATINGS = [["", tr("anyRating")], ["4.5", "4.5+"], ["4", "4.0+"], ["3", "3.0+"]];
   const [sort, setSort] = useState("");
   const [minRating, setMinRating] = useState("");
   const [format, setFormat] = useState("");
@@ -40,7 +42,7 @@ export default function FilterableBookGrid({ books, emptyMessage = "No books fou
       {/* Filter bar — applies instantly, no reload */}
       <div className="border-line bg-surface sticky top-16 z-10 -mx-4 flex flex-wrap items-center gap-2 border-y px-4 py-3 lg:static lg:mx-0 lg:rounded-2xl lg:border">
         <span className="text-muted flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-          <Icon name="layers" size={13} /> Filters
+          <Icon name="layers" size={13} /> {tr("filtersLabel")}
         </span>
         <div className="flex flex-1 flex-wrap gap-2">
           {SORTS.map(([v, label]) => (
@@ -70,15 +72,15 @@ export default function FilterableBookGrid({ books, emptyMessage = "No books fou
         </div>
         {active && (
           <button onClick={() => { setMinRating(""); setFormat(""); }} className="text-xs font-semibold text-brand-600 hover:underline">
-            Reset
+            {tr("resetLabel")}
           </button>
         )}
       </div>
 
-      <p className="text-muted mt-4 text-sm">{filtered.length} of {books.length} books</p>
+      <p className="text-muted mt-4 text-sm">{tr("filteredOfTotalBooks", { filtered: filtered.length, total: books.length })}</p>
 
       {filtered.length === 0 ? (
-        <EmptyState compact title={emptyMessage} />
+        <EmptyState compact title={emptyMessage || tr("noBooksFoundLabel")} />
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
           {filtered.map((b) => <BookCard key={b.id} book={b} />)}

@@ -150,7 +150,7 @@ export default async function BookPage({ params }) {
               </Link>
             </>
           )}
-          {" / "}<span className="text-[var(--fg)]">{book.title}</span>
+          {" / "}<span className="text-[var(--fg)]"><TitleTransliterated text={book.title} /></span>
         </nav>
 
         {/* min-w-0 on both grid children: without it, a grid item's implicit
@@ -266,7 +266,7 @@ export default async function BookPage({ params }) {
                           imgClassName="transition duration-500 group-hover:scale-105" />
                       </div>
                       <div className="p-2">
-                        <p className="line-clamp-2 text-xs font-semibold group-hover:text-brand-600">{b.title}</p>
+                        <p className="line-clamp-2 text-xs font-semibold group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
                       </div>
                     </Link>
                   ))}

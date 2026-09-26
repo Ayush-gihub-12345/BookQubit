@@ -10,12 +10,9 @@ const J = (v) => {
 // SQL JOIN across them is now: fetch the referencing rows, collect their
 // slugs, batch-fetch the matching catalog rows here, and merge in JS.
 // Chunked at 100 slugs/query (D1's max bound params per statement).
-async function getCatalogRowsBySlug(table, slugs, lang, cols = "*") {
-  const unique = [...new Set(slugs.filter(Boolean))];
-  if (!unique.length) return new Map();
-  const db = await getCatalogDb();
+async function fetchRowsBySlugInLang(db, table, cols, lang, slugs) {
   const chunks = [];
-  for (let i = 0; i < unique.length; i += 100) chunks.push(unique.slice(i, i + 100));
+  for (let i = 0; i < slugs.length; i += 100) chunks.push(slugs.slice(i, i + 100));
   const results = await Promise.all(
     chunks.map((chunk) =>
       db.prepare(
@@ -25,6 +22,25 @@ async function getCatalogRowsBySlug(table, slugs, lang, cols = "*") {
   );
   const map = new Map();
   for (const { results: rows } of results) for (const r of rows) map.set(r.slug, r);
+  return map;
+}
+
+// Same fallback as queryBooks()/getEntityBySlug(), applied per-slug rather
+// than all-or-nothing: a slug this language hasn't been translated for yet
+// still resolves to its English row, instead of silently vanishing from
+// whatever index (author/publisher book list, etc.) pointed at it.
+async function getCatalogRowsBySlug(table, slugs, lang, cols = "*") {
+  const unique = [...new Set(slugs.filter(Boolean))];
+  if (!unique.length) return new Map();
+  const db = await getCatalogDb();
+  const map = await fetchRowsBySlugInLang(db, table, cols, lang, unique);
+  if (lang !== "en") {
+    const missing = unique.filter((s) => !map.has(s));
+    if (missing.length) {
+      const enMap = await fetchRowsBySlugInLang(db, table, cols, "en", missing);
+      for (const [slug, row] of enMap) map.set(slug, row);
+    }
+  }
   return map;
 }
 export const getBooksBySlug = (slugs, lang = "en", cols = "*") => getCatalogRowsBySlug("books", slugs, lang, cols);
@@ -163,8 +179,22 @@ export async function queryBooks(lang, opts = {}) {
   const perPage = Math.min(Math.max(1, Number(opts.perPage) || 32), 200);
   const db = await getCatalogDb();
 
+  // Resolve the effective language up front, once, rather than per-filter:
+  // the tag/format/author/publisher branches below all build `id`/`slug`
+  // lists from a language-scoped index and then short-circuit to an empty
+  // result if that index has nothing — which happens on every request for a
+  // language with no translated books yet, well before the plain (untagged)
+  // query's own fallback further down ever gets a chance to run. Deciding
+  // the language once here, the same way getRandomBook() does, means every
+  // branch below transparently operates on the English catalog instead of
+  // each needing its own copy of this same fallback.
+  const bounds = await cached(`book-bounds:${lang}`, () =>
+    db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first()
+  , 10800);
+  const effLang = bounds?.hi ? lang : "en";
+
   const where = ["lang = ?"];
-  const binds = [lang];
+  const binds = [effLang];
   if (category) { where.push("category = ?"); binds.push(category); }
   if (collection) { where.push("collection = ?"); binds.push(collection); }
   // Same problem/fix as `tag` below, but `format` is messy free text, not a
@@ -177,7 +207,7 @@ export async function queryBooks(lang, opts = {}) {
   // (5,957 rows) — same shape as every other leading-wildcard filter fixed
   // this session.
   if (format) {
-    const formatIndex = await getFormatBookIndex(lang);
+    const formatIndex = await getFormatBookIndex(effLang);
     const needle = format.trim().toLowerCase();
     const ids = [];
     for (const key of Object.keys(formatIndex)) {
@@ -197,7 +227,7 @@ export async function queryBooks(lang, opts = {}) {
   // booksByPublisher below — one shared tag->ids index built via json_each,
   // reused by every tag-filtered request instead of scanned per request.
   if (tag) {
-    const tagIndex = await getTagBookIndex(lang);
+    const tagIndex = await getTagBookIndex(effLang);
     const ids = tagIndex[tag.trim().toLowerCase()] || [];
     if (!ids.length) return { books: [], page: Number(page), hasMore: false };
     // Inlined, not bound: `ids` are integers straight from this catalog's
@@ -214,14 +244,14 @@ export async function queryBooks(lang, opts = {}) {
   // booksByPublisher already built, just filtering the general browser
   // instead of a single profile page's book list.
   if (author) {
-    const authorIndex = await getAuthorBookIndex(lang);
+    const authorIndex = await getAuthorBookIndex(effLang);
     const slugs = authorIndex[author.trim().toLowerCase()] || [];
     if (!slugs.length) return { books: [], page: Number(page), hasMore: false };
     where.push(`slug IN (${slugs.map((_, i) => `?${binds.length + i + 1}`).join(",")})`);
     binds.push(...slugs);
   }
   if (publisher) {
-    const publisherIndex = await getPublisherBookIndex(lang);
+    const publisherIndex = await getPublisherBookIndex(effLang);
     const needle = publisher.trim().toLowerCase();
     const slugs = [];
     for (const key of Object.keys(publisherIndex)) {
@@ -301,10 +331,13 @@ export async function queryBooks(lang, opts = {}) {
       return r.results;
     }, 300);
 
-  let rows = await runRows(lang, binds);
+  let rows = await runRows(effLang, binds);
 
-  // Empty language falls back to English rows with the same filters.
-  if (!rows.length && lang !== "en") {
+  // effLang (above) already catches a language with zero books at all —
+  // this second check catches the narrower case where the language has
+  // *some* books but not ones matching this specific filter combination,
+  // falling back to the same filters against English.
+  if (!rows.length && effLang !== "en") {
     const enBinds = [...binds];
     enBinds[0] = "en";
     rows = await runRows("en", enBinds);
@@ -433,13 +466,22 @@ export async function getBestsellerBooks(lang, limit = 12) {
 // O(log n) via the primary key index no matter how many books there are.
 export async function getRandomBook(lang) {
   const db = await getCatalogDb();
-  const bounds = await cached(`book-bounds:${lang}`, () =>
+  let bounds = await cached(`book-bounds:${lang}`, () =>
     db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first()
   , 10800);
+  // Same fallback as queryBooks(): "Surprise me" shouldn't come up empty just
+  // because this language has no translated books yet.
+  let effLang = lang;
+  if (!bounds?.hi && lang !== "en") {
+    effLang = "en";
+    bounds = await cached(`book-bounds:en`, () =>
+      db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang='en'").first()
+    , 10800);
+  }
   if (!bounds?.hi) return null;
   const randomId = bounds.lo + Math.floor(Math.random() * (bounds.hi - bounds.lo + 1));
   const [row, { amazon_assoc_tag }] = await Promise.all([
-    db.prepare("SELECT * FROM books WHERE lang=?1 AND id >= ?2 ORDER BY id LIMIT 1").bind(lang, randomId).first(),
+    db.prepare("SELECT * FROM books WHERE lang=?1 AND id >= ?2 ORDER BY id LIMIT 1").bind(effLang, randomId).first(),
     getSiteSettings(),
   ]);
   return row ? mapBook(row, amazon_assoc_tag) : null;
@@ -536,27 +578,33 @@ export async function relatedBooks(book, lang, limit = 4) {
   const [rows, { amazon_assoc_tag }] = await Promise.all([
     cached(cacheKey, async () => {
       const db = await getCatalogDb();
-      const build = (column, value) =>
+      const build = (effLang, column, value) =>
         db.prepare(
           `SELECT * FROM books WHERE lang=?1 AND ${column}=?2 AND id != ?3
            ORDER BY rating DESC NULLS LAST LIMIT ?4`
-        ).bind(lang, value, book.id, limit);
+        ).bind(effLang, value, book.id, limit);
 
-      const queries = [];
-      if (book.category) queries.push(build("category", book.category));
-      if (book.author) queries.push(build("author", book.author));
-      if (!queries.length) return [];
+      const run = async (effLang) => {
+        const queries = [];
+        if (book.category) queries.push(build(effLang, "category", book.category));
+        if (book.author) queries.push(build(effLang, "author", book.author));
+        if (!queries.length) return [];
+        const batched = await db.batch(queries);
+        // Same-author and same-category results can overlap — dedupe by id,
+        // then re-rank across both sets so the best `limit` win overall.
+        const seen = new Map();
+        for (const part of batched) {
+          for (const row of part.results) if (!seen.has(row.id)) seen.set(row.id, row);
+        }
+        return [...seen.values()].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit);
+      };
 
-      const batched = await db.batch(queries);
-      // Same-author and same-category results can overlap — dedupe by id,
-      // then re-rank across both sets so the best `limit` win overall.
-      const seen = new Map();
-      for (const part of batched) {
-        for (const row of part.results) if (!seen.has(row.id)) seen.set(row.id, row);
-      }
-      return [...seen.values()]
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-        .slice(0, limit);
+      let out = await run(lang);
+      // Same fallback as queryBooks(): the book itself may already be an
+      // English fallback row, so its own language's related-books query
+      // would otherwise always come back empty.
+      if (!out.length && lang !== "en") out = await run("en");
+      return out;
     }, 3600),
     getSiteSettings(),
   ]);
@@ -569,27 +617,35 @@ export async function relatedBooks(book, lang, limit = 4) {
 export async function facets(lang) {
   return cached(`facets:${lang}`, async () => {
     const db = await getCatalogDb();
-    const [categories, collections, countries, tags] = await Promise.all([
-      db.prepare(
-        `SELECT category AS name, COUNT(*) AS count FROM books
-         WHERE lang=?1 AND category IS NOT NULL AND category != ''
-         GROUP BY category ORDER BY count DESC LIMIT 60`
-      ).bind(lang).all(),
-      db.prepare(
-        `SELECT collection AS name, COUNT(*) AS count FROM books
-         WHERE lang=?1 AND collection IS NOT NULL AND collection != ''
-         GROUP BY collection ORDER BY count DESC LIMIT 40`
-      ).bind(lang).all(),
-      db.prepare(
-        `SELECT country AS name, COUNT(*) AS count FROM books
-         WHERE lang=?1 AND country IS NOT NULL AND country != ''
-         GROUP BY country ORDER BY count DESC LIMIT 40`
-      ).bind(lang).all(),
-      db.prepare(
-        `SELECT value AS name, COUNT(*) AS count FROM books, json_each(books.tags)
-         WHERE books.lang=?1 GROUP BY value ORDER BY count DESC LIMIT 60`
-      ).bind(lang).all(),
-    ]);
+    const runFacets = (effLang) =>
+      Promise.all([
+        db.prepare(
+          `SELECT category AS name, COUNT(*) AS count FROM books
+           WHERE lang=?1 AND category IS NOT NULL AND category != ''
+           GROUP BY category ORDER BY count DESC LIMIT 60`
+        ).bind(effLang).all(),
+        db.prepare(
+          `SELECT collection AS name, COUNT(*) AS count FROM books
+           WHERE lang=?1 AND collection IS NOT NULL AND collection != ''
+           GROUP BY collection ORDER BY count DESC LIMIT 40`
+        ).bind(effLang).all(),
+        db.prepare(
+          `SELECT country AS name, COUNT(*) AS count FROM books
+           WHERE lang=?1 AND country IS NOT NULL AND country != ''
+           GROUP BY country ORDER BY count DESC LIMIT 40`
+        ).bind(effLang).all(),
+        db.prepare(
+          `SELECT value AS name, COUNT(*) AS count FROM books, json_each(books.tags)
+           WHERE books.lang=?1 GROUP BY value ORDER BY count DESC LIMIT 60`
+        ).bind(effLang).all(),
+      ]);
+
+    let [categories, collections, countries, tags] = await runFacets(lang);
+    // Same fallback as queryBooks(): a language with no translated books yet
+    // shouldn't leave every sidebar filter and the /collections page empty.
+    if (!categories.results.length && lang !== "en") {
+      [categories, collections, countries, tags] = await runFacets("en");
+    }
     return {
       categories: categories.results,
       collections: collections.results,
@@ -672,9 +728,17 @@ export async function listAuthors(lang) {
       listEntity("authors", lang, ["genres"], AUTHOR_LIST_COLUMNS),
       (async () => {
         const db = await getCatalogDb();
-        const { results } = await db
+        let { results } = await db
           .prepare("SELECT DISTINCT author FROM books WHERE lang=?1 AND author IS NOT NULL AND author != ''")
           .bind(lang).all();
+        // Same fallback as queryBooks(): a language with no translated books
+        // yet shouldn't make every author with an English-only catalog entry
+        // disappear from /authors.
+        if (!results.length && lang !== "en") {
+          ({ results } = await db
+            .prepare("SELECT DISTINCT author FROM books WHERE lang='en' AND author IS NOT NULL AND author != ''")
+            .all());
+        }
         const set = new Set();
         for (const { author } of results) {
           for (const name of author.split(",")) {
@@ -825,26 +889,30 @@ export async function relatedComics(comic, lang, limit = 4) {
   const cacheKey = `related-comics:${lang}:${comic.id}:${limit}`;
   return cached(cacheKey, async () => {
     const db = await getCatalogDb();
-    const build = (column, value) =>
+    const build = (effLang, column, value) =>
       db.prepare(
         `SELECT * FROM comics WHERE lang=?1 AND ${column}=?2 AND id != ?3
          ORDER BY rating DESC NULLS LAST LIMIT ?4`
-      ).bind(lang, value, comic.id, limit);
+      ).bind(effLang, value, comic.id, limit);
 
-    const queries = [];
-    if (comic.category) queries.push(build("category", comic.category));
-    if (comic.publisher) queries.push(build("publisher", comic.publisher));
-    if (!queries.length) return [];
+    const run = async (effLang) => {
+      const queries = [];
+      if (comic.category) queries.push(build(effLang, "category", comic.category));
+      if (comic.publisher) queries.push(build(effLang, "publisher", comic.publisher));
+      if (!queries.length) return [];
+      const batched = await db.batch(queries);
+      const seen = new Map();
+      for (const part of batched) {
+        for (const row of part.results) if (!seen.has(row.id)) seen.set(row.id, row);
+      }
+      return [...seen.values()].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, limit);
+    };
 
-    const batched = await db.batch(queries);
-    const seen = new Map();
-    for (const part of batched) {
-      for (const row of part.results) if (!seen.has(row.id)) seen.set(row.id, row);
-    }
-    return [...seen.values()]
-      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-      .slice(0, limit)
-      .map((r) => ({ ...r, characters: J(r.characters), creators: J(r.creators) }));
+    let out = await run(lang);
+    // Same fallback as relatedBooks(): the comic itself may already be an
+    // English fallback row.
+    if (!out.length && lang !== "en") out = await run("en");
+    return out.map((r) => ({ ...r, characters: J(r.characters), creators: J(r.creators) }));
   }, 3600);
 }
 
@@ -869,9 +937,16 @@ export async function relatedComics(comic, lang, limit = 4) {
 async function getAuthorBookIndex(lang) {
   return cached(`author-book-index:${lang}`, async () => {
     const db = await getCatalogDb();
-    const { results } = await db
+    let { results } = await db
       .prepare("SELECT slug, author FROM books WHERE lang=?1 AND author IS NOT NULL AND author != ''")
       .bind(lang).all();
+    // Same fallback as queryBooks(): don't blank an author page just because
+    // this language has no translated books yet.
+    if (!results.length && lang !== "en") {
+      ({ results } = await db
+        .prepare("SELECT slug, author FROM books WHERE lang='en' AND author IS NOT NULL AND author != ''")
+        .all());
+    }
     // Plain object, not a Map — this goes through JSON in the cache.
     const index = {};
     for (const { slug, author } of results) {
@@ -941,9 +1016,16 @@ export async function getAuthorLineProfiles(authorLine, lang) {
 async function getPublisherBookIndex(lang) {
   return cached(`publisher-book-index:${lang}`, async () => {
     const db = await getCatalogDb();
-    const { results } = await db
+    let { results } = await db
       .prepare("SELECT slug, publisher FROM books WHERE lang=?1 AND publisher IS NOT NULL AND publisher != ''")
       .bind(lang).all();
+    // Same fallback as queryBooks(): don't blank a publisher's book list just
+    // because this language has no translated books yet.
+    if (!results.length && lang !== "en") {
+      ({ results } = await db
+        .prepare("SELECT slug, publisher FROM books WHERE lang='en' AND publisher IS NOT NULL AND publisher != ''")
+        .all());
+    }
     const index = {};
     for (const { slug, publisher } of results) {
       const key = publisher.trim().toLowerCase();
@@ -1846,9 +1928,16 @@ async function computeRecommendations(uid, lang, limit) {
   for (const g of prefs.genres) bump(genreScores, g, 3);
 
   const owned = new Set(shelfRows.map((r) => r.book_slug));
-  const { results: candidates } = await catalogDb.prepare(
+  let { results: candidates } = await catalogDb.prepare(
     "SELECT slug, title, author, category, genres, rating, cover_url FROM books WHERE lang=?1 ORDER BY rating DESC LIMIT 500"
   ).bind(lang).all();
+  // Same fallback as queryBooks(): "Picked for you" shouldn't come up empty
+  // just because this language has no translated books yet.
+  if (!candidates.length && lang !== "en") {
+    ({ results: candidates } = await catalogDb.prepare(
+      "SELECT slug, title, author, category, genres, rating, cover_url FROM books WHERE lang='en' ORDER BY rating DESC LIMIT 500"
+    ).all());
+  }
 
   const scored = candidates
     .filter((b) => !owned.has(b.slug))
