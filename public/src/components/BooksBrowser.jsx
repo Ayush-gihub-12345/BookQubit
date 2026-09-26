@@ -5,6 +5,7 @@ import Link from "next/link";
 import BookCard from "./BookCard";
 import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
+import Translated from "./Translated";
 import Rating from "./Rating";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
@@ -318,7 +319,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
                       {b.page_count && <span className="text-muted">{b.page_count} pages</span>}
                       {b.published && <span className="text-muted">{b.published}</span>}
                     </div>
-                    <p className="text-muted mt-2 line-clamp-2 text-sm leading-relaxed">{b.description}</p>
+                    <Translated as="p" className="text-muted mt-2 line-clamp-2 text-sm leading-relaxed" text={b.description} />
                   </div>
                 </Link>
               ))}

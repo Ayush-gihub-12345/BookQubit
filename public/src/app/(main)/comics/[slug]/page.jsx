@@ -8,6 +8,7 @@ import ReviewCard from "@/components/ReviewCard";
 import BookCover from "@/components/BookCover";
 import QuickActions from "@/components/QuickActions";
 import TitleTransliterated from "@/components/TitleTransliterated";
+import Translated from "@/components/Translated";
 import { getComic, relatedComics, getBookCommunity } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -91,7 +92,7 @@ export default async function ComicPage({ params }) {
               )}
             </div>
 
-            {comic.description && <p className="mt-6 text-lg leading-relaxed">{comic.description}</p>}
+            {comic.description && <Translated as="p" className="mt-6 text-lg leading-relaxed" text={comic.description} />}
 
             {meta.length > 0 && (
               <div className="mt-8">
@@ -128,7 +129,7 @@ export default async function ComicPage({ params }) {
             {comic.fun_fact && (
               <div className="mt-8 tint-brand rounded-2xl border-l-4 border-brand-500 p-5">
                 <p className="text-sm font-semibold text-brand-700 dark:text-brand-100">💡 {_("funFactLabel")}</p>
-                <p className="mt-1 text-sm leading-relaxed">{comic.fun_fact}</p>
+                <Translated as="p" className="mt-1 text-sm leading-relaxed" text={comic.fun_fact} />
               </div>
             )}
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
+import Translated from "./Translated";
 import Icon from "./Icon";
 
 export default function HeroSlider({ books, labels }) {
@@ -60,7 +61,7 @@ export default function HeroSlider({ books, labels }) {
               <p className="text-xs font-bold uppercase tracking-wide text-brand-600">{labels.keyFeatures}</p>
               <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
                 {b.keyPoints.slice(0, 4).map((k) => (
-                  <li key={k} className="flex items-start gap-2 text-sm"><span className="text-brand-500">•</span>{k}</li>
+                  <li key={k} className="flex items-start gap-2 text-sm"><span className="text-brand-500">•</span><Translated text={k} /></li>
                 ))}
               </ul>
             </div>

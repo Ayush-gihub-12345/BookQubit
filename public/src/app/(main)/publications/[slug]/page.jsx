@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
 import TitleTransliterated from "@/components/TitleTransliterated";
+import Translated from "@/components/Translated";
 import { getPublication, booksByPublisher } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -45,7 +46,7 @@ export default async function PublicationPage({ params }) {
             )}
             <div className="min-w-0 flex-1 text-center sm:text-left">
               <h1 className="text-3xl font-bold"><TitleTransliterated text={pub.name} /></h1>
-              <p className="mt-2 max-w-2xl opacity-90">{pub.about || pub.description}</p>
+              <Translated as="p" className="mt-2 max-w-2xl opacity-90" text={pub.about || pub.description} />
               {pub.website && (
                 <a href={pub.website} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
                   {pub.website} ↗

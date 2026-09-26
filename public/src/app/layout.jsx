@@ -53,9 +53,19 @@ export default async function RootLayout({ children }) {
       lang={lang}
       dir={RTL.includes(lang) ? "rtl" : "ltr"}
       data-theme={theme}
-      className={`${inter.variable} ${sora.variable}`}
+      translate="no"
+      className={`${inter.variable} ${sora.variable} notranslate`}
     >
       <head>
+        {/* The site already ships its own translation/transliteration for
+            every language (i18n.js dictionaries, Translated/TitleTransliterated
+            components) — Chrome's own "Translate this page?" prompt only
+            confuses things on top of that (it sees a `lang` attribute that
+            doesn't match the mostly-English HTML Chrome parses before our
+            client-side translation swaps text in). `notranslate` + `translate="no"`
+            tells Chrome (and other browsers honoring the convention) to never
+            offer its own translate UI here. */}
+        <meta name="google" content="notranslate" />
         {/* No font <link> — next/font inlines @font-face and serves the files
             from this origin, so the googleapis/gstatic preconnects are gone
             too (they warmed connections we no longer make).

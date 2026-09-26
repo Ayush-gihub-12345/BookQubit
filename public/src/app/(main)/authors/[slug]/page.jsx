@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
 import TitleTransliterated from "@/components/TitleTransliterated";
+import Translated from "@/components/Translated";
 import { getAuthor, booksByAuthor } from "@/lib/repo";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
@@ -52,7 +53,7 @@ export default async function AuthorPage({ params }) {
             <p className="text-muted mt-1 text-sm">
               {[author.country, author.birth_year && _("bornAbbrev", { year: author.birth_year })].filter(Boolean).join(" · ")}
             </p>
-            <p className="mt-3 max-w-2xl leading-relaxed">{author.bio}</p>
+            <Translated as="p" className="mt-3 max-w-2xl leading-relaxed" text={author.bio} />
             <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
               {author.genres.map((g) => <span key={g} className="pill">{g}</span>)}
             </div>
