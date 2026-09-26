@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* dark: utilities respond to the theme attribute, not OS preference */
-@custom-variant dark (&:where([data-theme="dark"] *, [data-theme="dark"], [data-theme="midnight"] *, [data-theme="midnight"]));
+@custom-variant dark (&:where([data-theme="dark"] *, [data-theme="dark"], [data-theme="midnight"] *, [data-theme="midnight"], [data-theme="imperial"] *, [data-theme="imperial"]));
 
 @theme {
   --color-brand-50: #eef2ff;
@@ -39,6 +39,7 @@
   --color-brand-50: #1c2440; --color-brand-100: #26305a;
   --color-brand-500: #818cf8; --color-brand-600: #6366f1; --color-brand-700: #4f46e5;
   --pill-bg: #232d54; --pill-fg: #b3bcfa;
+  --pill-hover-brightness: 1.25;
 }
 [data-theme="sepia"] {
   --bg: #f4ecdd; --surface: #fdf8ee; --fg: #40331f;
@@ -53,6 +54,7 @@
   --color-brand-50: #1d1d3d; --color-brand-100: #28284e;
   --color-brand-500: #a78bfa; --color-brand-600: #8b5cf6; --color-brand-700: #7c3aed;
   --pill-bg: #262650; --pill-fg: #c9b8fc;
+  --pill-hover-brightness: 1.25;
 }
 [data-theme="ocean"] {
   --bg: #ebf7f9; --surface: #ffffff; --fg: #14454f;
@@ -74,6 +76,28 @@
   --color-brand-50: #fce7ea; --color-brand-100: #f9d0d8;
   --color-brand-500: #e0446a; --color-brand-600: #c72e55; --color-brand-700: #a52346;
   --pill-bg: #fadde2; --pill-fg: #a52346;
+}
+/* Imperial — the premium/"god-level" preset: near-black with warm gold,
+   deliberately distinct from every other (mostly cool-toned) theme. */
+[data-theme="imperial"] {
+  --bg: #0b0a08; --surface: #1a1712; --fg: #f3ecd9;
+  --muted: #a89a7a; --line: #2e2a1f;
+  --color-brand-50: #3d3315; --color-brand-100: #4d4119;
+  --color-brand-500: #d4af37; --color-brand-600: #c9a227; --color-brand-700: #a3801a;
+  --pill-bg: #2a2418; --pill-fg: #e8c874;
+  --pill-hover-brightness: 1.25;
+}
+/* Custom (reader-designed) theme — CustomThemeModal + layout.jsx apply the
+   reader's actual 12 colors as an inline style on <html>, which overrides
+   these; this block only matters as a sane fallback if that cookie is ever
+   missing or fails to decode, so "custom" never renders unstyled. */
+[data-theme="custom"] {
+  --bg: #0d1322; --surface: #161e33; --fg: #e4e8f4;
+  --muted: #98a2bd; --line: #232d47;
+  --color-brand-50: #1c2440; --color-brand-100: #26305a;
+  --color-brand-500: #818cf8; --color-brand-600: #6366f1; --color-brand-700: #4f46e5;
+  --pill-bg: #232d54; --pill-fg: #b3bcfa;
+  --pill-hover-brightness: 1.25;
 }
 
 /* Theme-aware hero/CTA band: adapts to whichever theme is active */
@@ -131,7 +155,12 @@
   box-shadow: 0 8px 20px color-mix(in srgb, var(--color-brand-600) 35%, transparent);
 }
 .icon-btn:active { transform: scale(0.96); }
-.icon-btn-sm { width: 2.1rem; height: 2.1rem; }
+/* Used exclusively by HeroSlider's mobile-only corner prev/next buttons —
+   the only way to navigate the hero carousel by tap on a phone, so this
+   gets the same touch-friendly size as .icon-btn rather than a smaller one;
+   kept as a separate class in case a genuinely secondary/decorative use
+   ever wants a smaller variant. */
+.icon-btn-sm { width: 2.75rem; height: 2.75rem; }
 
 .hscroll-btn {
   position: absolute;
@@ -144,7 +173,12 @@
 .hscroll-btn-left { left: 8px; }
 .hscroll-btn-right { right: 8px; }
 @media (max-width: 640px) {
-  .icon-btn { width: 2.1rem; height: 2.1rem; }
+  /* Was shrinking to 2.1rem (33.6px) here — backwards from mobile touch-
+     target guidance (~44px minimum), and smaller than this same control's
+     own desktop size. Now grows slightly instead. .icon-btn-sm (still
+     2.1rem) remains for genuinely secondary/compact contexts that opt in
+     explicitly rather than every icon button shrinking by default. */
+  .icon-btn { width: 2.75rem; height: 2.75rem; }
   .hscroll-fade { width: 36px; }
 }
 
@@ -206,8 +240,14 @@ section { animation: rise 0.45s ease both; }
   background: var(--pill-bg);
   color: var(--pill-fg);
 }
-.pill:hover { filter: brightness(1.06); }
-[data-theme="dark"] .pill:hover, [data-theme="midnight"] .pill:hover { filter: brightness(1.25); }
+/* --pill-hover-brightness lets a dark theme ask for a stronger hover
+   brightness bump than a light one needs (brand-50/100 double as hover
+   backgrounds and read as barely-there on a dark surface at the light
+   themes' 1.06). A custom (reader-picked) theme sets this itself as one of
+   its derived variables (see lib/customTheme.js), so it gets the right
+   value automatically whether the reader's own background turns out light
+   or dark, with no separate [data-theme="custom"] selector needed here. */
+.pill:hover { filter: brightness(var(--pill-hover-brightness, 1.06)); }
 
 /* subtle brand-tinted background that adapts to every theme */
 .tint-brand { background: color-mix(in srgb, var(--color-brand-500) 12%, transparent); }

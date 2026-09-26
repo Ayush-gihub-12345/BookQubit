@@ -36,7 +36,11 @@ export default function HeroSlider({ books, labels }) {
         </div>
       )}
 
-      <div className="grid items-center gap-8 md:grid-cols-[240px_1fr]">
+      {/* min-w-0 on the grid + its second child — same CSS Grid min-width
+          blowout fix already applied on the book/comic detail pages: without
+          it, an unusually wide cover or long title/key-point text can force
+          this grid (and the whole hero card) wider than the viewport. */}
+      <div className="grid min-w-0 items-center gap-8 md:grid-cols-[240px_1fr]">
         <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="group mx-auto">
           <div key={b.slug} className="aspect-[2/3] w-44 overflow-hidden rounded-xl shadow-2xl transition duration-500 group-hover:scale-105 sm:w-56"
             style={{ animation: "fadeIn .5s ease" }}>
@@ -44,7 +48,7 @@ export default function HeroSlider({ books, labels }) {
           </div>
         </Link>
 
-        <div>
+        <div className="min-w-0">
           {b.category && <span className="pill">{b.category}</span>}
           <h2 className="mt-3 text-2xl font-extrabold sm:text-4xl">
             <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600"><TitleTransliterated text={b.title} /></Link>

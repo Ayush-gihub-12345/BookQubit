@@ -160,7 +160,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
       </form>
 
       {open && (loading || res || showRecent) && (
-        <div className={`bg-surface border-line absolute z-50 mt-2 max-h-[70vh] overflow-auto rounded-2xl border shadow-2xl ${big ? "left-0 right-0" : "right-0 w-96"}`}>
+        <div className={`bg-surface border-line absolute z-50 mt-2 max-h-[70vh] overflow-auto rounded-2xl border shadow-2xl ${big ? "left-0 right-0" : "right-0 w-[min(24rem,calc(100vw-2rem))]"}`}>
           {showRecent && (
             <div className="p-2">
               <p className="text-muted px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide">Recent searches</p>

@@ -46,7 +46,7 @@ export default async function ComicPage({ params }) {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-4 py-10">
+      <div className="mx-auto max-w-7xl px-4 py-10 pb-20 lg:pb-10">
         <nav className="text-muted mb-6 text-sm">
           <Link href={`/${lang}/comics`} className="hover:text-brand-600">{_("comicsLink")}</Link>
           {comic.category && (
@@ -68,8 +68,13 @@ export default async function ComicPage({ params }) {
 
             {/* Comics have no Amazon fields, so QuickActions' "Get Book" button
                 simply doesn't render (it's gated on book.buyUrl) — every other
-                action (like/wishlist/share/shelf status) works identically. */}
-            <QuickActions book={{ ...comic, author: comic.publisher }} />
+                action (like/wishlist/share/shelf status) works identically.
+                id + scroll-mt below is the target for the mobile sticky bar's
+                "Add to My Library" shortcut, since that's the closest thing
+                this page has to a primary CTA with no buy action available. */}
+            <div id="quick-actions" className="scroll-mt-24">
+              <QuickActions book={{ ...comic, author: comic.publisher }} />
+            </div>
           </div>
 
           <div className="min-w-0">
@@ -140,7 +145,7 @@ export default async function ComicPage({ params }) {
                 <div className="card p-5 text-center hover:!translate-y-0">
                   <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
                   <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
-                  <p className="text-muted mt-1 text-xs">{_("ratingsFromReaders", { n: community.rating_count })}</p>
+                  <p className="text-muted mt-1 text-xs">{community.rating_count} {_("ratingsFromReaders")}</p>
                 </div>
                 <div className="space-y-1.5">
                   {community.distribution.map((d) => {
@@ -177,6 +182,23 @@ export default async function ComicPage({ params }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Sticky mobile primary-action bar: comics have no buyUrl (see the
+          QuickActions comment above), so there's no "Get Book" CTA to pin
+          here. The closest equivalent primary action is shelving the comic
+          ("Add to My Library"), which QuickActions already owns further up
+          the page — this just jumps down to that control rather than
+          duplicating its stateful (auth/fetch) logic in a second place.
+          Sits above the sitewide MobileTabBar (z-40, ~4rem tall) via the
+          bottom offset, one z-index below it. */}
+      <div
+        className="border-line bg-surface/95 fixed inset-x-0 z-30 border-t p-3 backdrop-blur-lg lg:hidden"
+        style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
+      >
+        <a href="#quick-actions" className="btn-primary w-full">
+          {_("addToMyLibrary")}
+        </a>
       </div>
 
       {related.length > 0 && (

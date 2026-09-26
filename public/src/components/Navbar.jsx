@@ -8,6 +8,7 @@ import SearchBar from "./SearchBar";
 import Icon from "./Icon";
 import { LogoMark } from "./Logo";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import CustomThemeModal from "./CustomThemeModal";
 import { t } from "@/lib/i18n";
 
 function Dropdown({ button, children, width = "w-48" }) {
@@ -40,6 +41,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
   const [myGenres, setMyGenres] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
   const [surprising, setSurprising] = useState(false);
+  const [showCustomTheme, setShowCustomTheme] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const headerRef = useRef(null);
@@ -281,12 +283,17 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             {themes.map((t) => (
               <button key={t.id} onClick={() => setCookie("theme", t.id)}
                 className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${t.id === theme ? "font-bold text-brand-600" : ""}`}>
-                <span className="h-3.5 w-3.5 rounded-full border border-black/10"
-                  style={{ background: { light: "#fff", dark: "#0b1220", sepia: "#b07d2f", midnight: "#7c3aed", ocean: "#0891b2", forest: "#059669", rose: "#e11d48" }[t.id] }} />
+                <span className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ background: t.swatch }} />
                 {t.name}
                 {t.id === theme && <Icon name="check" size={14} className="ml-auto text-brand-600" />}
               </button>
             ))}
+            <button onClick={() => setShowCustomTheme(true)}
+              className={`border-line flex w-full items-center gap-3 border-t px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${theme === "custom" ? "font-bold text-brand-600" : ""}`}>
+              <Icon name="palette" size={14} className="text-brand-600" />
+              {tr("customThemeLabel")}
+              {theme === "custom" && <Icon name="check" size={14} className="ml-auto text-brand-600" />}
+            </button>
           </Dropdown>
         </div>
 
@@ -462,6 +469,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                 {t.icon} {t.name}
               </button>
             ))}
+            <button onClick={() => setShowCustomTheme(true)}
+              className={`pill ${theme === "custom" ? "!bg-brand-600 !text-white" : ""}`}>
+              🎨 {tr("customThemeLabel")}
+            </button>
           </div>
           <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navLanguage")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -474,6 +485,8 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           </div>
         </div>
       )}
+
+      {showCustomTheme && <CustomThemeModal onClose={() => setShowCustomTheme(false)} />}
     </header>
   );
 }

@@ -202,7 +202,7 @@ export default function OnboardingPage() {
           <div className="absolute inset-0 animate-pulse rounded-full bg-brand-600/20 blur-2xl" />
           <div className="relative"><Logo size={56} /></div>
         </div>
-        <h1 className="mt-6 text-3xl font-extrabold tracking-tight">
+        <h1 className="mt-6 text-2xl font-extrabold tracking-tight sm:text-3xl">
           Welcome{user.displayName ? `, ${user.displayName.split(" ")[0]}` : ""}
         </h1>
         <p className="text-muted mt-2 max-w-sm text-sm leading-relaxed">
@@ -233,9 +233,9 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
       {/* Progress */}
-      <div className="mx-auto mb-10 max-w-md">
+      <div className="mx-auto mb-6 max-w-md sm:mb-10">
         <div className="mb-2 flex items-center justify-between">
           {step > 0 && step < 4 ? (
             <button onClick={() => setStep((s) => s - 1)} className="text-muted flex items-center gap-1 text-xs font-semibold hover:text-brand-600">
@@ -255,8 +255,8 @@ export default function OnboardingPage() {
       <div key={step} className="onboarding-step">
         {/* Step 0: genres */}
         {step === 0 && (
-          <div className="card p-8 text-center hover:!translate-y-0">
-            <h1 className="text-2xl font-bold">What do you love to read?</h1>
+          <div className="card p-5 text-center hover:!translate-y-0 sm:p-8">
+            <h1 className="text-xl font-bold sm:text-2xl">What do you love to read?</h1>
             <p className="text-muted mt-2 text-sm">Pick a few genres — we'll use these throughout BookQubit to personalize what you see. You can change this anytime.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-2.5">
               {categories.map((c) => (
@@ -278,11 +278,11 @@ export default function OnboardingPage() {
 
         {/* Step 1: reading goal */}
         {step === 1 && (
-          <div className="card p-8 text-center hover:!translate-y-0">
+          <div className="card p-5 text-center hover:!translate-y-0 sm:p-8">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
               <Icon name="calendar" size={24} />
             </span>
-            <h1 className="mt-4 text-2xl font-bold">Set a reading goal for {new Date().getFullYear()}</h1>
+            <h1 className="mt-4 text-xl font-bold sm:text-2xl">Set a reading goal for {new Date().getFullYear()}</h1>
             <p className="text-muted mt-2 text-sm">Goals with a number attached actually get finished. Pick one — you can adjust it anytime from your dashboard.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-2.5">
               {GOAL_PRESETS.map((n) => (
@@ -311,7 +311,7 @@ export default function OnboardingPage() {
                 <Icon name="check" size={14} className="inline" /> Goal set: {goalTarget} books this year
               </p>
             )}
-            <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <button onClick={() => setStep(2)} className="text-muted text-sm hover:text-brand-600">Skip for now</button>
               <button onClick={() => setStep(2)} className="btn-primary">
                 Continue <Icon name="arrowRight" size={15} />
@@ -322,11 +322,11 @@ export default function OnboardingPage() {
 
         {/* Step 2: authors to follow */}
         {step === 2 && (
-          <div className="card p-8 text-center hover:!translate-y-0">
+          <div className="card p-5 text-center hover:!translate-y-0 sm:p-8">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
               <Icon name="feather" size={24} />
             </span>
-            <h1 className="mt-4 text-2xl font-bold">Follow a few authors</h1>
+            <h1 className="mt-4 text-xl font-bold sm:text-2xl">Follow a few authors</h1>
             <p className="text-muted mt-2 text-sm">Follow writers you already love (or want to discover) — new releases and discussions from them will surface first.</p>
 
             {recommendedAuthors.length > 0 ? (
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
                   const following = followedAuthors.has(a.slug);
                   return (
                     <button key={a.slug} onClick={() => toggleAuthor(a)}
-                      className={`card flex flex-col items-center gap-2 p-4 hover:!translate-y-0 ${following ? "!border-brand-500 bg-brand-600/5" : ""}`}>
+                      className={`card flex flex-col items-center gap-2 p-3 hover:!translate-y-0 sm:p-4 ${following ? "!border-brand-500 bg-brand-600/5" : ""}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={a.image_url} alt="" className="h-16 w-16 rounded-full object-cover" />
@@ -356,7 +356,7 @@ export default function OnboardingPage() {
               <p className="text-muted mt-6 text-sm">Loading authors…</p>
             )}
 
-            <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <button onClick={() => setStep(3)} className="text-muted text-sm hover:text-brand-600">Skip for now</button>
               <button onClick={() => setStep(3)} className="btn-primary">
                 Continue <Icon name="arrowRight" size={15} />
@@ -368,7 +368,7 @@ export default function OnboardingPage() {
         {/* Step 3: rate books */}
         {step === 3 && (
           <div>
-            <div className="card flex flex-col items-center gap-4 p-6 text-center hover:!translate-y-0 sm:flex-row sm:text-left">
+            <div className="card flex flex-col items-center gap-4 p-5 text-center hover:!translate-y-0 sm:flex-row sm:p-6 sm:text-left">
               <div className="flex-1">
                 <p className="text-sm font-semibold">You've rated <b className="text-brand-600">{ratedCount}</b> book{ratedCount === 1 ? "" : "s"}</p>
                 <div className="bg-line mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full">
@@ -394,7 +394,7 @@ export default function OnboardingPage() {
               />
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
               {(q.trim().length >= 2 ? results : pool).map((b) => (
                 <div key={b.slug} className={`card p-3 hover:!translate-y-0 ${rated[b.slug] ? "!border-brand-500/50" : ""}`}>
                   <div className="aspect-[2/3] overflow-hidden rounded-lg bg-black/5">
@@ -402,15 +402,15 @@ export default function OnboardingPage() {
                   </div>
                   <p className="mt-2 line-clamp-1 text-xs font-semibold"><TitleTransliterated text={b.title} /></p>
                   <p className="text-muted line-clamp-1 text-[11px]"><TitleTransliterated text={b.author} /></p>
-                  <div className="mt-1.5 flex items-center justify-center gap-0.5">
+                  <div className="mt-1.5 flex items-center justify-center">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button key={n} onClick={() => rate(b, n)} aria-label={`Rate ${n} stars`}
-                        className={`text-base transition hover:scale-125 ${(rated[b.slug] || 0) >= n ? "text-amber-400" : "text-muted opacity-30"}`}>★</button>
+                        className={`p-1 text-base leading-none transition hover:scale-125 ${(rated[b.slug] || 0) >= n ? "text-amber-400" : "text-muted opacity-30"}`}>★</button>
                     ))}
                   </div>
                   <button
                     onClick={() => markWant(b)}
-                    className={`mt-1.5 w-full rounded-lg py-1 text-[11px] font-semibold transition ${
+                    className={`mt-1.5 w-full rounded-lg py-1.5 text-[11px] font-semibold transition ${
                       wanted[b.slug] ? "bg-brand-600/15 text-brand-600" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
@@ -428,11 +428,11 @@ export default function OnboardingPage() {
 
         {/* Step 4: summary + recommendations */}
         {step === 4 && (
-          <div className="card overflow-hidden p-8 text-center hover:!translate-y-0">
+          <div className="card overflow-hidden p-5 text-center hover:!translate-y-0 sm:p-8">
             <div className="celebrate-burst mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
               <Icon name="check" size={28} />
             </div>
-            <h1 className="mt-4 text-2xl font-bold">You're all set{user.displayName ? `, ${user.displayName.split(" ")[0]}` : ""}</h1>
+            <h1 className="mt-4 text-xl font-bold sm:text-2xl">You're all set{user.displayName ? `, ${user.displayName.split(" ")[0]}` : ""}</h1>
             <p className="text-muted mt-2 text-sm">Here's your reading profile — refine any of it anytime from your dashboard.</p>
 
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

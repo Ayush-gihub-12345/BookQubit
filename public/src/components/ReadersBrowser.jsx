@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
+import HScrollRow from "./HScrollRow";
 import { FollowButton } from "./FollowButton";
 import { t } from "@/lib/i18n";
 
@@ -51,36 +52,38 @@ export default function ReadersBrowser({ topReaders, popularReaders, lang }) {
       </div>
 
       {filtered.length > 0 ? (
-        <ol className="mt-6 space-y-2.5">
-          {filtered.map((r, i) => (
-            <li key={r.id}>
-              <div className="card flex items-center gap-4 p-4 hover:!translate-y-0">
-                <Link href={`/${lang}/readers/${r.slug || r.id}`} className="flex min-w-0 flex-1 items-center gap-4">
-                  <span className={`flex w-9 shrink-0 items-center justify-center text-lg font-bold ${i < 3 ? MEDAL_STYLE[i] : "text-muted"}`}>
-                    {i < 3 ? <Icon name="award" size={22} /> : `#${i + 1}`}
-                  </span>
+        <div className="mt-6">
+          <HScrollRow>
+            {filtered.map((r, i) => (
+              <div key={r.id} className="card w-40 shrink-0 p-4 text-center sm:w-44 hover:!translate-y-0">
+                <div className="relative mx-auto w-fit">
                   {r.photo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.photo_url} alt="" className="h-11 w-11 shrink-0 rounded-full" />
+                    <img src={r.photo_url} alt="" className="mx-auto h-14 w-14 rounded-full object-cover" />
                   ) : (
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-600 font-bold text-white">
+                    <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-600 text-lg font-bold text-white">
                       {(r.name || "R")[0].toUpperCase()}
                     </span>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{r.name}</p>
-                    <p className="text-muted text-xs">
-                      {tab === "top"
-                        ? `${r.reads} books read${r.favoriteGenre ? ` · loves ${r.favoriteGenre}` : ""}`
-                        : `${r.followers} follower${r.followers === 1 ? "" : "s"}`}
-                    </p>
-                  </div>
+                  <span className={`absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-surface shadow ${i < 3 ? MEDAL_STYLE[i] : "text-muted"}`}>
+                    {i < 3 ? <Icon name="award" size={14} /> : <span className="text-[10px] font-bold">#{i + 1}</span>}
+                  </span>
+                </div>
+                <Link href={`/${lang}/readers/${r.slug || r.id}`} className="mt-3 block">
+                  <p className="truncate font-semibold">{r.name}</p>
+                  <p className="text-muted mt-0.5 line-clamp-2 text-xs">
+                    {tab === "top"
+                      ? `${r.reads} books read${r.favoriteGenre ? ` · loves ${r.favoriteGenre}` : ""}`
+                      : `${r.followers} follower${r.followers === 1 ? "" : "s"}`}
+                  </p>
                 </Link>
-                <FollowButton type="reader" id={r.id} label="Follow" />
+                <div className="mt-3 flex justify-center">
+                  <FollowButton type="reader" id={r.id} label="Follow" />
+                </div>
               </div>
-            </li>
-          ))}
-        </ol>
+            ))}
+          </HScrollRow>
+        </div>
       ) : (
         <EmptyState title={tr("noReadersFound")} subtitle={tr("noResultsTryAdjusting")} />
       )}

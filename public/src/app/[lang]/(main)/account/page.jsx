@@ -189,7 +189,7 @@ export default function AccountPage() {
       )}
 
       {/* Profile + level */}
-      <div className="card flex flex-col items-center gap-6 p-8 hover:!translate-y-0 sm:flex-row">
+      <div className="card flex flex-col items-center gap-4 p-5 hover:!translate-y-0 sm:flex-row sm:gap-6 sm:p-8">
         {user.photoURL ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.photoURL} alt="" className="h-20 w-20 rounded-full ring-4 ring-brand-500/30" />
@@ -199,7 +199,7 @@ export default function AccountPage() {
           </span>
         )}
         <div className="flex-1 text-center sm:text-left">
-          <h1 className="text-2xl font-bold">{user.displayName || tr("readerFallback")}</h1>
+          <h1 className="text-xl font-bold sm:text-2xl">{user.displayName || tr("readerFallback")}</h1>
           <p className="text-muted text-sm">{user.email}</p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <span className="pill !text-sm"><Icon name={stats.level.icon} size={13} /> {stats.level.name}</span>
@@ -210,15 +210,17 @@ export default function AccountPage() {
             {rank && <Link href={withLang("/leaderboard")} className="pill !text-sm"><Icon name="trophy" size={13} /> {tr("rankHash", { n: rank.position })}</Link>}
           </div>
         </div>
-        <Link href={withLang("/wrapped")} className="btn-ghost text-sm"><Icon name="zap" size={15} /> {tr("yourYearInBooks")}</Link>
-        <Link href={withLang("/achievements")} className="btn-ghost text-sm"><Icon name="award" size={15} /> {tr("achievementsWord")}</Link>
-        <Link href={withLang("/leaderboard")} className="btn-ghost text-sm"><Icon name="trophy" size={15} /> {tr("navBookwormRanking")}</Link>
-        <Link href={withLang("/community")} className="btn-ghost text-sm"><Icon name="users" size={15} /> {tr("navCommunity")}</Link>
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:ml-auto sm:justify-end">
+          <Link href={withLang("/wrapped")} className="btn-ghost text-sm"><Icon name="zap" size={15} /> {tr("yourYearInBooks")}</Link>
+          <Link href={withLang("/achievements")} className="btn-ghost text-sm"><Icon name="award" size={15} /> {tr("achievementsWord")}</Link>
+          <Link href={withLang("/leaderboard")} className="btn-ghost text-sm"><Icon name="trophy" size={15} /> {tr("navBookwormRanking")}</Link>
+          <Link href={withLang("/community")} className="btn-ghost text-sm"><Icon name="users" size={15} /> {tr("navCommunity")}</Link>
+        </div>
       </div>
 
       {/* Currently reading spotlight */}
       {currentlyReading && (
-        <div className="card mt-6 flex flex-col gap-5 p-6 hover:!translate-y-0 sm:flex-row">
+        <div className="card mt-6 flex flex-col gap-4 p-5 hover:!translate-y-0 sm:flex-row sm:gap-5 sm:p-6">
           <Link href={withLang(`/books/${encodeURIComponent(currentlyReading.book_slug)}`)} className="mx-auto h-40 w-28 shrink-0 overflow-hidden rounded-xl shadow-lg sm:mx-0">
             <BookCover title={currentlyReading.title || currentlyReading.book_slug} author={currentlyReading.author} cover_url={currentlyReading.cover_url} />
           </Link>
@@ -283,7 +285,7 @@ export default function AccountPage() {
       )}
 
       {/* Stats */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
         {[
           ["check", stats.read, tr("booksReadStat")],
           ["bookOpen", stats.reading, tr("readingNowStat")],
@@ -291,18 +293,18 @@ export default function AccountPage() {
           ["barChart", stats.pagesRead.toLocaleString(), tr("pagesReadStat")],
           ["star", stats.avgRating, tr("avgRatingStat")],
         ].map(([icon, val, label]) => (
-          <div key={label} className="card p-4 text-center hover:!translate-y-0">
+          <div key={label} className="card p-3 text-center hover:!translate-y-0 sm:p-4">
             <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
               <Icon name={icon} size={18} />
             </span>
-            <p className="mt-2 text-2xl font-extrabold">{val}</p>
+            <p className="mt-2 text-xl font-extrabold sm:text-2xl">{val}</p>
             <p className="text-muted text-xs">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Reading goal */}
-      <div className="card mt-6 flex flex-col items-center gap-6 p-6 hover:!translate-y-0 sm:flex-row">
+      <div className="card mt-6 flex flex-col items-center gap-4 p-5 hover:!translate-y-0 sm:flex-row sm:gap-6 sm:p-6">
         {goal?.target ? (
           <>
             <div
@@ -409,11 +411,11 @@ export default function AccountPage() {
       {/* Your network */}
       {network && (network.followingCount > 0 || network.followerCount > 0) && (
         <div className="card mt-6 p-5 hover:!translate-y-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="flex items-center gap-2 text-sm font-bold">
               <Icon name="users" size={16} className="text-brand-600" /> {tr("yourNetworkTitle")}
             </p>
-            <div className="ml-auto flex gap-1.5">
+            <div className="ml-auto flex flex-wrap gap-1.5">
               <button onClick={() => setNetworkTab("following")}
                 className={`pill !text-xs ${networkTab === "following" ? "!bg-brand-600 !text-white" : ""}`}>
                 {tr("followingCountLabel", { n: network.followingCount })}
@@ -449,7 +451,7 @@ export default function AccountPage() {
 
       {/* Shelf */}
       <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold">{tr("myShelfHeading")}</h2>
+        <h2 className="text-xl font-bold sm:text-2xl">{tr("myShelfHeading")}</h2>
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -476,7 +478,7 @@ export default function AccountPage() {
       </div>
 
       {visible.length ? (
-        <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
           {visible.map((s) => (
             <ShelfItemCard
               key={s.book_slug}
@@ -499,7 +501,7 @@ export default function AccountPage() {
       {/* Your reviews */}
       {reviews.length > 0 && (
         <>
-          <h2 className="mt-12 text-2xl font-bold">{tr("yourReviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span></h2>
+          <h2 className="mt-12 text-xl font-bold sm:text-2xl">{tr("yourReviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span></h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {reviews.map((s) => (
               <Link key={s.book_slug} href={withLang(`/books/${encodeURIComponent(s.book_slug)}#reviews`)} className="card flex gap-3 p-4 hover:!translate-y-0">
@@ -520,8 +522,8 @@ export default function AccountPage() {
       {/* Wishlist */}
       {wishlist.length > 0 && (
         <>
-          <h2 className="mt-12 text-2xl font-bold">{tr("wishlist")} <span className="text-muted text-sm font-normal">({wishlist.length})</span></h2>
-          <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+          <h2 className="mt-12 text-xl font-bold sm:text-2xl">{tr("wishlist")} <span className="text-muted text-sm font-normal">({wishlist.length})</span></h2>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-6">
             {wishlist.map((b) => (
               <Link key={b.slug} href={withLang(`/books/${encodeURIComponent(b.slug)}`)} className="card group overflow-hidden">
                 <div className="aspect-[2/3] overflow-hidden bg-black/5">

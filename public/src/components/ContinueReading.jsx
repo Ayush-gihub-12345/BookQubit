@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth } from "@/lib/firebase";
 import BookCover from "./BookCover";
+import HScrollRow from "./HScrollRow";
 import TitleTransliterated from "./TitleTransliterated";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
@@ -35,10 +36,10 @@ export default function ContinueReading() {
         </div>
         <Link href={`/${lang}/account`} className="text-sm font-semibold text-brand-600 hover:underline">{tr("myShelfLink")}</Link>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <HScrollRow>
         {items.map((s) => (
           <Link key={s.book_slug} href={`/${lang}/books/${encodeURIComponent(s.book_slug)}`}
-            className="card flex gap-4 p-4">
+            className="card flex w-64 shrink-0 gap-4 p-4 sm:w-72">
             <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg shadow">
               <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url} />
             </div>
@@ -55,7 +56,7 @@ export default function ContinueReading() {
             </div>
           </Link>
         ))}
-      </div>
+      </HScrollRow>
     </section>
   );
 }

@@ -137,7 +137,11 @@ export default async function BookPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
 
-      <div className="mx-auto max-w-7xl px-4 py-10">
+      {/* Extra bottom padding clears BOTH the sitewide mobile tab bar (handled
+          by the layout's own pb-[calc(4rem+...)]) AND the sticky "Get Book"
+          bar rendered below, which floats just above the tab bar on mobile.
+          Only needed when that sticky bar actually renders (book.buyUrl). */}
+      <div className={`mx-auto max-w-7xl px-4 pt-6 sm:pt-10 ${book.buyUrl ? "pb-36 lg:pb-10" : "pb-6 sm:pb-10"}`}>
         <nav className="text-muted mb-6 text-sm">
           <Link href={withLang("/books")} className="hover:text-brand-600">{_("books")}</Link>
           {book.category && (
@@ -158,9 +162,12 @@ export default async function BookPage({ params }) {
             the viewport, squeezing the rest of the page into a narrow strip
             beside empty space. w-full/object-cover on the <img> itself don't
             prevent this; the fix has to be on the grid item. */}
-        <div className="grid min-w-0 gap-10 lg:grid-cols-[300px_1fr]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_1fr] lg:gap-10">
           <div className="min-w-0">
-            <div className="card aspect-[2/3] overflow-hidden !shadow-xl hover:!translate-y-0">
+            {/* Capped + centered on mobile (stacked layout would otherwise
+                stretch the cover to full viewport width, looking oversized) —
+                reverts to filling its 300px grid column at lg. */}
+            <div className="card mx-auto aspect-[2/3] max-w-[240px] overflow-hidden !shadow-xl hover:!translate-y-0 lg:mx-0 lg:max-w-none">
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
 
@@ -199,7 +206,7 @@ export default async function BookPage({ params }) {
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold sm:text-4xl"><TitleTransliterated text={book.title} /></h1>
+            <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl"><TitleTransliterated text={book.title} /></h1>
             <p className="text-muted mt-2 text-lg">
               {_("byWord")}{" "}
               {/* One link per co-author. Anyone with a real profile goes to
@@ -290,7 +297,7 @@ export default async function BookPage({ params }) {
 
             {book.keyPoints.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">{_("keyTakeaways")}</h2>
+                <h2 className="text-lg font-bold sm:text-xl">{_("keyTakeaways")}</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {book.keyPoints.map((k) => (
                     <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
@@ -303,14 +310,14 @@ export default async function BookPage({ params }) {
 
             {book.summary && (
               <div id="summary" className="mt-8 scroll-mt-24">
-                <h2 className="text-xl font-bold">{_("summary")}</h2>
+                <h2 className="text-lg font-bold sm:text-xl">{_("summary")}</h2>
                 <Translated as="p" className="mt-3 whitespace-pre-line leading-relaxed opacity-90" text={book.summary} />
               </div>
             )}
 
             {meta.length > 0 && (
               <div className="mt-8">
-                <h2 className="text-xl font-bold">{_("details")}</h2>
+                <h2 className="text-lg font-bold sm:text-xl">{_("details")}</h2>
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                   {meta.map(([k, v]) => (
                     <div key={k}>
@@ -345,7 +352,7 @@ export default async function BookPage({ params }) {
 
             {/* Community section */}
             <div id="reviews" className="mt-10 scroll-mt-24">
-              <h2 className="text-xl font-bold">{_("communityTitle")}</h2>
+              <h2 className="text-lg font-bold sm:text-xl">{_("communityTitle")}</h2>
               <div className="mt-4 grid gap-6 sm:grid-cols-[220px_1fr]">
                 <div className="card p-5 text-center hover:!translate-y-0">
                   <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
@@ -416,6 +423,29 @@ export default async function BookPage({ params }) {
           </div>
         </div>
       </div>
+
+      {/* Sticky mobile-only "Get Book" bar — a reachable duplicate of the
+          primary action in QuickActions (which scrolls away with the rest of
+          the column) so it's always available while deep in the page.
+          Sits just above the sitewide MobileTabBar: offset by that bar's own
+          height (4rem + safe-area) so the two stack instead of overlapping,
+          and z-30 (one below the tab bar's z-40). Doesn't render at all when
+          the book has no purchase link, rather than showing an empty bar. */}
+      {book.buyUrl && (
+        <div
+          className="border-line bg-surface/95 fixed inset-x-0 z-30 border-t p-3 backdrop-blur-lg lg:hidden"
+          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
+        >
+          <a
+            href={book.buyUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="btn-primary w-full"
+          >
+            <Icon name="cart" size={16} /> {_("getBookAction")}
+          </a>
+        </div>
+      )}
 
       {related.length > 0 && (
         <Section id="related" title={_("related")}>

@@ -27,7 +27,8 @@ const sora = Sora({
   display: "swap",
 });
 import { getLang, RTL } from "@/lib/lang";
-import { getTheme } from "@/lib/theme";
+import { getTheme, getCustomThemeColors } from "@/lib/theme";
+import { paletteToCssVars } from "@/lib/customTheme";
 import { ToastProvider } from "@/components/Toast";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { SITE_URL } from "@/lib/site";
@@ -47,12 +48,18 @@ export const viewport = {
 
 export default async function RootLayout({ children }) {
   const [lang, theme] = await Promise.all([getLang(), getTheme()]);
+  // Only reads the customTheme cookie when it could possibly matter — every
+  // other theme switch is a plain CSS-class-driven [data-theme="X"] block,
+  // no extra cookie read needed.
+  const customColors = theme === "custom" ? await getCustomThemeColors() : null;
+  const customStyle = customColors ? paletteToCssVars(customColors) : undefined;
 
   return (
     <html
       lang={lang}
       dir={RTL.includes(lang) ? "rtl" : "ltr"}
       data-theme={theme}
+      style={customStyle}
       translate="no"
       className={`${inter.variable} ${sora.variable} notranslate`}
     >
