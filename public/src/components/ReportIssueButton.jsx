@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getFirebaseAuth } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import Icon from "./Icon";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
@@ -16,11 +16,12 @@ export default function ReportIssueButton({ bookSlug }) {
     e.preventDefault();
     setState("busy");
     try {
-      const user = getFirebaseAuth()?.currentUser;
-      await fetch("/api/reports", {
+      // Attribution is carried by the bearer token (when signed in); the
+      // server ignores any user id in the body.
+      await authFetch("/api/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookSlug, message, userId: user?.uid || null }),
+        body: JSON.stringify({ bookSlug, message }),
       });
       setState("done");
       setMessage("");

@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { verifyUser } from "@/lib/auth-server";
+import { requireUser } from "@/lib/api-auth";
 import { getUserPreferences, upsertUserPreferences, upsertUser } from "@/lib/repo";
 
-// GET /api/preferences?uid=...
+// GET /api/preferences — the signed-in reader's saved genre picks and
+// onboarding state. Subject comes from the bearer token, not a `?uid=`
+// parameter; see src/lib/api-auth.js.
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const uid = searchParams.get("uid");
-  if (!uid) return NextResponse.json({ error: "uid required" }, { status: 400 });
-  return NextResponse.json(await getUserPreferences(uid));
+  const auth = await requireUser(request);
+  if (auth.response) return auth.response;
+  return NextResponse.json(await getUserPreferences(auth.user.uid));
 }
 
 // POST /api/preferences — { idToken, genres?, onboarded? }

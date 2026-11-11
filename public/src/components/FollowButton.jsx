@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { authFetch } from "@/lib/authFetch";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import Icon from "./Icon";
 import { useLang } from "@/lib/useLang";
@@ -15,14 +16,14 @@ export function FollowButton({ type, id, label = "Follow" }) {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    const load = async (uid) => {
-      const r = await fetch(`/api/follow?type=${type}&id=${encodeURIComponent(id)}${uid ? `&uid=${uid}` : ""}`);
+    const load = async (u) => {
+      const r = await authFetch(`/api/follow?type=${type}&id=${encodeURIComponent(id)}`, {}, u);
       const data = await r.json();
       setCount(data.count);
       setFollowing(data.following);
     };
     if (!auth) { load(); return; }
-    return auth.onAuthStateChanged((u) => { setUser(u); load(u?.uid); });
+    return auth.onAuthStateChanged((u) => { setUser(u); load(u); });
   }, [type, id]);
 
   const toggle = async () => {

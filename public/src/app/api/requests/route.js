@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
+import { requireUser } from "@/lib/api-auth";
 import { upsertUser } from "@/lib/repo";
 
-// GET /api/requests?uid=... — a reader's own submitted requests, so they can
-// see what's still pending vs. added/declined.
+// GET /api/requests — the signed-in reader's own submitted requests, so they
+// can see what's still pending vs. added/declined. Subject comes from the
+// bearer token, not a `?uid=` parameter; see src/lib/api-auth.js.
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const uid = searchParams.get("uid");
-  if (!uid) return NextResponse.json({ error: "uid required" }, { status: 400 });
+  const auth = await requireUser(request);
+  if (auth.response) return auth.response;
   const db = await getDb();
   const { results } = await db.prepare(
     "SELECT * FROM book_requests WHERE user_id=?1 ORDER BY created_at DESC"
-  ).bind(uid).all();
+  ).bind(auth.user.uid).all();
   return NextResponse.json({ requests: results });
 }
 

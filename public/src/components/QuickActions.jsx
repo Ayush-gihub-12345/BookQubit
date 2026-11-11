@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import { readWishlist } from "./WishlistButton";
 import Icon from "./Icon";
 import { useLang } from "@/lib/useLang";
@@ -38,8 +39,8 @@ export default function QuickActions({ book }) {
   useEffect(() => {
     setWishlisted(readWishlist().some((b) => b.slug === book.slug));
     const auth = getFirebaseAuth();
-    const loadLike = async (uid) => {
-      const r = await fetch(`/api/follow?type=book_like&id=${encodeURIComponent(book.slug)}${uid ? `&uid=${uid}` : ""}`);
+    const loadLike = async (u) => {
+      const r = await authFetch(`/api/follow?type=book_like&id=${encodeURIComponent(book.slug)}`, {}, u);
       const data = await r.json();
       setLikeCount(data.count);
       setLiked(data.following);
@@ -47,9 +48,9 @@ export default function QuickActions({ book }) {
     if (!auth) { loadLike(); return; }
     return auth.onAuthStateChanged((u) => {
       setUser(u);
-      loadLike(u?.uid);
+      loadLike(u);
       if (u) {
-        fetch(`/api/shelf?uid=${u.uid}&slug=${encodeURIComponent(book.slug)}`)
+        authFetch(`/api/shelf?slug=${encodeURIComponent(book.slug)}`, {}, u)
           .then((r) => r.json()).then((d) => {
             setStatus(d.entry?.status || null);
             setProgress(d.entry?.progress || 0);

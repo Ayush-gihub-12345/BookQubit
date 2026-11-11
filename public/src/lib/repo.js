@@ -1214,7 +1214,15 @@ export async function listDiscussions(limit = 30, { q } = {}) {
 // Discussions a specific reader can see joining/leaving/messaging on — includes
 // their own membership row (null if they've never interacted with it) so the
 // UI knows whether to show Join, Open, or "rejoin blocked".
-export async function getDiscussion(id, uid) {
+// A discussion's *header* (title, body, linked book/author, tags, owner) is
+// public — the community page lists every discussion so readers can find one
+// to join. Its *messages* are not: posting requires active membership
+// (`isActiveDiscussionMember`, enforced in the messages route), so reading
+// them should require it too. `includePosts` lets the caller say whether the
+// requester has earned that, and when they have not the posts query is
+// skipped entirely rather than fetched and discarded — which also means the
+// common anonymous case got cheaper, not more expensive.
+export async function getDiscussion(id, uid, { includePosts = true } = {}) {
   const db = await getDb();
   const [thread, posts, member] = await Promise.all([
     db.prepare(
@@ -1223,10 +1231,12 @@ export async function getDiscussion(id, uid) {
        JOIN users u ON u.id=d.user_id
        WHERE d.id=?1`
     ).bind(id).first(),
-    db.prepare(
-      `SELECT p.*, u.name, u.photo_url, u.slug FROM discussion_posts p JOIN users u ON u.id=p.user_id
-       WHERE p.discussion_id=?1 ORDER BY p.created_at ASC`
-    ).bind(id).all(),
+    includePosts
+      ? db.prepare(
+          `SELECT p.*, u.name, u.photo_url, u.slug FROM discussion_posts p JOIN users u ON u.id=p.user_id
+           WHERE p.discussion_id=?1 ORDER BY p.created_at ASC`
+        ).bind(id).all()
+      : Promise.resolve({ results: [] }),
     uid
       ? db.prepare("SELECT * FROM discussion_members WHERE discussion_id=?1 AND user_id=?2").bind(id, uid).first()
       : Promise.resolve(null),

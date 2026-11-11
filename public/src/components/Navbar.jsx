@@ -8,6 +8,7 @@ import SearchBar from "./SearchBar";
 import Icon from "./Icon";
 import { LogoMark } from "./Logo";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import CustomThemeModal from "./CustomThemeModal";
 import { t } from "@/lib/i18n";
 
@@ -68,9 +69,9 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
     if (!auth) return;
     return auth.onAuthStateChanged((u) => {
       if (!u) { setMyGenres([]); setNotifCount(0); return; }
-      fetch(`/api/preferences?uid=${u.uid}`).then((r) => r.json())
+      authFetch("/api/preferences", {}, u).then((r) => r.json())
         .then((d) => setMyGenres(d.genres || [])).catch(() => setMyGenres([]));
-      fetch(`/api/notifications?uid=${u.uid}`).then((r) => r.json())
+      authFetch("/api/notifications", {}, u).then((r) => r.json())
         .then((d) => setNotifCount((d.notifications || []).length)).catch(() => setNotifCount(0));
     });
   }, []);

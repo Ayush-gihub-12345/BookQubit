@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import Icon from "@/components/Icon";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
@@ -20,7 +21,7 @@ export default function AchievementsPage() {
     return auth.onAuthStateChanged((u) => {
       setUser(u);
       if (!u) { router.push(`/${lang}/login`); return; }
-      fetch(`/api/achievements?uid=${u.uid}`).then((r) => r.json()).then((d) => setAchievements(d.achievements || []));
+      authFetch("/api/achievements", {}, u).then((r) => r.json()).then((d) => setAchievements(d.achievements || []));
     });
   }, [router]);
 

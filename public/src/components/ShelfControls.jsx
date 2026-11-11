@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import { useToast } from "./Toast";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
@@ -32,7 +33,7 @@ export default function ShelfControls({ slug }) {
     return auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (u) {
-        const r = await fetch(`/api/shelf?uid=${u.uid}&slug=${encodeURIComponent(slug)}`);
+        const r = await authFetch(`/api/shelf?slug=${encodeURIComponent(slug)}`, {}, u);
         const data = await r.json();
         setEntry(data.entry);
         if (data.entry?.review) setReviewText(data.entry.review);

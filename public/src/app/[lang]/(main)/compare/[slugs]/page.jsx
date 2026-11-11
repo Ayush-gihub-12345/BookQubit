@@ -7,6 +7,7 @@ import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import { SITE_URL } from "@/lib/site";
 import { t } from "@/lib/i18n";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export default async function ComparePage({ params }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
 
       <nav className="text-muted mb-6 text-sm">
         <Link href={`/${lang}/compare`} className="hover:text-brand-600">{_("compareCrumb")}</Link>

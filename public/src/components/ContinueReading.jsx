@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCover from "./BookCover";
 import HScrollRow from "./HScrollRow";
 import TitleTransliterated from "./TitleTransliterated";
@@ -19,7 +20,8 @@ export default function ContinueReading() {
     if (!auth) return;
     return auth.onAuthStateChanged(async (u) => {
       if (!u) { setItems(null); return; }
-      const r = await fetch(`/api/shelf?uid=${u.uid}`);
+      const r = await authFetch("/api/shelf", {}, u);
+      if (!r.ok) { setItems(null); return; }
       const data = await r.json();
       setItems((data.shelf || []).filter((s) => s.status === "reading").slice(0, 4));
     });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCover from "./BookCover";
 import Rating from "./Rating";
 import Icon from "./Icon";
@@ -31,7 +32,7 @@ export default function ForYou({ lang, fallbackBooks = [] }) {
     return auth.onAuthStateChanged(async (u) => {
       if (!u) { setData(null); setCheckedAuth(true); return; }
       try {
-        const res = await fetch(`/api/recommendations?uid=${u.uid}&lang=${lang}&limit=12`).then((r) => r.json());
+        const res = await authFetch(`/api/recommendations?lang=${lang}&limit=12`, {}, u).then((r) => r.json());
         if (res.picks?.length) setData(res);
       } catch { /* ignore */ }
       setCheckedAuth(true);

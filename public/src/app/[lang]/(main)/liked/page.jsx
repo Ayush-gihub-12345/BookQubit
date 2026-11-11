@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCard from "@/components/BookCard";
 import Icon from "@/components/Icon";
 import { useLang } from "@/lib/useLang";
@@ -21,7 +22,7 @@ export default function LikedBooksPage() {
     return auth.onAuthStateChanged((u) => {
       setUser(u);
       if (!u) { setLoading(false); return; }
-      fetch(`/api/liked?uid=${u.uid}`).then((r) => r.json())
+      authFetch("/api/liked", {}, u).then((r) => r.json())
         .then((d) => setBooks(d.books || []))
         .finally(() => setLoading(false));
     });

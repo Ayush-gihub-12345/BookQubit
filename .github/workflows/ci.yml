@@ -1,0 +1,52 @@
+name: CI
+
+# Runs on every pull request and on pushes to main. It deploys nothing and
+# needs no secrets: tests mock every external service (Firebase, D1), and the
+# build only compiles.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: public
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: public/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: public/package-lock.json
+      - run: npm ci
+      # Plain `next build`, not `opennextjs-cloudflare build`: this verifies
+      # that the app compiles, which is what a PR check needs. Producing the
+      # deployable Worker bundle stays a deploy-time concern.
+      - run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

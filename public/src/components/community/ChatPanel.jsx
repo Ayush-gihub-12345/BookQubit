@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
+import { authFetch } from "@/lib/authFetch";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
@@ -25,7 +26,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
   const lastIdRef = useRef(0);
 
   const load = async () => {
-    const r = await fetch(`/api/discussions/${discussionId}?uid=${user?.uid || ""}`);
+    const r = await authFetch(`/api/discussions/${discussionId}`, {}, user);
     if (!r.ok) return;
     const d = await r.json();
     setThread(d);
@@ -37,7 +38,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
     setThread(null); setMessages([]); setError("");
     load();
     const poll = setInterval(async () => {
-      const r = await fetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`);
+      const r = await authFetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`, {}, user);
       if (!r.ok) return;
       const d = await r.json();
       if (d.messages?.length) {
@@ -105,7 +106,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
       body: JSON.stringify({ idToken, body }),
     });
     if (r.ok) {
-      const r2 = await fetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`);
+      const r2 = await authFetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`, {}, user);
       const d2 = await r2.json();
       if (d2.messages?.length) {
         setMessages((prev) => [...prev, ...d2.messages]);
