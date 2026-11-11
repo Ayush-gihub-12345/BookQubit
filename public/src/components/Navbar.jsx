@@ -34,9 +34,9 @@ function Dropdown({ button, children, width = "w-48" }) {
 }
 
 const iconBtn =
-  "grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-base shadow-sm transition hover:scale-105 hover:border-brand-500 hover:shadow-md";
+  "grid h-11 w-11 place-items-center rounded-full border border-line bg-surface text-base transition-colors hover:border-brand-600 hover:text-brand-600";
 
-export default function Navbar({ lang, theme, languages, themes, labels }) {
+export default function Navbar({ lang, theme, languages, themes, labels, genres = [], countries = [], collections = [] }) {
   const tr = t(lang);
   const [open, setOpen] = useState(false);
   const [myGenres, setMyGenres] = useState([]);
@@ -144,39 +144,28 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
         [tr("editorsChoice"), "/books?sort=rating&rating=4.5"],
       ],
     },
+    // These three groups used to be typed in by hand, and most of the links
+    // went nowhere: every "Special collection" (Harari, Stoic, Dystopian,
+    // Revolutionary), "USA" and "UK" returned zero books, and "Self-Help" and
+    // "Finance" returned four and three. They now come from the catalog's own
+    // facet data (see lib/genres.js and the layout), so a link can't point at
+    // an empty page. A group with nothing to show is dropped below.
     {
       title: tr("literatureTypes"),
-      links: [
-        ["Philosophy", "/books?category=Philosophy"],
-        ["History", "/books?category=History"],
-        ["Fiction", "/books?category=Fiction"],
-        ["Psychology", "/books?category=Psychology"],
-        ["Self-Help", "/books?category=Self-Help"],
-        ["Business", "/books?category=Business"],
-        ["Finance", "/books?category=Finance"],
-      ],
+      links: genres.map((g) => [g.label, `/books?category=${encodeURIComponent(g.category)}`]),
     },
     {
       title: tr("booksByCountry"),
-      links: [
-        ["India", "/books?country=India"],
-        ["USA", "/books?country=USA"],
-        ["UK", "/books?country=UK"],
-        ["Israel", "/books?country=Israel"],
-        ["Germany", "/books?country=Germany"],
-        ["Japan", "/books?country=Japan"],
-        ["Russia", "/books?country=Russia"],
-      ],
+      links: countries.map((c) => [c.name, `/books?country=${encodeURIComponent(c.name)}`]),
     },
     {
       title: tr("specialCollections"),
-      links: [
-        ["Harari Collection", "/collections/Harari%20Collection"],
-        ["Stoic Classics", "/collections/Stoic%20Classics"],
-        ["Dystopian Classics", "/collections/Dystopian%20Classics"],
-        ["Revolutionary Classics", "/collections/Revolutionary%20Classics"],
-        [tr("allCollectionsMenu"), "/collections"],
-      ],
+      links: collections.length
+        ? [
+            ...collections.map((c) => [c.name, `/collections/${encodeURIComponent(c.name)}`]),
+            [tr("allCollectionsMenu"), "/collections"],
+          ]
+        : [],
     },
     {
       title: tr("byFormat"),
@@ -188,6 +177,8 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
       ],
     },
   ];
+
+  const megaGroups = MEGA.filter((col) => col.links.length > 0);
 
   const setCookie = (name, value) => {
     document.cookie = `${name}=${value};path=/;max-age=31536000`;
@@ -222,8 +213,6 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
 
   return (
     <header ref={headerRef} className="border-line bg-surface/85 relative z-50 border-b shadow-sm backdrop-blur-xl lg:sticky lg:top-0">
-      {/* brand accent strip */}
-      <div className="h-0.5 bg-gradient-to-r from-brand-700 via-brand-500 to-brand-700" />
       {/* Row 1 */}
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
         {/* aria-label because the visible "BookQubit" text beside the mark is
@@ -232,9 +221,9 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             Lighthouse reported as "links do not have a discernible name" on
             mobile only. The label also covers the icon-only rendering for
             screen-reader users on any width. */}
-        <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex shrink-0 items-center gap-2">
+        <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex min-h-11 shrink-0 items-center gap-2">
           <LogoMark size={36} />
-          <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
+          <span className="text-xl font-extrabold tracking-tight">
             Book<span className="text-brand-600">Qubit</span>
           </span>
         </Link>
@@ -280,7 +269,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
               </button>
             )}
           >
-            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.theme}</p>
+            <p className="text-muted border-line border-b px-4 py-2 text-xs font-semibold">{labels.theme}</p>
             {themes.map((t) => (
               <button key={t.id} onClick={() => setCookie("theme", t.id)}
                 className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${t.id === theme ? "font-bold text-brand-600" : ""}`}>
@@ -304,14 +293,14 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             width="w-48"
             button={(toggle) => (
               <button onClick={toggle}
-                className="border-line bg-surface flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold shadow-sm transition hover:scale-105 hover:border-brand-500 hover:shadow-md"
+                className="border-line bg-surface flex h-11 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors hover:border-brand-600 hover:text-brand-600"
                 aria-label={labels.language}>
                 🌐 <span className="uppercase">{currentLang.code}</span>
                 <span className="text-[9px] opacity-50">▼</span>
               </button>
             )}
           >
-            <p className="text-muted border-line border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide">{labels.language}</p>
+            <p className="text-muted border-line border-b px-4 py-2 text-xs font-semibold">{labels.language}</p>
             <div className="max-h-72 overflow-auto">
               {languages.map((l) => (
                 <button key={l.code} onClick={() => switchLang(l.code)}
@@ -345,7 +334,7 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                   className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${active ? "text-brand-600" : ""}`}>
                   <Icon name={m.icon} size={14} className="opacity-70" /> {m.label}
                   {m.items && <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />}
-                  <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
+                  <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-600 transition-transform ${active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
                 </Link>
                 {m.items && (
                   <div className="invisible absolute left-1/2 top-full z-50 w-60 -translate-x-1/2 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
@@ -368,12 +357,12 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
             <button className="relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600">
               <Icon name="grid" size={14} className="opacity-70" /> {tr("moreWord")}
               <Icon name="chevronDown" size={11} className="opacity-40 transition group-hover:rotate-180" />
-              <span className="absolute inset-x-3 bottom-0 h-0.5 scale-x-0 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform group-hover:scale-x-100" />
+              <span className="absolute inset-x-3 bottom-0 h-0.5 scale-x-0 rounded-full bg-brand-600 transition-transform group-hover:scale-x-100" />
             </button>
             <div className="invisible absolute inset-x-0 top-full z-50 translate-y-2 pt-1 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               <div className="bg-surface border-line mx-auto max-w-7xl overflow-hidden rounded-b-2xl border border-t-0 shadow-2xl">
-                <div className="grid grid-cols-6 gap-6 p-8">
-                  {MEGA.map((col) => (
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-6 p-8">
+                  {megaGroups.map((col) => (
                     <div key={col.title}>
                       <p className="border-line mb-3 border-b pb-2 text-sm font-bold">{col.title}</p>
                       <ul className="space-y-1.5">
@@ -403,10 +392,10 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
                 </div>
                 <div className="border-line flex justify-center gap-3 border-t p-4">
                   <Link href={withLang("/categories")} prefetch={false} className="btn-primary !py-2 text-sm">
-                    Browse All Categories <Icon name="arrowRight" size={14} />
+                    {tr("genresAndCategories")}
                   </Link>
                   <Link href={withLang("/request-a-book")} prefetch={false} className="btn-ghost !py-2 text-sm">
-                    <Icon name="bookmark" size={14} /> Request a Book
+                    <Icon name="bookmark" size={14} /> {tr("requestABookTitle")}
                   </Link>
                 </div>
               </div>
@@ -416,13 +405,13 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           <Link href={withLang("/compare")} prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${relPath === "/compare" || relPath.startsWith("/compare/") ? "text-brand-600" : ""}`}>
             <Icon name="layers" size={14} className="opacity-70" /> {tr("compareWord")}
-            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${relPath === "/compare" || relPath.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
+            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-600 transition-transform ${relPath === "/compare" || relPath.startsWith("/compare/") ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
 
           <Link href={withLang("/about")} prefetch={false}
             className={`relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:text-brand-600 ${relPath === "/about" ? "text-brand-600" : ""}`}>
             <Icon name="shieldCheck" size={14} className="opacity-70" /> {tr("aboutWord")}
-            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-transform ${relPath === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
+            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-600 transition-transform ${relPath === "/about" ? "scale-x-100" : "scale-x-0 hover:scale-x-100"}`} />
           </Link>
         </nav>
       </div>
@@ -433,53 +422,53 @@ export default function Navbar({ lang, theme, languages, themes, labels }) {
           <div className="grid grid-cols-2 gap-2">
             {MENUS.map((m) => (
               <Link key={m.label} href={withLang(m.href)} prefetch={false} onClick={() => setOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+                className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
                 <Icon name={m.icon} size={15} className="text-muted" /> {m.label}
               </Link>
             ))}
-            <Link href={withLang("/notifications")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/notifications")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="bell" size={15} className="text-muted" /> {tr("notificationsWord")} {notifCount > 0 && <span className="text-brand-600">({notifCount})</span>}
             </Link>
-            <Link href={withLang("/liked")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/liked")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="heart" size={15} className="text-muted" /> {tr("likedBooksWord")}
             </Link>
-            <Link href={withLang("/compare")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/compare")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="layers" size={15} className="text-muted" /> {tr("compareWord")}
             </Link>
-            <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <button onClick={() => { setOpen(false); surpriseMe(); }} className="flex items-center gap-2 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="zap" size={15} className="text-muted" /> {tr("navSurpriseMe")}
             </button>
-            <Link href={withLang("/about")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/about")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="shieldCheck" size={15} className="text-muted" /> {tr("aboutWord")}
             </Link>
-            <Link href={withLang("/login")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
+            <Link href={withLang("/login")} prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium hover:bg-brand-50 dark:hover:bg-white/5">
               <Icon name="user" size={15} className="text-muted" /> {labels.signIn}
             </Link>
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("exploreSectionLabel")}</p>
+          <p className="text-muted mt-4 px-1 text-xs font-semibold">{tr("exploreSectionLabel")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {[[tr("topRated"), "/books?sort=rating"], [tr("newReleases"), "/books?sort=new"], ["Philosophy", "/books?category=Philosophy"], ["History", "/books?category=History"], ["India", "/books?country=India"], [labels.collections, "/collections"], [labels.tags, "/tags"]].map(([label, href]) => (
+            {[[tr("topRated"), "/books?sort=rating"], [tr("newReleases"), "/books?sort=new"], ...genres.slice(0, 3).map((g) => [g.label, `/books?category=${encodeURIComponent(g.category)}`]), ...countries.slice(0, 1).map((c) => [c.name, `/books?country=${encodeURIComponent(c.name)}`]), [labels.collections, "/collections"], [labels.tags, "/tags"]].map(([label, href]) => (
               <Link key={label} href={withLang(href)} prefetch={false} onClick={() => setOpen(false)} className="pill">{label}</Link>
             ))}
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navTheme")}</p>
+          <p className="text-muted mt-4 px-1 text-xs font-semibold">{tr("navTheme")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {themes.map((t) => (
               <button key={t.id} onClick={() => setCookie("theme", t.id)}
-                className={`pill ${t.id === theme ? "!bg-brand-600 !text-white" : ""}`}>
+                className={`pill ${t.id === theme ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                 {t.icon} {t.name}
               </button>
             ))}
             <button onClick={() => setShowCustomTheme(true)}
-              className={`pill ${theme === "custom" ? "!bg-brand-600 !text-white" : ""}`}>
+              className={`pill ${theme === "custom" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
               🎨 {tr("customThemeLabel")}
             </button>
           </div>
-          <p className="text-muted mt-4 px-1 text-[11px] font-semibold uppercase tracking-wide">{tr("navLanguage")}</p>
+          <p className="text-muted mt-4 px-1 text-xs font-semibold">{tr("navLanguage")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {languages.map((l) => (
               <button key={l.code} onClick={() => switchLang(l.code)}
-                className={`pill ${l.code === lang ? "!bg-brand-600 !text-white" : ""}`}>
+                className={`pill ${l.code === lang ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                 {l.name}
               </button>
             ))}

@@ -32,7 +32,7 @@ export default function CustomThemeModal({ onClose }) {
   const [saved] = useState(readSavedCustomTheme);
   const [bg, setBg] = useState(saved?.bg || "#0d1322");
   const [fg, setFg] = useState(saved?.fg || "#e4e8f4");
-  const [accent, setAccent] = useState(saved?.brand500 || "#6366f1");
+  const [accent, setAccent] = useState(saved?.brand500 || "#1b7f78");
   const [saving, setSaving] = useState(false);
 
   const palette = useMemo(() => deriveFullPalette({ bg, fg, accent }), [bg, fg, accent]);

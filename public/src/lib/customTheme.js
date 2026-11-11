@@ -33,6 +33,34 @@ function relativeLuminance(hex) {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
+// WCAG 2.x relative luminance and contrast ratio. The simple luminance above
+// is fine for deciding "is this background dark?", but picking readable text
+// for a button needs the real formula (it linearises sRGB first), because the
+// naive version misjudges mid-tones such as yellows and cyans, which are
+// exactly the accents people choose.
+function wcagLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const lin = (v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+function contrastRatio(a, b) {
+  const [hi, lo] = [wcagLuminance(a), wcagLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// Text colour for anything filled with the brand colour (primary buttons,
+// the active pill): whichever of white or near-black reads better on it.
+// A reader-chosen accent used to get white text unconditionally, which is
+// unreadable on a light accent. Computed here rather than stored, so the
+// saved-theme cookie format does not change and existing themes keep working.
+export function onBrandColor(brandHex) {
+  const dark = "#0b1110";
+  return contrastRatio(brandHex, "#ffffff") >= contrastRatio(brandHex, dark) ? "#ffffff" : dark;
+}
+
 const CUSTOM_KEYS = [
   "bg", "surface", "fg", "muted", "line", "pillBg", "pillFg",
   "brand50", "brand100", "brand500", "brand600", "brand700", "pillHoverBrightness",
@@ -92,6 +120,7 @@ export function paletteToCssVars(palette) {
     "--color-brand-600": palette.brand600,
     "--color-brand-700": palette.brand700,
     "--pill-hover-brightness": palette.pillHoverBrightness,
+    "--on-brand": onBrandColor(palette.brand600),
   };
 }
 

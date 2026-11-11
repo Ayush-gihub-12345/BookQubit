@@ -411,6 +411,53 @@ export async function getRecentlyAdded(lang, limit = 8) {
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
 }
 
+// The authors shown on the homepage: the writers with the most books in the
+// catalog, preferring ones that have a photo.
+//
+// The homepage used to call listAuthors(), which returns EVERY author who has
+// a book (~5,000 rows, a multi-megabyte cache entry) just to render twelve
+// cards from an unordered slice of it — and that slice included junk rows
+// such as an author literally named "-". Parsing that blob on a cold isolate
+// is real CPU on the page that gets the most traffic.
+//
+// This does the work in two small, bounded queries instead and caches the
+// result for three hours like the other slow-changing lookups: the top
+// authors by book count (one GROUP BY, 40 rows out), then the matching author
+// profile rows by exact name (so every card links to a page that exists).
+// Multi-author strings ("A, B" or "A; B") are excluded from the ranking
+// because they would never match a single profile.
+export async function getFeaturedAuthors(lang, limit = 10) {
+  return cached(`featured-authors:${lang}:${limit}`, async () => {
+    const db = await getCatalogDb();
+    const run = async (effLang) => {
+      const { results: top } = await db.prepare(
+        `SELECT author AS name, COUNT(*) AS n FROM books
+         WHERE lang=?1 AND author IS NOT NULL AND author != ''
+           AND author NOT LIKE '%,%' AND author NOT LIKE '%;%' AND author NOT LIKE '-%'
+         GROUP BY author ORDER BY n DESC LIMIT 40`
+      ).bind(effLang).all();
+      if (!top.length) return [];
+      const names = top.map((r) => r.name);
+      const { results: rows } = await db.prepare(
+        `SELECT id, slug, name, country, image_url FROM authors
+         WHERE lang=?1 AND name IN (${names.map((_, i) => `?${i + 2}`).join(",")})`
+      ).bind(effLang, ...names).all();
+      const byName = new Map(rows.map((r) => [r.name, r]));
+      return top
+        .map((t) => (byName.has(t.name) ? { ...byName.get(t.name), books: t.n } : null))
+        .filter(Boolean)
+        // Faces first, then by how much of the catalog they account for.
+        .sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)) || b.books - a.books)
+        .slice(0, limit);
+    };
+    let out = await run(lang);
+    // Same fallback as queryBooks(): a language with no translated catalog
+    // yet should show the English authors rather than an empty section.
+    if (!out.length && lang !== "en") out = await run("en");
+    return out;
+  }, 10800);
+}
+
 // Admin-curated, not tied to import cadence — safe to cache far longer than
 // the 5-min default. Same 3h TTL applied across the slow-changing lookups
 // below: verified live via Cloudflare's D1 dashboard that even with very

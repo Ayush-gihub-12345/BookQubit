@@ -50,3 +50,7 @@ jobs:
       - run: npx next build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+          # next.config.mjs normally starts Cloudflare's local runtime (workerd)
+          # for dev bindings. This swaps in the Node-SQLite stand-in so the
+          # build does not depend on workerd running on the CI machine.
+          BQ_LOCAL_D1: "1"

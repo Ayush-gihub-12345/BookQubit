@@ -48,7 +48,7 @@ export default async function Footer({ lang = "en" }) {
             <div className="mt-4 flex gap-2">
               {socialLinks.map(([key, icon, label]) => (
                 <a key={key} href={settings[key]} target="_blank" rel="noopener noreferrer" aria-label={label}
-                  className="border-line text-muted grid h-9 w-9 place-items-center rounded-full border transition hover:border-brand-500 hover:text-brand-600">
+                  className="border-line text-muted grid h-11 w-11 place-items-center rounded-full border transition-colors hover:border-brand-600 hover:text-brand-600">
                   <SocialIcon name={icon} size={16} />
                 </a>
               ))}
@@ -66,34 +66,34 @@ export default async function Footer({ lang = "en" }) {
         </div>
 
         <div>
-          <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerExplore")}</p>
-          <ul className="space-y-2 text-sm">
-            <li><Link href={withLang("/books")} prefetch={false} className="hover:text-brand-600">{_("browse")}</Link></li>
-            <li><Link href={withLang("/books?sort=rating")} prefetch={false} className="hover:text-brand-600">{_("topRated")}</Link></li>
-            <li><Link href={withLang("/books?sort=new")} prefetch={false} className="hover:text-brand-600">{_("newReleases")}</Link></li>
-            <li><Link href={withLang("/collections")} prefetch={false} className="hover:text-brand-600">{_("collections")}</Link></li>
-            <li><Link href={withLang("/tags")} prefetch={false} className="hover:text-brand-600">{_("tags")}</Link></li>
+          <p className="text-muted mb-1 text-sm font-semibold">{_("footerExplore")}</p>
+          <ul className="text-sm">
+            <li><Link href={withLang("/books")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("browse")}</Link></li>
+            <li><Link href={withLang("/books?sort=rating")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("topRated")}</Link></li>
+            <li><Link href={withLang("/books?sort=new")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("newReleases")}</Link></li>
+            <li><Link href={withLang("/collections")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("collections")}</Link></li>
+            <li><Link href={withLang("/tags")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("tags")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerBrowse")}</p>
-          <ul className="space-y-2 text-sm">
-            <li><Link href={withLang("/authors")} prefetch={false} className="hover:text-brand-600">{_("authors")}</Link></li>
-            <li><Link href={withLang("/publications")} prefetch={false} className="hover:text-brand-600">{_("publishers")}</Link></li>
-            <li><Link href={withLang("/comics")} prefetch={false} className="hover:text-brand-600">{_("comics")}</Link></li>
-            <li><Link href={withLang("/community")} prefetch={false} className="hover:text-brand-600">{_("communityTitle")}</Link></li>
-            <li><Link href={withLang("/leaderboard")} prefetch={false} className="hover:text-brand-600">{_("navBookwormRanking")}</Link></li>
+          <p className="text-muted mb-1 text-sm font-semibold">{_("footerBrowse")}</p>
+          <ul className="text-sm">
+            <li><Link href={withLang("/authors")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("authors")}</Link></li>
+            <li><Link href={withLang("/publications")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("publishers")}</Link></li>
+            <li><Link href={withLang("/comics")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("comics")}</Link></li>
+            <li><Link href={withLang("/community")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("communityTitle")}</Link></li>
+            <li><Link href={withLang("/leaderboard")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("navBookwormRanking")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <p className="text-muted mb-3 text-sm font-semibold uppercase tracking-wide">{_("footerCompany")}</p>
-          <ul className="space-y-2 text-sm">
-            <li><Link href={withLang("/about")} prefetch={false} className="hover:text-brand-600">{_("footerAbout")}</Link></li>
-            <li><Link href={withLang("/contact")} prefetch={false} className="hover:text-brand-600">{_("footerContact")}</Link></li>
-            <li><Link href={withLang("/privacy")} prefetch={false} className="hover:text-brand-600">{_("footerPrivacy")}</Link></li>
-            <li><Link href={withLang("/terms")} prefetch={false} className="hover:text-brand-600">{_("footerTerms")}</Link></li>
+          <p className="text-muted mb-1 text-sm font-semibold">{_("footerCompany")}</p>
+          <ul className="text-sm">
+            <li><Link href={withLang("/about")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerAbout")}</Link></li>
+            <li><Link href={withLang("/contact")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerContact")}</Link></li>
+            <li><Link href={withLang("/privacy")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerPrivacy")}</Link></li>
+            <li><Link href={withLang("/terms")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerTerms")}</Link></li>
           </ul>
         </div>
       </div>

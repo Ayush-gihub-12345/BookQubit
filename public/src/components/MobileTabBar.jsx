@@ -46,18 +46,19 @@ export default function MobileTabBar() {
           if (!tab) {
             return (
               <button key="search" onClick={() => setSearchOpen(true)}
-                className="text-muted flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium">
+                className="text-muted flex min-h-14 min-w-0 flex-col items-center justify-start gap-0.5 px-1 pb-1.5 pt-2 text-[11px] font-medium">
                 <Icon name="search" size={20} />
-                {tr("searchWord")}
+                <span className="line-clamp-2 max-w-full text-center leading-[1.15]">{tr("searchWord")}</span>
               </button>
             );
           }
           const active = tab.match(relPath);
           return (
             <Link key={tab.href} href={`/${lang}${tab.href}`} prefetch={false}
-              className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium transition ${active ? "text-brand-600" : "text-muted"}`}>
-              <Icon name={tab.icon} size={20} className={active ? "scale-110" : ""} />
-              {tab.label}
+              aria-label={tab.label}
+              className={`flex min-h-14 min-w-0 flex-col items-center justify-start gap-0.5 px-1 pb-1.5 pt-2 text-[11px] font-medium transition-colors ${active ? "text-brand-600" : "text-muted"}`}>
+              <Icon name={tab.icon} size={20} />
+              <span className="line-clamp-2 max-w-full text-center leading-[1.15]">{tab.label}</span>
             </Link>
           );
         })}

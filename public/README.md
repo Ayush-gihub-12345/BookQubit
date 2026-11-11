@@ -83,6 +83,29 @@ Two other options:
 Cover images: use Open Library covers (`https://covers.openlibrary.org/b/isbn/<ISBN>-L.jpg`)
 or Google Books thumbnails — both free.
 
+## 6b. Run locally without Cloudflare's runtime (Windows-friendly)
+
+`npm run preview` and the default `npm run dev` start Cloudflare's local runtime
+(`workerd`). On a machine where it will not start (for example a Windows PC
+missing the Visual C++ runtime, where `workerd.exe` exits with 0xC0000135) both
+fail with `Error: write EOF`. This repo has a stand-in that needs only Node 22.5+:
+
+```bash
+npm run seed:local   # once: copies a slice of the PUBLIC catalog (read-only GETs) into .local-d1/
+npm run dev:local    # next dev, backed by a local SQLite file instead of D1
+```
+
+- Data lives in `.local-d1/` (gitignored). Delete the folder to reset.
+- It never talks to Cloudflare and reads no secrets. Admin, email and the importer are
+  unavailable locally, which is accurate: those need real bindings and secrets.
+- Sign-in uses the real Firebase project, so signed-in flows need network access.
+- `BQ_LOCAL_D1=1 npx next build` also works, for a build check without `workerd`.
+- Do not run `next build` while `dev:local` is running in the same folder: both
+  write `.next/` and the dev server will start returning 500s until restarted.
+- The stand-in implements the slice of the D1 API this app uses, not all of it. Anything
+  that depends on real D1 behaviour (read replicas, limits, `meta` fields) must be
+  tested against D1.
+
 ## 7. Deploy
 ```bash
 npm run deploy

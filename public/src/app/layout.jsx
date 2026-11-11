@@ -1,31 +1,44 @@
 import Script from "next/script";
-import { Inter, Sora } from "next/font/google";
+import {
+  Noto_Sans, Noto_Sans_Devanagari, Noto_Sans_Bengali, Noto_Sans_Tamil, Noto_Sans_Telugu,
+  Noto_Sans_Gujarati, Noto_Sans_Kannada, Noto_Sans_Malayalam, Noto_Sans_Gurmukhi,
+  Noto_Sans_Arabic, Noto_Nastaliq_Urdu,
+} from "next/font/google";
 import "./globals.css";
 
-// Downloaded at build time and served from our own origin, instead of the
-// runtime <link> to fonts.googleapis.com that used to live in <head>.
+// One type family across every script the site ships a UI in.
 //
-// That link was render-blocking AND cross-origin, so a mobile visitor paid
-// DNS + TLS + CSS download to googleapis.com and only THEN discovered the
-// font files on a second origin (gstatic.com) — all before first paint.
-// Lighthouse measured it as the largest single blocker on mobile
-// (render-blocking requests ~1,030 ms, with LCP at 8.3s).
+// The site offers 21 interface languages, ten of them Indian, but it used to
+// load only Inter and Sora with `subsets: ["latin"]`. A Hindi page therefore
+// rendered its Devanagari in whatever the visitor's device happened to have
+// (verified on production: /hi carries ~450 Devanagari characters and loads
+// only Inter's Latin glyphs), so the product's headline promise looked
+// different — and often worse — on every phone.
 //
-// next/font inlines the @font-face rules and serves the files locally, so
-// there is no blocking round-trip and no extra origins. `display: "swap"`
-// keeps text readable in a fallback face while they load.
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-inter",
-  display: "swap",
-});
-const sora = Sora({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-sora",
-  display: "swap",
-});
+// Noto Sans is one design across Latin, Cyrillic, Devanagari and the other
+// scripts below, so a reader in Tamil gets the same weight and rhythm as one
+// in English. Every face is declared here but costs an English visitor
+// nothing: each @font-face carries a unicode-range for its own script, and
+// characters from that range. `preload` is off for all of them except the
+// Latin face, so no script a visitor doesn't use is ever fetched early.
+// (Options are written out per call because next/font only accepts values it
+// can read statically; a shared spread object is a build error.)
+//
+// CJK (zh/ja/ko) deliberately stays on the system fonts: those are good on
+// every platform and a web CJK face is several MB.
+const noto = Noto_Sans({ display: "swap", subsets: ["latin", "latin-ext", "cyrillic"], variable: "--font-noto" });
+const deva = Noto_Sans_Devanagari({ display: "swap", preload: false, subsets: ["devanagari"], variable: "--font-deva" });
+const beng = Noto_Sans_Bengali({ display: "swap", preload: false, subsets: ["bengali"], variable: "--font-beng" });
+const taml = Noto_Sans_Tamil({ display: "swap", preload: false, subsets: ["tamil"], variable: "--font-taml" });
+const telu = Noto_Sans_Telugu({ display: "swap", preload: false, subsets: ["telugu"], variable: "--font-telu" });
+const gujr = Noto_Sans_Gujarati({ display: "swap", preload: false, subsets: ["gujarati"], variable: "--font-gujr" });
+const knda = Noto_Sans_Kannada({ display: "swap", preload: false, subsets: ["kannada"], variable: "--font-knda" });
+const mlym = Noto_Sans_Malayalam({ display: "swap", preload: false, subsets: ["malayalam"], variable: "--font-mlym" });
+const guru = Noto_Sans_Gurmukhi({ display: "swap", preload: false, subsets: ["gurmukhi"], variable: "--font-guru" });
+const arab = Noto_Sans_Arabic({ display: "swap", preload: false, subsets: ["arabic"], variable: "--font-arab" });
+// Urdu is conventionally set in Nastaliq, not the Naskh-style Arabic face.
+const urdu = Noto_Nastaliq_Urdu({ display: "swap", preload: false, subsets: ["arabic"], variable: "--font-urdu" });
+const FONT_VARS = [noto, deva, beng, taml, telu, gujr, knda, mlym, guru, arab, urdu].map((f) => f.variable).join(" ");
 import { getLang, RTL } from "@/lib/lang";
 import { getTheme, getCustomThemeColors } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
@@ -43,7 +56,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#0f5b57",
 };
 
 export default async function RootLayout({ children }) {
@@ -61,7 +74,7 @@ export default async function RootLayout({ children }) {
       data-theme={theme}
       style={customStyle}
       translate="no"
-      className={`${inter.variable} ${sora.variable} notranslate`}
+      className={`${FONT_VARS} notranslate`}
     >
       <head>
         {/* The site already ships its own translation/transliteration for

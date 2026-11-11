@@ -26,6 +26,14 @@
       "service": "bookqubit-import-cron"
     }
   ],
+  // Workers Logs. It was OFF in production (confirmed from the account's
+  // Worker settings: no `observability` block), so failures were invisible:
+  // between 1% and 9% of requests end in `exceededResources` every day and
+  // there was no record of which route did it. 100% sampling is fine at the
+  // current volume (~35k requests/day, about 1M events/month, against 20M
+  // included); lower head_sampling_rate if traffic grows tenfold. Log OBJECTS,
+  // not strings, so the fields are searchable.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "vars": {
     // "1" re-applies SCHEMA/CATALOG_SCHEMA + migrations on database access.
     // Keep at "0" in normal operation: applying them on every isolate cold

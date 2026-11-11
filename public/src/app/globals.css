@@ -4,24 +4,34 @@
 @custom-variant dark (&:where([data-theme="dark"] *, [data-theme="dark"], [data-theme="midnight"] *, [data-theme="midnight"], [data-theme="imperial"] *, [data-theme="imperial"]));
 
 @theme {
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-ink-900: #0e1220;
-  --color-ink-800: #171d31;
+  /* "Spine" teal replaces the indigo-violet that every themed element
+     (buttons, links, focus, pills) derives from. Chosen for contrast first:
+     brand-600 on the page surface is about 7.9:1, so it is safe as link text
+     and as a button fill under white text. */
+  --color-brand-50: #e6f2f0;
+  --color-brand-100: #cde6e2;
+  --color-brand-500: #1b7f78;
+  --color-brand-600: #0f5b57;
+  --color-brand-700: #0a4440;
+  --color-ink-900: #16201d;
+  --color-ink-800: #1f2b27;
+  /* The one highlight: reading progress, today's pick. Text on it is
+     --color-marker-ink, never white. */
+  --color-marker: #f2c230;
+  --color-marker-ink: #4d3a00;
   /* Registers `surface` as a real Tailwind color token (mapped to the
      per-theme --surface variable) so opacity modifiers like bg-surface/85
      actually generate CSS — without this, Tailwind can't apply an alpha
      modifier to an unregistered color and silently drops the background. */
   --color-surface: var(--surface);
-  /* --font-sora / --font-inter are injected by next/font in layout.jsx (it
-     generates a hashed family name for the self-hosted files). The literal
-     names stay as a fallback so nothing loses its typeface if those
-     variables are ever missing. */
-  --font-display: var(--font-sora), "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* The --font-* variables are injected by next/font in layout.jsx, one per
+     script (Latin/Cyrillic, Devanagari, Bengali, and so on). They are listed
+     in one stack so the browser picks the right face per character and only
+     downloads the scripts a page actually contains. */
+  --font-body: var(--font-noto), var(--font-deva), var(--font-beng), var(--font-taml),
+    var(--font-telu), var(--font-gujr), var(--font-knda), var(--font-mlym),
+    var(--font-guru), var(--font-arab), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-body);
 }
 
 /* ── Themes: bg is softly tinted so surfaces (cards/nav) visibly lift ──
@@ -29,17 +39,20 @@
    readable contrast (brand-50/100 double as hover backgrounds and CANNOT
    be reused as text colors in dark themes). */
 :root, [data-theme="light"] {
-  --bg: #f6f7fb; --surface: #ffffff; --fg: #1f2437;
-  --muted: #6b7288; --line: #e6e8f0;
-  --pill-bg: #e8ecfd; --pill-fg: #4338ca;
+  --bg: #f3f5f1; --surface: #fbfcfa; --fg: #16201d;
+  --muted: #566660; --line: #d5dcd3;
+  --pill-bg: #e1ece9; --pill-fg: #0a4440;
+  --on-brand: #ffffff;
 }
 [data-theme="dark"] {
-  --bg: #0d1322; --surface: #161e33; --fg: #e4e8f4;
-  --muted: #98a2bd; --line: #232d47;
-  --color-brand-50: #1c2440; --color-brand-100: #26305a;
-  --color-brand-500: #818cf8; --color-brand-600: #6366f1; --color-brand-700: #4f46e5;
-  --pill-bg: #232d54; --pill-fg: #b3bcfa;
+  --bg: #0e1513; --surface: #151d1a; --fg: #e5ece8;
+  --muted: #9aaaa3; --line: #25302c;
+  --color-brand-50: #12302d; --color-brand-100: #17403c;
+  --color-brand-500: #4fb8ae; --color-brand-600: #37a095; --color-brand-700: #25867d;
+  --pill-bg: #1b3a36; --pill-fg: #9fdcd4;
   --pill-hover-brightness: 1.25;
+  /* white on this lighter teal would be about 3:1; dark ink on it is about 7:1 */
+  --on-brand: #04201d;
 }
 [data-theme="sepia"] {
   --bg: #f4ecdd; --surface: #fdf8ee; --fg: #40331f;
@@ -80,6 +93,7 @@
 /* Imperial — the premium/"god-level" preset: near-black with warm gold,
    deliberately distinct from every other (mostly cool-toned) theme. */
 [data-theme="imperial"] {
+  --on-brand: #1a1305;
   --bg: #0b0a08; --surface: #1a1712; --fg: #f3ecd9;
   --muted: #a89a7a; --line: #2e2a1f;
   --color-brand-50: #3d3315; --color-brand-100: #4d4119;
@@ -92,20 +106,23 @@
    these; this block only matters as a sane fallback if that cookie is ever
    missing or fails to decode, so "custom" never renders unstyled. */
 [data-theme="custom"] {
-  --bg: #0d1322; --surface: #161e33; --fg: #e4e8f4;
-  --muted: #98a2bd; --line: #232d47;
-  --color-brand-50: #1c2440; --color-brand-100: #26305a;
-  --color-brand-500: #818cf8; --color-brand-600: #6366f1; --color-brand-700: #4f46e5;
-  --pill-bg: #232d54; --pill-fg: #b3bcfa;
+  --bg: #0e1513; --surface: #151d1a; --fg: #e5ece8;
+  --muted: #9aaaa3; --line: #25302c;
+  --color-brand-50: #12302d; --color-brand-100: #17403c;
+  --color-brand-500: #4fb8ae; --color-brand-600: #37a095; --color-brand-700: #25867d;
+  --pill-bg: #1b3a36; --pill-fg: #9fdcd4;
   --pill-hover-brightness: 1.25;
+  --on-brand: #04201d;
+}
+
+:root {
+  --control-border: color-mix(in srgb, var(--fg) 50%, var(--surface));
 }
 
 /* Theme-aware hero/CTA band: adapts to whichever theme is active */
 .band {
   color: #fff;
-  background:
-    radial-gradient(90% 120% at 85% 0%, color-mix(in srgb, var(--color-brand-500) 45%, transparent) 0%, transparent 55%),
-    linear-gradient(135deg, #0e1220 0%, color-mix(in srgb, var(--color-brand-700) 55%, #0e1220) 65%, color-mix(in srgb, var(--color-brand-600) 80%, #0e1220) 100%);
+  background: color-mix(in srgb, var(--color-brand-700) 38%, #0d1512);
 }
 
 /* horizontal scroll rows — native scrollbar hidden, arrow buttons (HScrollRow) drive/assist scrolling instead */
@@ -145,16 +162,14 @@
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--color-brand-600);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.14);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .icon-btn:hover {
-  transform: scale(1.1);
   background: var(--color-brand-600);
-  color: #fff;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-brand-600) 35%, transparent);
+  color: var(--on-brand, #fff);
+  border-color: var(--color-brand-600);
 }
-.icon-btn:active { transform: scale(0.96); }
 /* Used exclusively by HeroSlider's mobile-only corner prev/next buttons —
    the only way to navigate the hero carousel by tap on a phone, so this
    gets the same touch-friendly size as .icon-btn rather than a smaller one;
@@ -168,8 +183,8 @@
   transform: translateY(-50%);
   z-index: 10;
 }
-.hscroll-btn:hover { transform: translateY(-50%) scale(1.1); }
-.hscroll-btn:active { transform: translateY(-50%) scale(0.96); }
+.hscroll-btn:hover { transform: translateY(-50%); }
+.hscroll-btn:active { transform: translateY(-50%); }
 .hscroll-btn-left { left: 8px; }
 .hscroll-btn-right { right: 8px; }
 @media (max-width: 640px) {
@@ -191,7 +206,27 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; line-height: 1.2; text-wrap: balance; }
+
+/* Indic and Arabic-script text. Two things the Latin-tuned defaults get wrong:
+   (1) negative letter-spacing, which breaks up conjuncts and joined forms, so
+       it must be zero; (2) line-height, which these scripts need taller
+       because of their marks above and below the line. Tailwind's text-*
+       utilities set their own line-height, so this targets the text-bearing
+       elements directly, with enough specificity to beat a single utility. */
+html:is([lang="hi"], [lang="mr"], [lang="bn"], [lang="ta"], [lang="te"], [lang="gu"], [lang="kn"], [lang="ml"], [lang="pa"], [lang="ur"], [lang="ar"]) {
+  letter-spacing: 0;
+}
+html:is([lang="hi"], [lang="mr"], [lang="bn"], [lang="ta"], [lang="te"], [lang="gu"], [lang="kn"], [lang="ml"], [lang="pa"], [lang="ur"], [lang="ar"]) :is(h1, h2, h3, h4) {
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+html:is([lang="hi"], [lang="mr"], [lang="bn"], [lang="ta"], [lang="te"], [lang="gu"], [lang="kn"], [lang="ml"], [lang="pa"], [lang="ur"], [lang="ar"]) body :is(p, li, a, span, button, label, blockquote, dd, dt, summary) {
+  line-height: 1.7;
+}
+/* Nastaliq (Urdu) is a much taller script than Naskh; it needs real air. */
+html[lang="ur"] { --font-body: var(--font-urdu), var(--font-arab), var(--font-noto), ui-sans-serif, system-ui, sans-serif; }
+html[lang="ur"] body :is(p, li, a, span, button, label, blockquote, dd, dt, summary) { line-height: 2.1; }
 
 ::selection { background: color-mix(in srgb, var(--color-brand-500) 30%, transparent); }
 
@@ -210,29 +245,44 @@ h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
 
 /* consistent, accessible focus */
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* content sections rise in as they enter the viewport */
-@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-section { animation: rise 0.45s ease both; }
+/* No scroll-triggered entrance on content sections. They used to fade and
+   slide up on load, which delays reading for no benefit; motion on this site
+   now only ever answers something the reader did. */
 @media (prefers-reduced-motion: reduce) {
-  section { animation: none; }
   html { scroll-behavior: auto; }
 }
 
+/* A flat surface with a 1px rule. No lift and no shadow on hover: the border
+   shifts toward the brand colour, which says this is a link without making
+   every block on the page bounce. */
 .card {
-  @apply rounded-2xl border transition duration-300 hover:-translate-y-1 hover:border-brand-500/40;
+  @apply rounded-xl border transition-colors duration-150;
   background: var(--surface);
   border-color: var(--line);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.03);
 }
-.card:hover {
-  box-shadow:
-    0 12px 24px -8px color-mix(in srgb, var(--color-brand-600) 18%, transparent),
-    0 4px 8px rgb(0 0 0 / 0.06);
+.card:hover { border-color: color-mix(in srgb, var(--color-brand-600) 55%, var(--line)); }
+
+/* The one signature detail: a hinge crease down the left edge of every
+   cover, like the join of a real book. Pure overlay; it never covers text
+   and costs no extra request. */
+.cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px 7px 7px 3px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2), 0 10px 18px -12px rgb(0 0 0 / 0.5);
+}
+.cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    rgb(0 0 0 / 0.32) 0, rgb(255 255 255 / 0.24) 1.4%, rgb(0 0 0 / 0.12) 3%, transparent 5.5%);
 }
 
 .pill {
@@ -252,23 +302,27 @@ section { animation: rise 0.45s ease both; }
 /* subtle brand-tinted background that adapts to every theme */
 .tint-brand { background: color-mix(in srgb, var(--color-brand-500) 12%, transparent); }
 
+/* Flat solid fill (was a gradient with a coloured glow). min-height 44px is
+   the touch-target floor on every screen, not just phones. */
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
-    font-semibold text-white bg-gradient-to-r from-brand-600 to-brand-500
-    shadow-lg shadow-brand-600/25 transition hover:brightness-110 active:scale-95;
+  @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-5 py-2.5
+    font-semibold bg-brand-600 transition-colors hover:bg-brand-700 active:translate-y-px;
+  min-height: 2.75rem;
+  color: var(--on-brand, #fff);
 }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
-    font-semibold border transition hover:border-brand-500 hover:text-brand-600;
-  border-color: var(--line);
+  @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-5 py-2.5
+    font-semibold border transition-colors hover:border-brand-600 hover:text-brand-600;
+  min-height: 2.75rem;
+  border-color: var(--control-border);
 }
 
 .input {
-  @apply w-full rounded-xl border px-4 py-2.5 outline-none transition
-    focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+  @apply w-full rounded-[10px] border px-4 py-2.5 outline-none transition
+    focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20;
   background: var(--surface);
-  border-color: var(--line);
+  border-color: var(--control-border);
   color: var(--fg);
 }
 

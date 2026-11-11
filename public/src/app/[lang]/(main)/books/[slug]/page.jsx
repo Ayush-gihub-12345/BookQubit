@@ -168,7 +168,7 @@ export default async function BookPage({ params }) {
             {/* Capped + centered on mobile (stacked layout would otherwise
                 stretch the cover to full viewport width, looking oversized) —
                 reverts to filling its 300px grid column at lg. */}
-            <div className="card mx-auto aspect-[2/3] max-w-[240px] overflow-hidden !shadow-xl hover:!translate-y-0 lg:mx-0 lg:max-w-none">
+            <div className="cover mx-auto aspect-[2/3] max-w-[240px] lg:mx-0 lg:max-w-none">
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
 

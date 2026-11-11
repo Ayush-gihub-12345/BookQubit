@@ -1,7 +1,17 @@
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 // Makes env.DB / env.CACHE bindings available in plain `next dev` too.
-initOpenNextCloudflareForDev();
+//
+// BQ_LOCAL_D1=1 swaps Cloudflare's local runtime (workerd, which will not
+// start on a machine missing the Visual C++ runtime) for a Node-SQLite
+// stand-in. Dev only — see scripts/local-d1.mjs. Unset, this is exactly the
+// original behaviour.
+if (process.env.BQ_LOCAL_D1 === "1") {
+  const { installLocalCloudflareContext } = await import("./scripts/local-d1.mjs");
+  installLocalCloudflareContext();
+} else {
+  initOpenNextCloudflareForDev();
+}
 
 // Response headers for every page and API response served by the Worker.
 //

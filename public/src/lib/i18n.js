@@ -1,6 +1,7 @@
 // English is the canonical key set; every other language must define the
 // same keys. Missing keys fall back to English so the UI never shows "undefined".
 const en = {
+  todaysPick: "Today's pick", moreToExplore: "More to explore",
   getBook: "Get Book", keyFeatures: "Key Features",
   books: "Books", collections: "Collections", categories: "Categories", authors: "Authors",
   publishers: "Publishers", comics: "Comics", tags: "Tags", search: "Search books, authors…",
@@ -374,6 +375,7 @@ const en = {
 };
 
 const hi = {
+  todaysPick: "आज की पसंद", moreToExplore: "और खोजें",
   getBook: "किताब लें", keyFeatures: "मुख्य विशेषताएं",
   books: "किताबें", collections: "संग्रह", categories: "श्रेणियाँ", authors: "लेखक", publishers: "प्रकाशक",
   comics: "कॉमिक्स", tags: "टैग", search: "किताबें, लेखक खोजें…", signIn: "साइन इन", account: "मेरा खाता",
