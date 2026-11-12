@@ -44,6 +44,8 @@ import { getTheme, getCustomThemeColors } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
 import { ToastProvider } from "@/components/Toast";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import EnvBanner from "@/components/EnvBanner";
+import { isDevEnv } from "@/lib/env";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata = {
@@ -60,6 +62,9 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }) {
+  // The dev deployment must not feed the production Google Analytics property:
+  // its traffic is test traffic and would pollute the real numbers.
+  const devEnv = isDevEnv();
   const [lang, theme] = await Promise.all([getLang(), getTheme()]);
   // Only reads the customTheme cookie when it could possibly matter — every
   // other theme switch is a plain CSS-class-driven [data-theme="X"] block,
@@ -96,6 +101,9 @@ export default async function RootLayout({ children }) {
         <link rel="alternate" type="application/rss+xml" title="BookQubit — New Releases" href="/feed.xml" />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
+        <EnvBanner />
+        {!devEnv && (
+          <>
         <Script async src="https://www.googletagmanager.com/gtag/js?id=G-42XWW9D7JK" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
           {`
@@ -109,6 +117,8 @@ export default async function RootLayout({ children }) {
           `}
         </Script>
         <GoogleAnalytics />
+          </>
+        )}
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

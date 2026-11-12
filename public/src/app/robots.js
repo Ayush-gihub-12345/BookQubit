@@ -1,4 +1,5 @@
 import { SITE_URL } from "@/lib/site";
+import { isDevEnv } from "@/lib/env";
 const BASE = SITE_URL;
 
 // Private/auth-only areas — never useful in a search index. `/*/` matches
@@ -72,6 +73,8 @@ const LONG_TAIL_DETAIL_PAGES = [
 ];
 
 export default function robots() {
+  // The dev deployment is a test copy: keep every crawler out and advertise no sitemap.
+  if (isDevEnv()) return { rules: [{ userAgent: "*", disallow: "/" }] };
   return {
     rules: [
       // Real search engines — full access (minus private areas), since these

@@ -106,6 +106,45 @@ npm run dev:local    # next dev, backed by a local SQLite file instead of D1
   that depends on real D1 behaviour (read replicas, limits, `meta` fields) must be
   tested against D1.
 
+## 6c. The dev environment (test features here before production)
+
+A second, separate deployment for trying features and UI safely.
+
+| | Production | Dev |
+|---|---|---|
+| Branch | `main` | `dev` |
+| Worker | `bookqubitdev` | `bookqubit-dev-site` |
+| Address | bookqubit.com | https://bookqubit-dev-site.webpagewale.workers.dev |
+| Users DB | `database` | `bookqubit-dev-database` (one fake reader) |
+| Catalog DB | `catalog` | `bookqubit-dev-catalog` (10 synthetic books) |
+| Deploy | push to `main` (Workers Builds) | push to `dev` (Workers Builds) |
+
+How it is kept safe:
+
+- Own databases only. Bindings are not inherited by a Wrangler environment, so `env.dev` in
+  `wrangler.jsonc` lists them explicitly. `tests/dev-environment.test.js` and `npm run deploy:dev`
+  both refuse to proceed if dev ever points at a production database, or gains the importer binding.
+- No secrets: admin login, email sending and the importer are off until you set dev-only values
+  (`npx wrangler secret put ADMIN_USERNAME --env dev`, and likewise `ADMIN_PASSWORD`).
+- Not indexable: `robots.txt` disallows everything and every response carries
+  `X-Robots-Tag: noindex`. Canonical URLs point at the dev address.
+- No production analytics: the Google Analytics tag is not loaded on dev.
+- A yellow banner on every page says it is dev.
+
+These switches come from `NEXT_PUBLIC_APP_ENV=dev`, which `npm run deploy:dev` sets for the build.
+Production never sets it, so production behaviour is unchanged.
+
+**Two things this does not do:**
+
+- **Anyone with the link can open it.** There is no login in front of dev. Put Cloudflare Access on
+  the Worker (Workers & Pages > `bookqubit-dev-site` > Settings > Domains & Routes) to restrict it.
+- **Sign-in uses the production Firebase project.** Add the dev address to Firebase > Authentication >
+  Settings > Authorized domains, and be aware that signing in on dev creates real Firebase users.
+  A separate Firebase project for dev is the clean fix.
+
+Re-seeding dev data: the schema was copied from production's exact DDL; the seed is the repo's own
+synthetic data. To load a larger realistic catalog, run `npx wrangler login` once, then
+`npx wrangler d1 execute bookqubit-dev-catalog --remote --file=<your seed>.sql` (dev database only).
 ## 7. Deploy
 ```bash
 npm run deploy

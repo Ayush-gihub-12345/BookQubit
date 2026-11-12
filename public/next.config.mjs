@@ -42,6 +42,9 @@ const securityHeaders = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Dev deployment only (NEXT_PUBLIC_APP_ENV is set by scripts/deploy-dev.mjs): belt and
+  // braces with robots.txt, since a header also covers crawlers that ignore robots.txt.
+  ...(process.env.NEXT_PUBLIC_APP_ENV === "dev" ? [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] : []),
 ];
 
 /** @type {import('next').NextConfig} */
