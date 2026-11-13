@@ -44,5 +44,7 @@ const run = (args) => {
   if (r.status !== 0) process.exit(r.status === null ? 1 : r.status);
 };
 
-run(["opennextjs-cloudflare", "build", "--env=dev"]);
+// OpenNext refuses Next.js majors older than two years (15.x since Oct 2026). Production
+// builds hit the same check; moving to a supported Next.js is a separate upgrade.
+run(["opennextjs-cloudflare", "build", "--env=dev", "--dangerouslyUseUnsupportedNextVersion"]);
 run(["opennextjs-cloudflare", "deploy", "--env=dev"]);
