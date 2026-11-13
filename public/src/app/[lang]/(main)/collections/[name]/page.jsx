@@ -37,7 +37,7 @@ export default async function CollectionPage({ params }) {
         { label: _("collections"), href: "/collections" },
         { label: collection },
       ]} />
-      <h1 className="text-3xl font-bold">{collection}</h1>
+      <h1 className="text-3xl font-bold sm:text-4xl">{collection}</h1>
       <p className="text-muted mt-1 text-sm">
         {hasMore ? _("showingOfMany", { count: books.length }) : _("bookCountInCollection", { n: books.length, word: books.length === 1 ? _("bookWord") : _("booksWord") })}
       </p>

@@ -41,10 +41,10 @@ export default function NamedListBrowser({
   }, [items, q]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{title}</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl">{title}</h1>
           {subtitle && <p className="text-muted mt-1 text-sm">{subtitle}</p>}
         </div>
         <div className="relative w-full sm:w-64">
@@ -56,13 +56,14 @@ export default function NamedListBrowser({
         </div>
       </div>
 
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((c) => (
-          <Link key={c.name} href={`${hrefPrefix}${encodeURIComponent(c.name)}`} prefetch={false} className="card relative overflow-hidden p-8">
-            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-brand-500/10" />
-            <h2 className="text-xl font-bold">{c.name}</h2>
-            <p className="text-muted mt-1 text-sm">{c.count} {c.count === 1 ? itemNoun : `${itemNoun}s`}</p>
-            <p className="mt-4 text-sm font-semibold text-brand-600">{exploreLabel}</p>
+          <Link key={c.name} href={`${hrefPrefix}${encodeURIComponent(c.name)}`} prefetch={false} className="card group flex items-center justify-between gap-4 px-5 py-4" aria-label={`${c.name}: ${exploreLabel}`}>
+            <span className="min-w-0">
+              <span className="font-display block truncate text-lg font-semibold group-hover:text-brand-600">{c.name}</span>
+              <span className="text-muted block text-sm">{c.count} {c.count === 1 ? itemNoun : `${itemNoun}s`}</span>
+            </span>
+            <Icon name="chevronDown" size={16} className="text-muted shrink-0 -rotate-90 group-hover:text-brand-600 rtl:rotate-90" />
           </Link>
         ))}
       </div>
