@@ -7,14 +7,20 @@ import EmptyState from "./EmptyState";
 
 // Generalized from the original CollectionsBrowser — the same
 // search-box + card-grid treatment, reused for /categories and /tags so
-// those stop being a bare count-list and a bare pill-list. `getHref` is a
-// function rather than a fixed base path because collections link to their
-// own route (`/collections/Name`) while categories/tags link to a filtered
-// /books query (`/books?category=Name`) — both are just "a name maps to a
-// URL", so one component covers both without inventing two near-duplicates.
+// those stop being a bare count-list and a bare pill-list.
+//
+// `hrefPrefix` is a plain string: each card links to hrefPrefix + the
+// URL-encoded name. Collections use a path prefix (`/en/collections/`),
+// categories and tags use a query prefix (`/en/books?category=`). It used to
+// be a `getHref` FUNCTION, but this is a Client Component rendered from Server
+// Component pages, and React cannot serialize a function across that boundary:
+// the server render threw "Functions cannot be passed directly to Client
+// Components" on every request to /categories, /collections and /tags (a hard
+// 500 in dev; in production the page recovered by re-rendering in the browser,
+// which hid the error). Props that cross the boundary must be plain data.
 export default function NamedListBrowser({
   items,
-  getHref,
+  hrefPrefix,
   title,
   subtitle,
   searchPlaceholder, // caller should pass a translated string (see t("searchEllipsis"))
@@ -52,7 +58,7 @@ export default function NamedListBrowser({
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((c) => (
-          <Link key={c.name} href={getHref(c.name)} prefetch={false} className="card relative overflow-hidden p-8">
+          <Link key={c.name} href={`${hrefPrefix}${encodeURIComponent(c.name)}`} prefetch={false} className="card relative overflow-hidden p-8">
             <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-brand-500/10" />
             <h2 className="text-xl font-bold">{c.name}</h2>
             <p className="text-muted mt-1 text-sm">{c.count} {c.count === 1 ? itemNoun : `${itemNoun}s`}</p>

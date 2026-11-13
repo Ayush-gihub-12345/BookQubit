@@ -22,7 +22,7 @@ export default async function CategoriesPage() {
   return (
     <NamedListBrowser
       items={f.categories}
-      getHref={(name) => `/${lang}/books?category=${encodeURIComponent(name)}`}
+      hrefPrefix={`/${lang}/books?category=`}
       title={_("categories")}
       subtitle={_("categoriesSub")}
       searchPlaceholder={_("searchEllipsis")}
