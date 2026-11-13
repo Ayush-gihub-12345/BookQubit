@@ -1,3 +1,4 @@
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
@@ -143,18 +144,11 @@ export default async function BookPage({ params }) {
           bar rendered below, which floats just above the tab bar on mobile.
           Only needed when that sticky bar actually renders (book.buyUrl). */}
       <div className={`mx-auto max-w-7xl px-4 pt-6 sm:pt-10 ${book.buyUrl ? "pb-36 lg:pb-10" : "pb-6 sm:pb-10"}`}>
-        <nav className="text-muted mb-6 text-sm">
-          <Link href={withLang("/books")} className="hover:text-brand-600">{_("books")}</Link>
-          {book.category && (
-            <>
-              {" / "}
-              <Link href={withLang(`/books?category=${encodeURIComponent(book.category)}`)} className="hover:text-brand-600">
-                {book.category}
-              </Link>
-            </>
-          )}
-          {" / "}<span className="text-[var(--fg)]"><TitleTransliterated text={book.title} /></span>
-        </nav>
+        <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
+          { label: _("books"), href: "/books" },
+          ...(book.category ? [{ label: book.category, href: `/books?category=${encodeURIComponent(book.category)}` }] : []),
+          { label: <TitleTransliterated text={book.title} /> },
+        ]} />
 
         {/* min-w-0 on both grid children: without it, a grid item's implicit
             min-width is "auto", which factors in a replaced element's (img)

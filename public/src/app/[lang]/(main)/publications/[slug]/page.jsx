@@ -1,3 +1,4 @@
+import Breadcrumbs from "@/components/Breadcrumbs";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
@@ -37,7 +38,11 @@ export default async function PublicationPage({ params }) {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-4 py-10">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+        <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
+          { label: _("publishers"), href: "/publications" },
+          { label: <TitleTransliterated text={pub.name} /> },
+        ]} />
         <div className="card p-8 hover:!translate-y-0">
           <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
             {pub.logo_url && (

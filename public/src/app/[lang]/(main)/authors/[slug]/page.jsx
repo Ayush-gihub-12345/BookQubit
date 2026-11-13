@@ -1,3 +1,4 @@
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
@@ -28,7 +29,11 @@ export default async function AuthorPage({ params }) {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-4 py-10">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+        <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
+          { label: _("authors"), href: "/authors" },
+          { label: <TitleTransliterated text={author.name} /> },
+        ]} />
         <div className="card flex flex-col items-center gap-6 p-8 hover:!translate-y-0 sm:flex-row sm:items-start">
           {author.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element

@@ -4,21 +4,21 @@
 @custom-variant dark (&:where([data-theme="dark"] *, [data-theme="dark"], [data-theme="midnight"] *, [data-theme="midnight"], [data-theme="imperial"] *, [data-theme="imperial"]));
 
 @theme {
-  /* "Spine" teal replaces the indigo-violet that every themed element
-     (buttons, links, focus, pills) derives from. Chosen for contrast first:
-     brand-600 on the page surface is about 7.9:1, so it is safe as link text
-     and as a button fill under white text. */
-  --color-brand-50: #e6f2f0;
-  --color-brand-100: #cde6e2;
-  --color-brand-500: #1b7f78;
-  --color-brand-600: #0f5b57;
-  --color-brand-700: #0a4440;
-  --color-ink-900: #16201d;
-  --color-ink-800: #1f2b27;
-  /* The one highlight: reading progress, today's pick. Text on it is
-     --color-marker-ink, never white. */
-  --color-marker: #f2c230;
-  --color-marker-ink: #4d3a00;
+  /* Bottle green, the colour of cloth-bound library editions. Every themed
+     element (buttons, links, focus, pills) derives from it. brand-600 on the
+     ivory page is about 9:1, so it is safe as link text and as a button fill
+     under white text. */
+  --color-brand-50: #eaf0e6;
+  --color-brand-100: #d7e4d6;
+  --color-brand-500: #2f6b54;
+  --color-brand-600: #1f4d3b;
+  --color-brand-700: #163a2c;
+  --color-ink-900: #211d17;
+  --color-ink-800: #2c2720;
+  /* The one highlight: oxblood, like a ribbon marker. Reading progress and
+     today's pick only. Text on it is --color-marker-ink. */
+  --color-marker: #7a2335;
+  --color-marker-ink: #fff3ec;
   /* Registers `surface` as a real Tailwind color token (mapped to the
      per-theme --surface variable) so opacity modifiers like bg-surface/85
      actually generate CSS — without this, Tailwind can't apply an alpha
@@ -31,7 +31,10 @@
   --font-body: var(--font-noto), var(--font-deva), var(--font-beng), var(--font-taml),
     var(--font-telu), var(--font-gujr), var(--font-knda), var(--font-mlym),
     var(--font-guru), var(--font-arab), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-body);
+  /* Headings are set in Literata, a face drawn for long-form reading on
+     screens. It covers Latin, Cyrillic and Greek; headings in any other
+     script fall through to the body stack below it. */
+  --font-display: var(--font-literata), var(--font-body);
 }
 
 /* ── Themes: bg is softly tinted so surfaces (cards/nav) visibly lift ──
@@ -39,20 +42,21 @@
    readable contrast (brand-50/100 double as hover backgrounds and CANNOT
    be reused as text colors in dark themes). */
 :root, [data-theme="light"] {
-  --bg: #f3f5f1; --surface: #fbfcfa; --fg: #16201d;
-  --muted: #566660; --line: #d5dcd3;
-  --pill-bg: #e1ece9; --pill-fg: #0a4440;
+  --bg: #f6f1e6; --surface: #fffcf5; --fg: #211d17;
+  --muted: #655d51; --line: #e2d9c7;
+  --pill-bg: #e8eadb; --pill-fg: #163a2c;
   --on-brand: #ffffff;
 }
 [data-theme="dark"] {
-  --bg: #0e1513; --surface: #151d1a; --fg: #e5ece8;
-  --muted: #9aaaa3; --line: #25302c;
-  --color-brand-50: #12302d; --color-brand-100: #17403c;
-  --color-brand-500: #4fb8ae; --color-brand-600: #37a095; --color-brand-700: #25867d;
-  --pill-bg: #1b3a36; --pill-fg: #9fdcd4;
+  --bg: #141613; --surface: #1c1f1b; --fg: #ece7dc;
+  --muted: #a8a295; --line: #2c312b;
+  --color-brand-50: #1b2a22; --color-brand-100: #23382d;
+  --color-brand-500: #8cc2a7; --color-brand-600: #77b396; --color-brand-700: #5f9c80;
+  --color-marker: #d98a9a; --color-marker-ink: #2a0d14;
+  --pill-bg: #223128; --pill-fg: #b4d9c6;
   --pill-hover-brightness: 1.25;
-  /* white on this lighter teal would be about 3:1; dark ink on it is about 7:1 */
-  --on-brand: #04201d;
+  /* white on this lighter green would be about 2.5:1; dark ink on it is about 8:1 */
+  --on-brand: #0b1f17;
 }
 [data-theme="sepia"] {
   --bg: #f4ecdd; --surface: #fdf8ee; --fg: #40331f;
@@ -206,7 +210,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; line-height: 1.2; text-wrap: balance; }
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.012em; line-height: 1.18; text-wrap: balance; }
+/* Literata is sturdy; the extrabold the sans headings used reads as shouting
+   in a serif. Cap heading weight wherever a utility asks for more. */
+:is(h1, h2, h3, h4):is(.font-bold, .font-extrabold, .font-black) { font-weight: 650; }
 
 /* Indic and Arabic-script text. Two things the Latin-tuned defaults get wrong:
    (1) negative letter-spacing, which breaks up conjuncts and joined forms, so
@@ -238,7 +245,7 @@ html[lang="ur"] body :is(p, li, a, span, button, label, blockquote, dd, dt, summ
 
 .skip-link {
   position: absolute; left: -9999px; top: 0; z-index: 100;
-  background: var(--color-brand-600); color: #fff;
+  background: var(--color-brand-600); color: var(--on-brand, #fff);
   padding: 10px 18px; border-radius: 0 0 10px 0; font-weight: 600; font-size: 14px;
 }
 .skip-link:focus { left: 0; }
@@ -327,6 +334,72 @@ html[lang="ur"] body :is(p, li, a, span, button, label, blockquote, dd, dt, summ
 }
 
 .text-muted { color: var(--muted); }
+
+/* ── Navigation and wayfinding ─────────────────────────────────────────── */
+
+/* A row inside any menu, dropdown or sheet. One hover treatment that works
+   in every theme (brand-50 is retuned per theme). */
+.menu-item {
+  @apply flex w-full items-center gap-3 rounded-lg px-3 text-left text-sm transition-colors;
+  min-height: 2.5rem;
+}
+.menu-item:hover, .menu-item[data-active="true"] { background: var(--color-brand-50); }
+.menu-item[aria-current="page"] { color: var(--color-brand-600); font-weight: 600; }
+
+/* Floating panel shared by every dropdown. Motion only on open, and none at
+   all under reduced-motion. */
+.popover {
+  @apply rounded-xl border;
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 18px 40px -18px rgb(0 0 0 / 0.35);
+  animation: popover-in 0.14s ease-out;
+}
+@keyframes popover-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Primary navigation link. The active page gets a short brand-coloured bar
+   under the label, not just a colour change. */
+.nav-link {
+  @apply relative inline-flex items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors;
+  min-height: 2.75rem;
+}
+.nav-link:hover { color: var(--color-brand-600); }
+.nav-link[aria-current="page"], .nav-link[aria-expanded="true"] { color: var(--color-brand-600); }
+.nav-link[aria-current="page"]::after {
+  content: ""; position: absolute; left: 0.75rem; right: 0.75rem; bottom: 0.2rem;
+  height: 2px; border-radius: 2px; background: var(--color-brand-600);
+}
+
+/* Breadcrumb trail */
+.crumbs { @apply flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px]; color: var(--muted); }
+.crumbs a { @apply inline-flex items-center rounded underline-offset-4; min-height: 2rem; }
+.crumbs a:hover { color: var(--color-brand-600); text-decoration: underline; }
+.crumbs [aria-current="page"] { color: var(--fg); font-weight: 500; }
+
+/* Tabs: a rule under the row, the active tab marked on that rule. Scrolls
+   sideways on a phone instead of wrapping into a second line. */
+.tabs {
+  @apply flex gap-1 overflow-x-auto border-b;
+  border-color: var(--line);
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  @apply relative inline-flex shrink-0 items-center gap-2 px-3 text-sm font-medium transition-colors;
+  min-height: 2.75rem;
+  color: var(--muted);
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"], .tab[aria-current="page"] { color: var(--color-brand-600); font-weight: 600; }
+.tab[aria-selected="true"]::after, .tab[aria-current="page"]::after {
+  content: ""; position: absolute; left: 0.5rem; right: 0.5rem; bottom: 0;
+  height: 2px; background: var(--color-brand-600);
+}
+.tab-count { @apply rounded-full px-1.5 text-[11px] font-semibold tabular-nums; background: var(--pill-bg); color: var(--pill-fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .popover { animation: none; }
+}
 
 /* loading skeletons */
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }

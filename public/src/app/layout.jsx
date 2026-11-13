@@ -2,7 +2,7 @@ import Script from "next/script";
 import {
   Noto_Sans, Noto_Sans_Devanagari, Noto_Sans_Bengali, Noto_Sans_Tamil, Noto_Sans_Telugu,
   Noto_Sans_Gujarati, Noto_Sans_Kannada, Noto_Sans_Malayalam, Noto_Sans_Gurmukhi,
-  Noto_Sans_Arabic, Noto_Nastaliq_Urdu,
+  Noto_Sans_Arabic, Noto_Nastaliq_Urdu, Literata,
 } from "next/font/google";
 import "./globals.css";
 
@@ -38,7 +38,10 @@ const guru = Noto_Sans_Gurmukhi({ display: "swap", preload: false, subsets: ["gu
 const arab = Noto_Sans_Arabic({ display: "swap", preload: false, subsets: ["arabic"], variable: "--font-arab" });
 // Urdu is conventionally set in Nastaliq, not the Naskh-style Arabic face.
 const urdu = Noto_Nastaliq_Urdu({ display: "swap", preload: false, subsets: ["arabic"], variable: "--font-urdu" });
-const FONT_VARS = [noto, deva, beng, taml, telu, gujr, knda, mlym, guru, arab, urdu].map((f) => f.variable).join(" ");
+// Headings only. A variable font, so every weight is one file; `preload` stays
+// on because the page title is usually the largest thing on screen.
+const literata = Literata({ display: "swap", subsets: ["latin", "latin-ext"], variable: "--font-literata" });
+const FONT_VARS = [literata, noto, deva, beng, taml, telu, gujr, knda, mlym, guru, arab, urdu].map((f) => f.variable).join(" ");
 import { getLang, RTL } from "@/lib/lang";
 import { getTheme, getCustomThemeColors } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
@@ -58,7 +61,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#0f5b57",
+  themeColor: "#1f4d3b",
 };
 
 export default async function RootLayout({ children }) {
