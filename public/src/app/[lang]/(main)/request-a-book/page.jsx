@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import { useToast } from "@/components/Toast";
 import Icon from "@/components/Icon";
 import { useLang } from "@/lib/useLang";
@@ -25,7 +26,7 @@ export default function RequestABookPage() {
   const [busy, setBusy] = useState(false);
   const [mine, setMine] = useState([]);
 
-  const loadMine = (uid) => fetch(`/api/requests?uid=${uid}`).then((r) => r.json()).then((d) => setMine(d.requests || []));
+  const loadMine = (u) => authFetch("/api/requests", {}, u).then((r) => r.json()).then((d) => setMine(d.requests || []));
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -33,7 +34,7 @@ export default function RequestABookPage() {
     return auth.onAuthStateChanged((u) => {
       setUser(u);
       if (!u) { router.push(`/${lang}/login`); return; }
-      loadMine(u.uid);
+      loadMine(u);
     });
   }, [router, lang]);
 
@@ -51,7 +52,7 @@ export default function RequestABookPage() {
       if (r.ok) {
         toast(tr("requestSubmittedToast"));
         setTitle(""); setAuthor(""); setNote("");
-        loadMine(user.uid);
+        loadMine(user);
       } else {
         toast(tr("requestFailedToast"), "error");
       }
@@ -64,7 +65,7 @@ export default function RequestABookPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <div className="text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
           <Icon name="bookmark" size={26} />
         </span>
         <h1 className="mt-4 text-2xl font-bold">{tr("requestABookTitle")}</h1>

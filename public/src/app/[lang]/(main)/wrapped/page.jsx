@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
@@ -33,7 +34,7 @@ export default function WrappedPage() {
 
   useEffect(() => {
     if (!user) return;
-    fetch(`/api/wrapped?uid=${user.uid}&year=${year}`).then((r) => r.json()).then(setData);
+    authFetch(`/api/wrapped?year=${year}`, {}, user).then((r) => r.json()).then(setData);
   }, [user, year]);
 
   const share = async () => {
@@ -89,7 +90,7 @@ export default function WrappedPage() {
               ["compass", data.topGenre || "—", tr("topGenreLabel")],
             ].map(([icon, val, label]) => (
               <div key={label} className="card p-4 text-center hover:!translate-y-0">
-                <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+                <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-700">
                   <Icon name={icon} size={18} />
                 </span>
                 <p className="mt-2 truncate text-xl font-extrabold">{val}</p>
@@ -100,7 +101,7 @@ export default function WrappedPage() {
 
           <div className="card mt-6 p-5 hover:!translate-y-0">
             <p className="mb-4 flex items-center gap-2 text-sm font-bold">
-              <Icon name="trendingUp" size={16} className="text-brand-600" /> {tr("booksFinishedByMonth")}
+              <Icon name="trendingUp" size={16} className="text-brand-700" /> {tr("booksFinishedByMonth")}
             </p>
             <div className="flex h-28 items-end gap-2">
               {data.months.map((m, i) => (
@@ -144,7 +145,7 @@ export default function WrappedPage() {
             <p className="text-muted mt-6 text-center text-sm">
               {(() => {
                 const [before, after] = tr("spentMostTimeWith").split("{author}");
-                return <>{before}<span className="font-semibold text-brand-600"><TitleTransliterated text={data.topAuthor} /></span>{after}</>;
+                return <>{before}<span className="font-semibold text-brand-700"><TitleTransliterated text={data.topAuthor} /></span>{after}</>;
               })()}
             </p>
           )}

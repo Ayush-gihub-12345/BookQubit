@@ -51,9 +51,9 @@ export default function HeroSlider({ books, labels }) {
         <div className="min-w-0">
           {b.category && <span className="pill">{b.category}</span>}
           <h2 className="mt-3 text-2xl font-extrabold sm:text-4xl">
-            <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-600"><TitleTransliterated text={b.title} /></Link>
+            <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="hover:text-brand-700"><TitleTransliterated text={b.title} /></Link>
           </h2>
-          <p className="text-muted mt-1">{labels.byWord} <span className="font-medium text-brand-600"><TitleTransliterated text={b.author} /></span></p>
+          <p className="text-muted mt-1">{labels.byWord} <span className="font-medium text-brand-700"><TitleTransliterated text={b.author} /></span></p>
 
           <div className="text-muted mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs">
             {b.rating && <span className="text-amber-400">{"★".repeat(Math.round(b.rating))} <span className="text-muted">({b.rating})</span></span>}
@@ -64,7 +64,7 @@ export default function HeroSlider({ books, labels }) {
 
           {b.keyPoints?.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-600">{labels.keyFeatures}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-700">{labels.keyFeatures}</p>
               <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
                 {b.keyPoints.slice(0, 4).map((k) => (
                   <li key={k} className="flex items-start gap-2 text-sm"><span className="text-brand-500">•</span><Translated text={k} /></li>

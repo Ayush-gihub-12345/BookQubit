@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
+import { requireUser } from "@/lib/api-auth";
 
-// GET /api/goal?uid=...
+// GET /api/goal — the signed-in reader's yearly goal progress and activity
+// streak. Subject comes from the bearer token, not a `?uid=` parameter; see
+// src/lib/api-auth.js. (The streak is derived from the days a reader touched
+// their shelf, so a uid-addressed version disclosed their daily activity.)
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const uid = searchParams.get("uid");
-  if (!uid) return NextResponse.json({ error: "uid required" }, { status: 400 });
+  const auth = await requireUser(request);
+  if (auth.response) return auth.response;
+  const uid = auth.user.uid;
   const year = new Date().getFullYear();
   const db = await getDb();
   const [goal, done, days] = await Promise.all([

@@ -1,6 +1,12 @@
 // English is the canonical key set; every other language must define the
 // same keys. Missing keys fall back to English so the UI never shows "undefined".
 const en = {
+  todaysPick: "Today's pick", moreToExplore: "More to explore",
+  navLibrary: "Library", navPreferences: "Language and theme", navStartHere: "Start here", navGenres: "Genres",
+  navAllGenres: "All genres", navMoreWays: "More ways to browse", navYourGenres: "Your genres",
+  navPrimaryLabel: "Primary", navCloseMenu: "Close menu", navAccountMenu: "Account menu",
+  navSurpriseHint: "Not sure what to read next?", navPublicProfile: "Public profile", navSettings: "Shelf and settings",
+  navAchievements: "Achievements", navWrapped: "Year in books", navRankingShort: "Ranking", filtersWord: "Filters", onThisPage: "On this page", navBreadcrumb: "Breadcrumb",
   getBook: "Get Book", keyFeatures: "Key Features",
   books: "Books", collections: "Collections", categories: "Categories", authors: "Authors",
   publishers: "Publishers", comics: "Comics", tags: "Tags", search: "Search books, authors…",
@@ -374,6 +380,12 @@ const en = {
 };
 
 const hi = {
+  todaysPick: "आज की पसंद", moreToExplore: "और खोजें",
+  navLibrary: "लाइब्रेरी", navPreferences: "भाषा और थीम", navStartHere: "यहां से शुरू करें", navGenres: "विधाएं",
+  navAllGenres: "सभी विधाएं", navMoreWays: "खोजने के और तरीके", navYourGenres: "आपकी विधाएं",
+  navPrimaryLabel: "मुख्य", navCloseMenu: "मेन्यू बंद करें", navAccountMenu: "खाता मेन्यू",
+  navSurpriseHint: "तय नहीं कि आगे क्या पढ़ें?", navPublicProfile: "सार्वजनिक प्रोफ़ाइल", navSettings: "शेल्फ़ और सेटिंग",
+  navAchievements: "उपलब्धियां", navWrapped: "किताबों में आपका साल", navRankingShort: "रैंकिंग", filtersWord: "फ़िल्टर", onThisPage: "इस पेज पर", navBreadcrumb: "ब्रेडक्रंब",
   getBook: "किताब लें", keyFeatures: "मुख्य विशेषताएं",
   books: "किताबें", collections: "संग्रह", categories: "श्रेणियाँ", authors: "लेखक", publishers: "प्रकाशक",
   comics: "कॉमिक्स", tags: "टैग", search: "किताबें, लेखक खोजें…", signIn: "साइन इन", account: "मेरा खाता",

@@ -66,7 +66,7 @@ export default function ComicsBrowser({ comics, lang }) {
         <div className="hscroll mt-5">
           {categories.map(([name, count]) => (
             <button key={name} onClick={() => setCategory(category === name ? "" : name)}
-              className={`pill whitespace-nowrap ${category === name ? "!bg-brand-600 !text-white" : ""}`}>
+              className={`pill whitespace-nowrap ${category === name ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
               {name} <span className="ml-1 opacity-60">{count}</span>
             </button>
           ))}
@@ -91,7 +91,7 @@ export default function ComicsBrowser({ comics, lang }) {
               )}
             </div>
             <div className="p-4">
-              <h2 className="line-clamp-1 font-semibold group-hover:text-brand-600"><TitleTransliterated text={c.title} /></h2>
+              <h2 className="line-clamp-1 font-semibold group-hover:text-brand-700"><TitleTransliterated text={c.title} /></h2>
               <p className="text-muted line-clamp-1 text-sm"><TitleTransliterated text={c.publisher} /></p>
               <div className="mt-2"><Rating value={c.rating} /></div>
             </div>

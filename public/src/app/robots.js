@@ -1,4 +1,5 @@
 import { SITE_URL } from "@/lib/site";
+import { isDevEnv } from "@/lib/env";
 const BASE = SITE_URL;
 
 // Private/auth-only areas — never useful in a search index. `/*/` matches
@@ -28,6 +29,10 @@ const SEO_CRAWLERS = [
   "ZoominfoBot",
   "magpie-crawler",
   "serpstatbot",
+  // SEO-analytics crawler (backlink index), same category as the ones above.
+  // Measured on the live zone: 3,094 requests in 24 hours, the second-largest
+  // visitor after a search crawler, and not previously blocked.
+  "SERankingBacklinksBot",
   // Amazon's crawler. Measured live via `wrangler tail`: 10 of 13 requests in
   // one 16-second window — roughly 48 requests/minute, on the order of 70,000
   // a day, against a catalog whose entire free-tier budget is 5 million row
@@ -68,6 +73,8 @@ const LONG_TAIL_DETAIL_PAGES = [
 ];
 
 export default function robots() {
+  // The dev deployment is a test copy: keep every crawler out and advertise no sitemap.
+  if (isDevEnv()) return { rules: [{ userAgent: "*", disallow: "/" }] };
   return {
     rules: [
       // Real search engines — full access (minus private areas), since these

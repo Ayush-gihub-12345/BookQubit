@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCard from "@/components/BookCard";
 import Icon from "@/components/Icon";
 import { useLang } from "@/lib/useLang";
@@ -21,7 +22,7 @@ export default function LikedBooksPage() {
     return auth.onAuthStateChanged((u) => {
       setUser(u);
       if (!u) { setLoading(false); return; }
-      fetch(`/api/liked?uid=${u.uid}`).then((r) => r.json())
+      authFetch("/api/liked", {}, u).then((r) => r.json())
         .then((d) => setBooks(d.books || []))
         .finally(() => setLoading(false));
     });
@@ -43,7 +44,7 @@ export default function LikedBooksPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-        <Icon name="heart" size={26} filled className="text-brand-600" /> {tr("navLikedBooks")}
+        <Icon name="heart" size={26} filled className="text-brand-700" /> {tr("navLikedBooks")}
       </h1>
       <p className="text-muted mt-1 text-sm">{books.length} {books.length === 1 ? "book" : "books"} you've liked</p>
 

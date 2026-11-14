@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BookCover from "./BookCover";
-import Icon from "./Icon";
 import HScrollRow from "./HScrollRow";
 import TitleTransliterated from "./TitleTransliterated";
 import { useLang } from "@/lib/useLang";
@@ -36,19 +35,17 @@ export default function RecentlyViewed() {
   if (items.length < 2) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10">
-      <div className="mb-4 flex items-center gap-2">
-        <Icon name="clock" size={18} className="text-brand-600" />
-        <h2 className="text-2xl font-bold">{tr("recentlyViewedTitle")}</h2>
+    <section className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
+      <div className="mb-5">
+        <h2 className="text-xl font-bold sm:text-2xl">{tr("recentlyViewedTitle")}</h2>
       </div>
       <HScrollRow>
         {items.map((b) => (
-          <Link key={b.slug} href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="card group w-36 overflow-hidden sm:w-40">
-            <div className="aspect-[2/3] overflow-hidden">
-              <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
-                imgClassName="transition duration-500 group-hover:scale-105" />
+          <Link key={b.slug} href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="group block w-32 sm:w-36">
+            <div className="cover aspect-[2/3] bg-[color-mix(in_srgb,var(--fg)_8%,var(--surface))]">
+              <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
             </div>
-            <p className="line-clamp-2 min-h-[2.2em] p-2.5 text-xs font-semibold leading-snug group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
+            <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug group-hover:text-brand-700"><TitleTransliterated text={b.title} /></p>
           </Link>
         ))}
       </HScrollRow>

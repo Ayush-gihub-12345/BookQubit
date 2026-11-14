@@ -35,7 +35,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           Questions about your data? Contact us at{" "}
-          <a href="mailto:contact@bookqubit.com" className="text-brand-600 hover:underline">contact@bookqubit.com</a>.
+          <a href="mailto:contact@bookqubit.com" className="text-brand-700 hover:underline">contact@bookqubit.com</a>.
         </p>
       </div>
     </div>

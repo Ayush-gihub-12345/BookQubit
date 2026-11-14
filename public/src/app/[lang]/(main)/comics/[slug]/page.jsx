@@ -1,3 +1,4 @@
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
@@ -47,15 +48,10 @@ export default async function ComicPage({ params }) {
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 py-10 pb-20 lg:pb-10">
-        <nav className="text-muted mb-6 text-sm">
-          <Link href={`/${lang}/comics`} className="hover:text-brand-600">{_("comicsLink")}</Link>
-          {comic.category && (
-            <>
-              {" / "}
-              <span className="text-[var(--fg)]">{comic.category}</span>
-            </>
-          )}
-        </nav>
+        <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
+          { label: _("comics"), href: "/comics" },
+          { label: <TitleTransliterated text={comic.title} /> },
+        ]} />
 
         {/* min-w-0 on both grid children — see books/[slug]/page.jsx for why:
             without it, a cover with unusually large intrinsic dimensions can
@@ -88,7 +84,7 @@ export default async function ComicPage({ params }) {
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <Rating value={comic.rating} />
               {community.reviews.length > 0 && (
-                <a href="#reviews" className="text-muted hover:text-brand-600">
+                <a href="#reviews" className="text-muted hover:text-brand-700">
                   {community.reviews.length} {community.reviews.length === 1 ? _("reviewWord") : _("reviewsWord")}
                 </a>
               )}

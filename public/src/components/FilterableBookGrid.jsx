@@ -40,30 +40,30 @@ export default function FilterableBookGrid({ books, emptyMessage }) {
   return (
     <div>
       {/* Filter bar — applies instantly, no reload */}
-      <div className="border-line bg-surface sticky top-16 z-10 -mx-4 flex flex-wrap items-center gap-2 border-y px-4 py-3 lg:static lg:mx-0 lg:rounded-2xl lg:border">
-        <span className="text-muted flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
+      <div className="border-line bg-surface sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-y px-4 py-3 sm:top-16 lg:static lg:mx-0 lg:rounded-xl lg:border">
+        <span className="text-muted flex items-center gap-1.5 text-xs font-semibold">
           <Icon name="layers" size={13} /> {tr("filtersLabel")}
         </span>
         <div className="flex flex-1 flex-wrap gap-2">
           {SORTS.map(([v, label]) => (
-            <button key={label} onClick={() => setSort(v)}
-              className={`pill !text-xs ${sort === v ? "!bg-brand-600 !text-white" : ""}`}>
+            <button key={label} onClick={() => setSort(v)} aria-pressed={sort === v}
+              className={`pill !text-xs ${sort === v ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
               {label}
             </button>
           ))}
           <span className="border-line mx-1 hidden h-5 w-px sm:block" />
           {RATINGS.map(([v, label]) => (
-            <button key={label} onClick={() => setMinRating(v)}
-              className={`pill !text-xs ${minRating === v ? "!bg-brand-600 !text-white" : ""}`}>
-              {v && <span className="text-amber-300">★</span>} {label}
+            <button key={label} onClick={() => setMinRating(v)} aria-pressed={minRating === v}
+              className={`pill !text-xs ${minRating === v ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
+              {v && <span aria-hidden="true">★</span>} {label}
             </button>
           ))}
           {formats.length > 1 && (
             <>
               <span className="border-line mx-1 hidden h-5 w-px sm:block" />
               {formats.map((fmt) => (
-                <button key={fmt} onClick={() => setFormat(format === fmt ? "" : fmt)}
-                  className={`pill !text-xs ${format === fmt ? "!bg-brand-600 !text-white" : ""}`}>
+                <button key={fmt} onClick={() => setFormat(format === fmt ? "" : fmt)} aria-pressed={format === fmt}
+                  className={`pill !text-xs ${format === fmt ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                   {fmt}
                 </button>
               ))}
@@ -71,7 +71,7 @@ export default function FilterableBookGrid({ books, emptyMessage }) {
           )}
         </div>
         {active && (
-          <button onClick={() => { setMinRating(""); setFormat(""); }} className="text-xs font-semibold text-brand-600 hover:underline">
+          <button onClick={() => { setMinRating(""); setFormat(""); }} className="text-xs font-semibold text-brand-700 hover:underline">
             {tr("resetLabel")}
           </button>
         )}
@@ -82,7 +82,7 @@ export default function FilterableBookGrid({ books, emptyMessage }) {
       {filtered.length === 0 ? (
         <EmptyState compact title={emptyMessage || tr("noBooksFoundLabel")} />
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {filtered.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       )}

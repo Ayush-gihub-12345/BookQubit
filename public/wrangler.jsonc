@@ -26,6 +26,14 @@
       "service": "bookqubit-import-cron"
     }
   ],
+  // Workers Logs. It was OFF in production (confirmed from the account's
+  // Worker settings: no `observability` block), so failures were invisible:
+  // between 1% and 9% of requests end in `exceededResources` every day and
+  // there was no record of which route did it. 100% sampling is fine at the
+  // current volume (~35k requests/day, about 1M events/month, against 20M
+  // included); lower head_sampling_rate if traffic grows tenfold. Log OBJECTS,
+  // not strings, so the fields are searchable.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "vars": {
     // "1" re-applies SCHEMA/CATALOG_SCHEMA + migrations on database access.
     // Keep at "0" in normal operation: applying them on every isolate cold
@@ -34,5 +42,40 @@
     // editing a schema in db.js: set to "1", deploy, load one page, set back
     // to "0", deploy again. See shouldBootstrap() in src/lib/db.js.
     "RUN_SCHEMA": "0"
+  },
+
+  // ---------------------------------------------------------------------------
+  // DEV environment: Worker "bookqubit-dev-site", deployed from the `dev` branch.
+  // Deploy with `npm run deploy:dev` (Workers Builds runs it on pushes to `dev`).
+  //
+  // Bindings are NOT inherited from the production config above, so everything
+  // dev may touch is listed here, and it is deliberately limited:
+  //  - its own two D1 databases (never the production ids; tests/dev-environment
+  //    .test.js fails if these ever match),
+  //  - no IMPORT_CRON service binding (the importer writes to the production
+  //    catalog), so admin import routes report "not configured" in dev,
+  //  - no secrets: ADMIN_*, RESEND_*, IMPORT_* are unset, so admin login fails
+  //    closed and email sending degrades instead of sending real mail.
+  // Set a dev-only admin login with `wrangler secret put ADMIN_USERNAME --env dev`.
+  // ---------------------------------------------------------------------------
+  "env": {
+    "dev": {
+      "name": "bookqubit-dev-site",
+      "main": ".open-next/worker.js",
+      "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+      "compatibility_date": "2025-05-01",
+      "compatibility_flags": ["nodejs_compat"],
+      "observability": { "enabled": true, "head_sampling_rate": 1 },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "bookqubit-dev-database", "database_id": "48a757c3-22d8-4f03-9180-7075f04f2825" },
+        { "binding": "CATALOG_DB", "database_name": "bookqubit-dev-catalog", "database_id": "a95e1940-7268-4f0d-bf47-a3b86f27f9de" }
+      ],
+      "services": [],
+      // Workers KV for the shared cache tier (see src/lib/db.js). No id on purpose: wrangler creates a namespace
+      // for THIS Worker on deploy, so dev never shares a namespace with production. If KV is missing or errors,
+      // the cache simply skips that layer (memory, edge and database still serve).
+      "kv_namespaces": [{ "binding": "CACHE_KV" }],
+      "vars": { "RUN_SCHEMA": "0" }
+    }
   }
 }

@@ -46,7 +46,7 @@ function BookSlot({ lang, index, picked, onPick, onClear }) {
   return (
     <div className="relative">
       <div className="border-line bg-surface flex items-center gap-2 rounded-xl border border-dashed p-3">
-        <span className="text-muted grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600">
+        <span className="text-muted grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-700">
           {index + 1}
         </span>
         <input

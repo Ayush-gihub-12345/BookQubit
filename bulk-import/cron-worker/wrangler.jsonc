@@ -90,6 +90,13 @@
     // The Psychology of Money, Sapiens, etc. — real bestsellers OL's own
     // reader-log data underrepresents) before falling back to subject rotation.
     // Continuous mode overrides this to 1/hop, same as OL_MAX_ENRICH_PER_RUN.
-    "OL_CURATED_PER_RUN": "2"
+    "OL_CURATED_PER_RUN": "2",
+    // Workers AI during import. One combined call per book yields key takeaways AND the
+    // structured 1-minute summary saved to the catalog's `book_summaries` table
+    // (apply public/migrations/catalog/0001_fts_summaries.sql first; until then the
+    // summary step is skipped harmlessly). Set "0" to keep key points only.
+    "AI_ONE_MINUTE": "1"
+    // Optional: "AI_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast" — better JSON than the
+    // default 1B model, at a higher neuron cost per book.
   }
 }

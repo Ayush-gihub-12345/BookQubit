@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import Icon from "@/components/Icon";
 import ChatPanel from "@/components/community/ChatPanel";
 import NewDiscussionModal from "@/components/community/NewDiscussionModal";
@@ -51,7 +52,7 @@ function CommunityInner() {
 
   const loadMine = async () => {
     if (!user) return;
-    const r = await fetch(`/api/discussions/mine?uid=${user.uid}`);
+    const r = await authFetch("/api/discussions/mine", {}, user);
     const d = await r.json();
     setMine(d.discussions || []);
   };
@@ -73,7 +74,7 @@ function CommunityInner() {
   useEffect(() => {
     if (tab !== "discover") return;
     const t = setTimeout(async () => {
-      const r = await fetch(`/api/discussions/search?q=${encodeURIComponent(q)}&uid=${user?.uid || ""}`);
+      const r = await authFetch(`/api/discussions/search?q=${encodeURIComponent(q)}`, {}, user);
       const d = await r.json();
       setDiscover(d.discussions || []);
     }, 250);
@@ -123,7 +124,7 @@ function CommunityInner() {
           <div className="border-line flex gap-1 border-b p-2">
             {[["chats", tr("chatsTabLabel")], ["archived", tr("archivedTabLabel")], ["discover", tr("discoverTabLabel")]].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)}
-                className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${tab === id ? "bg-brand-600 text-white" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"}`}>
+                className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition ${tab === id ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"}`}>
                 {label}
               </button>
             ))}
@@ -143,7 +144,7 @@ function CommunityInner() {
               discover.length ? discover.map((d) => (
                 <button key={d.id} onClick={() => (d.my_active ? setSelected(d.id) : join(d.id))}
                   className={`flex w-full items-start gap-2.5 border-b border-line px-3 py-3 text-left transition hover:bg-black/5 dark:hover:bg-white/5 ${selected === d.id ? "bg-brand-600/10" : ""}`}>
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-[var(--on-brand)] shadow-sm">
                     <Icon name={d.book_slug ? "book" : "feather"} size={15} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -155,9 +156,9 @@ function CommunityInner() {
                   {d.my_exit_count >= 2 && !d.my_active ? (
                     <span className="text-muted shrink-0 text-[10px]">{tr("lockedLabel")}</span>
                   ) : d.my_active ? (
-                    <span className="shrink-0 text-[10px] font-semibold text-brand-600">{tr("openLabel")}</span>
+                    <span className="shrink-0 text-[10px] font-semibold text-brand-700">{tr("openLabel")}</span>
                   ) : (
-                    <span className="shrink-0 rounded-full bg-brand-600/10 px-2 py-0.5 text-[10px] font-semibold text-brand-600">{tr("joinLabel")}</span>
+                    <span className="shrink-0 rounded-full bg-brand-600/10 px-2 py-0.5 text-[10px] font-semibold text-brand-700">{tr("joinLabel")}</span>
                   )}
                 </button>
               )) : (
@@ -172,7 +173,7 @@ function CommunityInner() {
               visibleChats.map((d) => (
                 <button key={d.id} onClick={() => setSelected(d.id)}
                   className={`flex w-full items-start gap-2.5 border-b border-line px-3 py-3 text-left transition hover:bg-black/5 dark:hover:bg-white/5 ${selected === d.id ? "bg-brand-600/10" : ""}`}>
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 text-[var(--on-brand)] shadow-sm">
                     <Icon name={d.book_slug ? "book" : "feather"} size={15} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -182,7 +183,7 @@ function CommunityInner() {
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     <span className="text-muted text-[10px]">{timeAgo(d.last_message_at || d.created_at)}</span>
                     {d.unread > 0 && (
-                      <span className="grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">{d.unread}</span>
+                      <span className="grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-[var(--on-brand)]">{d.unread}</span>
                     )}
                   </span>
                 </button>

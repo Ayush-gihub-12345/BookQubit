@@ -100,7 +100,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
         <div className="hscroll mt-5">
           {countries.map(({ name, count }) => (
             <button key={name} onClick={() => setCountry(country === name ? "" : name)}
-              className={`pill whitespace-nowrap ${country === name ? "!bg-brand-600 !text-white" : ""}`}>
+              className={`pill whitespace-nowrap ${country === name ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
               {name} <span className="ml-1 opacity-60">{count}</span>
             </button>
           ))}
@@ -126,7 +126,7 @@ export default function AuthorsBrowser({ lang, initialAuthors, initialHasMore, c
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={a.image_url} alt={a.name} className="h-20 w-20 rounded-full object-cover" loading="lazy" />
               ) : (
-                <div className="tint-brand grid h-20 w-20 shrink-0 place-items-center rounded-full text-2xl font-bold text-brand-600">
+                <div className="tint-brand grid h-20 w-20 shrink-0 place-items-center rounded-full text-2xl font-bold text-brand-700">
                   {a.name[0]}
                 </div>
               )}

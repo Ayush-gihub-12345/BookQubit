@@ -30,7 +30,7 @@ export default function TermsPage() {
         </p>
         <p>
           Questions about these terms? Contact{" "}
-          <a href="mailto:contact@bookqubit.com" className="text-brand-600 hover:underline">contact@bookqubit.com</a>.
+          <a href="mailto:contact@bookqubit.com" className="text-brand-700 hover:underline">contact@bookqubit.com</a>.
         </p>
       </div>
     </div>

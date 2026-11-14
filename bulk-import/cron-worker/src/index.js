@@ -347,7 +347,7 @@ function cleanRawText(raw) {
 async function polishSummary(ai, title, author, raw) {
   if (!ai || !raw) return null;
   try {
-    const response = await ai.run("@cf/meta/llama-3.2-1b-instruct", {
+    const response = await ai.run(ai.model || "@cf/meta/llama-3.2-1b-instruct", {
       messages: [
         {
           role: "user",
@@ -402,21 +402,48 @@ function isCleanSubject(s) {
 // Library's own `series` field instead (see fetchWorkDetails/
 // fetchSeriesName) — a real fact, not a model guess.
 async function generateEnrichment(ai, title, author, summary) {
-  if (!ai || !summary) return { keyPoints: null };
+  if (!ai || !summary) return { keyPoints: null, oneMin: null };
   try {
-    const response = await ai.run("@cf/meta/llama-3.2-1b-instruct", {
-      messages: [
-        {
-          role: "user",
-          content:
-            `Book: "${title}" by ${author}.\nSynopsis: ${summary.slice(0, 800)}\n\n` +
-            `Write exactly 3 short key takeaways/highlights for this book, each under 15 words. ` +
-            `Respond with ONLY a JSON array of strings, no other text. Example: ["First point","Second point","Third point"]`,
-        },
-      ],
-      max_tokens: 300,
+    // One call, two products (keeps the per-book AI subrequest count unchanged):
+    // key takeaways (the `key_points` column) AND the structured 1-minute summary
+    // stored in `book_summaries` for the site's "Understand in 60 seconds" player.
+    // ai.oneMinute === false (AI_ONE_MINUTE="0") falls back to the original
+    // takeaways-only prompt.
+    const wantOneMin = ai.oneMinute !== false;
+    const prompt = wantOneMin
+      ? `Book: "${title}" by ${author}.\nSynopsis: ${summary.slice(0, 900)}\n\n` +
+        `Using ONLY facts in the synopsis, respond with ONLY a JSON object: ` +
+        `{"thesis": one sentence under 30 words, "takeaways": exactly 4 strings each under 15 words, ` +
+        `"script": about 100 words of spoken-style narration summarising the book}. ` +
+        `Do not invent quotes, facts or names.`
+      : `Book: "${title}" by ${author}.\nSynopsis: ${summary.slice(0, 800)}\n\n` +
+        `Write exactly 3 short key takeaways/highlights for this book, each under 15 words. ` +
+        `Respond with ONLY a JSON array of strings, no other text. Example: ["First point","Second point","Third point"]`;
+    const response = await ai.run(ai.model || "@cf/meta/llama-3.2-1b-instruct", {
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: wantOneMin ? 600 : 300,
     });
     const text = response?.response || "";
+
+    if (wantOneMin) {
+      const objMatch = text.match(/\{[\s\S]*\}/);
+      if (objMatch) {
+        try {
+          const o = JSON.parse(objMatch[0]);
+          const takeaways = Array.isArray(o.takeaways)
+            ? o.takeaways.filter((p) => typeof p === "string" && p.trim()).slice(0, 5)
+            : [];
+          if (takeaways.length && typeof o.thesis === "string" && typeof o.script === "string" && o.script.length >= 60) {
+            return {
+              keyPoints: takeaways,
+              oneMin: { thesis: o.thesis.trim(), takeaways, quotes: [], script: o.script.trim() },
+            };
+          }
+        } catch {
+          /* fall through to the lenient extraction below */
+        }
+      }
+    }
 
     // This small/cheap model frequently cuts off before closing the array
     // (observed ~1 in 3 calls) — try strict JSON first, but fall back to
@@ -462,7 +489,7 @@ async function enrichAndCollect(doc, ai, titlesDb, { books, authors, publication
   const authorLine = [...new Set(authorNames.map((n) => n.trim()))].slice(0, 3).join(", ");
   const polished = await polishSummary(ai, title, authorLine, cleaned);
   const { short, full } = splitDescription(polished || cleaned);
-  const { keyPoints } = await generateEnrichment(ai, title, authorLine, full);
+  const { keyPoints, oneMin } = await generateEnrichment(ai, title, authorLine, full);
   // Both real facts sourced independently of the AI: collection from OL's
   // own series link (resolved to a name), format from the edition record.
   const [collection, format] = await Promise.all([
@@ -481,6 +508,7 @@ async function enrichAndCollect(doc, ai, titlesDb, { books, authors, publication
     published: doc.first_publish_year ? String(doc.first_publish_year) : null,
     page_count: doc.number_of_pages_median || null,
     key_points: keyPoints,
+    one_min: oneMin || null, // not a books column — saved to book_summaries by runImport
     category: subjects[0] || null,
     subjects: subjects.slice(0, 8),
     genres: subjects.slice(0, 2),
@@ -757,6 +785,37 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
   // landing early without ballooning subrequest use on top of everything else.
   const olCuratedPerRun = curatedOverride ?? (Number(env.OL_CURATED_PER_RUN) || 5);
 
+  // Per-run Workers AI wrapper (a plain object, not module state, so overlapping
+  // invocations can't affect each other). AI_MODEL overrides the default small model
+  // (e.g. "@cf/meta/llama-3.1-8b-instruct-fast" for better JSON); AI_ONE_MINUTE="0"
+  // turns the 1-minute-summary generation off and keeps only key points.
+  const ai = env.AI
+    ? {
+        run: (model, input) => env.AI.run(model, input),
+        model: env.AI_MODEL || undefined,
+        oneMinute: env.AI_ONE_MINUTE !== "0",
+      }
+    : null;
+
+  // Stores the structured 1-minute summaries generated during enrichment. INSERT OR
+  // IGNORE so a human/editorial or later AI version is never overwritten, and a missing
+  // table (catalog migration 0001 not applied yet) just skips this step.
+  async function saveSummaries(rows) {
+    const stmts = rows
+      .filter((r) => r.one_min)
+      .map((r) =>
+        db.prepare(
+          "INSERT OR IGNORE INTO book_summaries (book_slug, lang, intent, summary_json, source) VALUES (?1, ?2, 'general', ?3, 'ai')"
+        ).bind(r.slug, r.lang || "en", JSON.stringify(r.one_min))
+      );
+    if (!stmts.length) return;
+    try {
+      await db.batch(stmts);
+    } catch {
+      /* book_summaries not migrated yet — the import itself must not fail */
+    }
+  }
+
   await db.prepare(
     "INSERT INTO import_progress (id, total_imported, total_skipped) VALUES (1, 0, 0) ON CONFLICT(id) DO NOTHING"
   ).run();
@@ -904,9 +963,10 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
     Math.min(olMaxEnrich, olCuratedPerRun)
   );
   if (curatedBudget > 0) {
-    const curated = await fetchCuratedBooks(db, titlesDb, env.AI, { maxBooks: curatedBudget });
+    const curated = await fetchCuratedBooks(db, titlesDb, ai, { maxBooks: curatedBudget });
     if (curated.books.length) source = "curated";
     imported += await upsertBatch("books", bookColumns, curated.books, toBookValues);
+    await saveSummaries(curated.books);
     authorsImported += await upsertBatch("authors", authorColumns, curated.authors, toAuthorValues, authorUpdateCols);
     publishersImported += await upsertBatch("publications", pubColumns, curated.publications, toPubValues, pubUpdateCols);
   }
@@ -916,12 +976,13 @@ async function runImport(env, { maxChunks, maxBooksOverride, curatedOverride, pa
   const budgetRemaining = progress.daily_cap - (progress.imported_today + imported + authorsImported + publishersImported);
   const olBudget = Math.min(budgetRemaining, Math.max(0, olMaxEnrich - imported));
   if (olBudget > 0) {
-    const ol = await fetchFromOpenLibrary(db, titlesDb, env.AI, {
+    const ol = await fetchFromOpenLibrary(db, titlesDb, ai, {
       pages: olPages, pageSize: olPageSize, minRating: olMinRating, minReaders: olMinReaders,
       maxBooks: olBudget,
     });
     if (ol.books.length) source = ol.subject;
     imported += await upsertBatch("books", bookColumns, ol.books, toBookValues);
+    await saveSummaries(ol.books);
     authorsImported += await upsertBatch("authors", authorColumns, ol.authors, toAuthorValues, authorUpdateCols);
     publishersImported += await upsertBatch("publications", pubColumns, ol.publications, toPubValues, pubUpdateCols);
   }

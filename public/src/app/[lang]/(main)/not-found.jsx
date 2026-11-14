@@ -11,7 +11,7 @@ export default async function NotFound() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+      <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
         <Icon name="search" size={28} />
       </span>
       <h1 className="mt-4 text-3xl font-bold">Page not found</h1>

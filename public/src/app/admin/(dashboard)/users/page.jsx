@@ -59,7 +59,7 @@ export default function AdminUsersPage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={u.photo_url} alt="" className="h-6 w-6 rounded-full" />
                   ) : (
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">{(u.name || "R")[0]}</span>
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-[var(--on-brand)]">{(u.name || "R")[0]}</span>
                   )}
                   {u.name}
                 </td>

@@ -217,7 +217,7 @@ export default function OnboardingPage() {
             ["star", "Rate books you've already read"],
           ].map(([icon, label]) => (
             <div key={label} className="flex items-center gap-3 text-sm">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-600/10 text-brand-600">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-600/10 text-brand-700">
                 <Icon name={icon} size={15} />
               </span>
               {label}
@@ -227,7 +227,7 @@ export default function OnboardingPage() {
         <button onClick={() => setStarted(true)} className="btn-primary mt-8 w-full sm:w-auto">
           Let's Go <Icon name="arrowRight" size={15} />
         </button>
-        <Link href={`/${lang}/account`} className="text-muted mt-4 text-xs hover:text-brand-600">Skip setup for now</Link>
+        <Link href={`/${lang}/account`} className="text-muted mt-4 text-xs hover:text-brand-700">Skip setup for now</Link>
       </div>
     );
   }
@@ -238,7 +238,7 @@ export default function OnboardingPage() {
       <div className="mx-auto mb-6 max-w-md sm:mb-10">
         <div className="mb-2 flex items-center justify-between">
           {step > 0 && step < 4 ? (
-            <button onClick={() => setStep((s) => s - 1)} className="text-muted flex items-center gap-1 text-xs font-semibold hover:text-brand-600">
+            <button onClick={() => setStep((s) => s - 1)} className="text-muted flex items-center gap-1 text-xs font-semibold hover:text-brand-700">
               <Icon name="arrowRight" size={11} className="rotate-180" /> Back
             </button>
           ) : <span />}
@@ -261,7 +261,7 @@ export default function OnboardingPage() {
             <div className="mt-6 flex flex-wrap justify-center gap-2.5">
               {categories.map((c) => (
                 <button key={c.name} onClick={() => toggleGenre(c.name)}
-                  className={`pill !text-sm ${genres.includes(c.name) ? "!bg-brand-600 !text-white" : ""}`}>
+                  className={`pill !text-sm ${genres.includes(c.name) ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                   <Icon name={iconForGenre(c.name)} size={13} /> {c.name}
                 </button>
               ))}
@@ -279,7 +279,7 @@ export default function OnboardingPage() {
         {/* Step 1: reading goal */}
         {step === 1 && (
           <div className="card p-5 text-center hover:!translate-y-0 sm:p-8">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
               <Icon name="calendar" size={24} />
             </span>
             <h1 className="mt-4 text-xl font-bold sm:text-2xl">Set a reading goal for {new Date().getFullYear()}</h1>
@@ -287,7 +287,7 @@ export default function OnboardingPage() {
             <div className="mt-6 flex flex-wrap justify-center gap-2.5">
               {GOAL_PRESETS.map((n) => (
                 <button key={n} onClick={() => pickGoal(n)}
-                  className={`pill !px-5 !py-2 !text-base ${goalTarget === n ? "!bg-brand-600 !text-white" : ""}`}>
+                  className={`pill !px-5 !py-2 !text-base ${goalTarget === n ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                   {n} books
                 </button>
               ))}
@@ -307,12 +307,12 @@ export default function OnboardingPage() {
               </button>
             </div>
             {goalTarget && (
-              <p className="mt-4 text-sm font-semibold text-brand-600">
+              <p className="mt-4 text-sm font-semibold text-brand-700">
                 <Icon name="check" size={14} className="inline" /> Goal set: {goalTarget} books this year
               </p>
             )}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              <button onClick={() => setStep(2)} className="text-muted text-sm hover:text-brand-600">Skip for now</button>
+              <button onClick={() => setStep(2)} className="text-muted text-sm hover:text-brand-700">Skip for now</button>
               <button onClick={() => setStep(2)} className="btn-primary">
                 Continue <Icon name="arrowRight" size={15} />
               </button>
@@ -323,7 +323,7 @@ export default function OnboardingPage() {
         {/* Step 2: authors to follow */}
         {step === 2 && (
           <div className="card p-5 text-center hover:!translate-y-0 sm:p-8">
-            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
               <Icon name="feather" size={24} />
             </span>
             <h1 className="mt-4 text-xl font-bold sm:text-2xl">Follow a few authors</h1>
@@ -340,12 +340,12 @@ export default function OnboardingPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={a.image_url} alt="" className="h-16 w-16 rounded-full object-cover" />
                       ) : (
-                        <span className="grid h-16 w-16 place-items-center rounded-full bg-brand-600/15 text-xl font-bold text-brand-600">
+                        <span className="grid h-16 w-16 place-items-center rounded-full bg-brand-600/15 text-xl font-bold text-brand-700">
                           {a.name?.[0]}
                         </span>
                       )}
                       <span className="line-clamp-1 text-sm font-semibold"><TitleTransliterated text={a.name} /></span>
-                      <span className={`pill !px-3 !py-1 !text-[11px] ${following ? "!bg-brand-600 !text-white" : ""}`}>
+                      <span className={`pill !px-3 !py-1 !text-[11px] ${following ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                         {following ? <><Icon name="check" size={11} /> Following</> : "Follow"}
                       </span>
                     </button>
@@ -357,7 +357,7 @@ export default function OnboardingPage() {
             )}
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              <button onClick={() => setStep(3)} className="text-muted text-sm hover:text-brand-600">Skip for now</button>
+              <button onClick={() => setStep(3)} className="text-muted text-sm hover:text-brand-700">Skip for now</button>
               <button onClick={() => setStep(3)} className="btn-primary">
                 Continue <Icon name="arrowRight" size={15} />
               </button>
@@ -370,7 +370,7 @@ export default function OnboardingPage() {
           <div>
             <div className="card flex flex-col items-center gap-4 p-5 text-center hover:!translate-y-0 sm:flex-row sm:p-6 sm:text-left">
               <div className="flex-1">
-                <p className="text-sm font-semibold">You've rated <b className="text-brand-600">{ratedCount}</b> book{ratedCount === 1 ? "" : "s"}</p>
+                <p className="text-sm font-semibold">You've rated <b className="text-brand-700">{ratedCount}</b> book{ratedCount === 1 ? "" : "s"}</p>
                 <div className="bg-line mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full">
                   <div className="h-full bg-brand-600 transition-all" style={{ width: `${Math.min(100, (ratedCount / RATE_TARGET) * 100)}%` }} />
                 </div>
@@ -411,7 +411,7 @@ export default function OnboardingPage() {
                   <button
                     onClick={() => markWant(b)}
                     className={`mt-1.5 w-full rounded-lg py-1.5 text-[11px] font-semibold transition ${
-                      wanted[b.slug] ? "bg-brand-600/15 text-brand-600" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"
+                      wanted[b.slug] ? "bg-brand-600/15 text-brand-700" : "text-muted hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                   >
                     {wanted[b.slug] ? "Added to Want to Read" : "Want to Read"}
@@ -429,7 +429,7 @@ export default function OnboardingPage() {
         {/* Step 4: summary + recommendations */}
         {step === 4 && (
           <div className="card overflow-hidden p-5 text-center hover:!translate-y-0 sm:p-8">
-            <div className="celebrate-burst mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
+            <div className="celebrate-burst mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-[var(--on-brand)] shadow-lg shadow-brand-600/30">
               <Icon name="check" size={28} />
             </div>
             <h1 className="mt-4 text-xl font-bold sm:text-2xl">You're all set{user.displayName ? `, ${user.displayName.split(" ")[0]}` : ""}</h1>
@@ -443,7 +443,7 @@ export default function OnboardingPage() {
                 ["star", ratedCount, "Books rated"],
               ].map(([icon, val, label]) => (
                 <div key={label} className="card p-3 hover:!translate-y-0">
-                  <span className="mx-auto grid h-8 w-8 place-items-center rounded-lg bg-brand-600/10 text-brand-600">
+                  <span className="mx-auto grid h-8 w-8 place-items-center rounded-lg bg-brand-600/10 text-brand-700">
                     <Icon name={icon} size={15} />
                   </span>
                   <p className="mt-1.5 text-lg font-extrabold">{val}</p>
@@ -455,7 +455,7 @@ export default function OnboardingPage() {
             {recs.length > 0 && (
               <>
                 <p className="text-muted mt-8 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-                  <Icon name="zap" size={13} className="text-brand-600" /> Picked for you
+                  <Icon name="zap" size={13} className="text-brand-700" /> Picked for you
                 </p>
                 <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {recs.map((b) => (

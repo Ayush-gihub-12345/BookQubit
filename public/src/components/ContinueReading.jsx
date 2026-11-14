@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCover from "./BookCover";
 import HScrollRow from "./HScrollRow";
 import TitleTransliterated from "./TitleTransliterated";
@@ -19,7 +20,8 @@ export default function ContinueReading() {
     if (!auth) return;
     return auth.onAuthStateChanged(async (u) => {
       if (!u) { setItems(null); return; }
-      const r = await fetch(`/api/shelf?uid=${u.uid}`);
+      const r = await authFetch("/api/shelf", {}, u);
+      if (!r.ok) { setItems(null); return; }
       const data = await r.json();
       setItems((data.shelf || []).filter((s) => s.status === "reading").slice(0, 4));
     });
@@ -29,26 +31,26 @@ export default function ContinueReading() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-8">
-      <div className="mb-4 flex items-end justify-between">
+      <div className="mb-5 flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">{tr("continueReadingTitle")}</h2>
-          <p className="text-muted mt-0.5 text-sm">{tr("pickUpWhereLeftOff")}</p>
+          <h2 className="text-xl font-bold sm:text-2xl">{tr("continueReadingTitle")}</h2>
+          <p className="text-muted mt-1 text-sm">{tr("pickUpWhereLeftOff")}</p>
         </div>
-        <Link href={`/${lang}/account`} className="text-sm font-semibold text-brand-600 hover:underline">{tr("myShelfLink")}</Link>
+        <Link href={`/${lang}/account`} className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-brand-700 hover:underline">{tr("myShelfLink")}</Link>
       </div>
       <HScrollRow>
         {items.map((s) => (
           <Link key={s.book_slug} href={`/${lang}/books/${encodeURIComponent(s.book_slug)}`}
             className="card flex w-64 shrink-0 gap-4 p-4 sm:w-72">
-            <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg shadow">
+            <div className="cover h-24 w-16 shrink-0">
               <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="line-clamp-2 text-sm font-semibold"><TitleTransliterated text={s.title || s.book_slug} /></p>
               <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={s.author} /></p>
               <div className="mt-3">
-                <div className="h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-                  <div className="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-500 transition-all"
+                <div className="h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--fg)_14%,transparent)]">
+                  <div className="h-full rounded-full bg-marker"
                     style={{ width: `${s.progress || 0}%` }} />
                 </div>
                 <p className="text-muted mt-1 text-[11px]">{tr("percentComplete", { pct: s.progress || 0 })}</p>

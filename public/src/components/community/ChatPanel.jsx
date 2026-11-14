@@ -4,10 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
+import { authFetch } from "@/lib/authFetch";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
+import { useRoom } from "@/lib/useRoom";
+import { useSafety } from "@/lib/safety-client";
+import MessageBody from "./MessageBody";
+import MessageMenu from "./MessageMenu";
 
-const POLL_MS = 4000;
+const POLL_MS = 4000; // fallback only: with a live room connection the panel refetches on a push instead
+const LIVE_POLL_MS = 30000; // safety net while connected
 
 // One open discussion's chat thread — polls for new messages (no
 // websockets/Durable Objects in this build), and understands three states:
@@ -23,9 +29,14 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
   const [error, setError] = useState("");
   const scrollRef = useRef(null);
   const lastIdRef = useRef(0);
+  const safety = useSafety();
+  const connectedRef = useRef(false);
+  const fetchNewRef = useRef(() => {});
+  const room = useRoom(`discussion:${discussionId}`, () => fetchNewRef.current());
+  connectedRef.current = room.connected;
 
   const load = async () => {
-    const r = await fetch(`/api/discussions/${discussionId}?uid=${user?.uid || ""}`);
+    const r = await authFetch(`/api/discussions/${discussionId}`, {}, user);
     if (!r.ok) return;
     const d = await r.json();
     setThread(d);
@@ -36,16 +47,24 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
   useEffect(() => {
     setThread(null); setMessages([]); setError("");
     load();
-    const poll = setInterval(async () => {
-      const r = await fetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`);
+    const fetchNew = async () => {
+      const r = await authFetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`, {}, user);
       if (!r.ok) return;
       const d = await r.json();
       if (d.messages?.length) {
         setMessages((prev) => [...prev, ...d.messages]);
         lastIdRef.current = d.messages[d.messages.length - 1].id;
       }
-    }, POLL_MS);
-    return () => clearInterval(poll);
+    };
+    fetchNewRef.current = fetchNew;
+    // Slow loop while the live connection is up, normal polling when it isn't.
+    let stopped = false, timer;
+    const tick = async () => {
+      try { await fetchNew(); } catch { /* offline: try again next tick */ }
+      if (!stopped) timer = setTimeout(tick, connectedRef.current ? LIVE_POLL_MS : POLL_MS);
+    };
+    timer = setTimeout(tick, POLL_MS);
+    return () => { stopped = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discussionId]);
 
@@ -105,7 +124,8 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
       body: JSON.stringify({ idToken, body }),
     });
     if (r.ok) {
-      const r2 = await fetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`);
+      room.notify();
+      const r2 = await authFetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`, {}, user);
       const d2 = await r2.json();
       if (d2.messages?.length) {
         setMessages((prev) => [...prev, ...d2.messages]);
@@ -122,12 +142,13 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
           <p className="truncate font-semibold">{thread.title}</p>
           <p className="text-muted flex flex-wrap items-center gap-x-2 text-xs">
             {thread.book_slug && (
-              <Link href={`/${lang}/books/${encodeURIComponent(thread.book_slug)}`} className="hover:text-brand-600">
+              <Link href={`/${lang}/books/${encodeURIComponent(thread.book_slug)}`} className="hover:text-brand-700">
                 <Icon name="book" size={11} className="inline" /> <TitleTransliterated text={thread.book_title || thread.book_slug} />
               </Link>
             )}
             {thread.author_name && <span><Icon name="feather" size={11} className="inline" /> <TitleTransliterated text={thread.author_name} /></span>}
-            <span>{tr("startedByLabel")} <Link href={`/${lang}/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-600 hover:underline">{thread.name}</Link></span>
+            <span>{tr("startedByLabel")} <Link href={`/${lang}/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-700 hover:underline">{thread.name}</Link></span>
+            {room.connected && room.readers > 0 && <span className="text-brand-700 inline-flex items-center gap-1" role="status"><span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden />{room.readers} {room.readers === 1 ? "reader" : "readers"} here now</span>}
           </p>
         </div>
         {isMember && (
@@ -157,7 +178,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
             <p className="whitespace-pre-line leading-relaxed">{thread.body}</p>
           </div>
         )}
-        {messages.map((m) => {
+        {messages.filter((m) => !safety.hides(m.user_id)).map((m) => {
           const mine = m.user_id === user?.uid;
           return (
             <div key={m.id} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
@@ -166,17 +187,18 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.photo_url} alt="" className="h-7 w-7 rounded-full" />
                 ) : (
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-[var(--on-brand)]">
                     {(m.name || "R")[0].toUpperCase()}
                   </span>
                 )}
               </Link>
-              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-brand-600 text-white" : "bg-black/5 dark:bg-white/5"}`}>
+              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-brand-600 text-[var(--on-brand)]" : "bg-black/5 dark:bg-white/5"}`}>
                 <Link href={`/${lang}/readers/${m.slug || m.user_id}`}
                   className={`mb-0.5 block text-[11px] font-semibold hover:underline ${mine ? "text-white/80" : "opacity-70"}`}>
                   {mine ? tr("youLabel") : m.name}
                 </Link>
-                <p className="whitespace-pre-line leading-relaxed">{m.body}</p>
+                {!mine && user && <span className="float-end"><MessageMenu messageId={m.id} userId={m.user_id} name={m.name} onChanged={safety.refresh} /></span>}
+                <MessageBody body={m.body} />
                 <p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-muted"}`}>
                   {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
@@ -196,6 +218,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
             value={text} onChange={(e) => setText(e.target.value)}
             placeholder={tr("messagePlaceholder")} className="input flex-1"
           />
+          <button type="button" onClick={() => setText((v) => (v.trim() ? `||${v.trim()}||` : "||spoiler||"))} className="btn-ghost !px-3 text-xs" title="Hide this message behind a spoiler" aria-label="Wrap message in a spoiler">Spoiler</button>
           <button type="submit" disabled={!text.trim()} className="btn-primary !px-4 disabled:cursor-not-allowed disabled:opacity-40">
             <Icon name="arrowRight" size={16} />
           </button>

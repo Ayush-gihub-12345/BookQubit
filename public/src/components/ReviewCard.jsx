@@ -16,19 +16,19 @@ export default async function ReviewCard({ rating, review, spoiler, updatedAt, r
             // eslint-disable-next-line @next/next/no-img-element
             <img src={reviewer.photo_url} alt="" className="h-9 w-9 rounded-full" />
           ) : (
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-600 text-sm font-bold text-[var(--on-brand)]">
               {(reviewer.name || "R")[0].toUpperCase()}
             </span>
           )
         )}
         <div className="min-w-0 flex-1">
           {reviewer && (
-            <Link href={`/${lang}/readers/${reviewer.slug || reviewer.user_id}`} className="text-sm font-semibold hover:text-brand-600">
+            <Link href={`/${lang}/readers/${reviewer.slug || reviewer.user_id}`} className="text-sm font-semibold hover:text-brand-700">
               {reviewer.name}
             </Link>
           )}
           {book && (
-            <Link href={`/${lang}/books/${encodeURIComponent(book.slug)}`} className="line-clamp-1 text-sm font-semibold hover:text-brand-600">
+            <Link href={`/${lang}/books/${encodeURIComponent(book.slug)}`} className="line-clamp-1 text-sm font-semibold hover:text-brand-700">
               <TitleTransliterated text={book.title} />
             </Link>
           )}
@@ -38,7 +38,7 @@ export default async function ReviewCard({ rating, review, spoiler, updatedAt, r
       </div>
       {spoiler ? (
         <details className="mt-3">
-          <summary className="text-muted cursor-pointer text-xs font-semibold hover:text-brand-600">
+          <summary className="text-muted cursor-pointer text-xs font-semibold hover:text-brand-700">
             {spoilerLabel}
           </summary>
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{review}</p>

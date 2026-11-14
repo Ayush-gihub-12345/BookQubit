@@ -141,7 +141,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
           onFocus={() => { setRecent(readRecent()); setOpen(true); }}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className={`input !rounded-full !pl-11 ${q || big ? "!pr-14" : "!pr-4"} ${big ? "py-3 text-[15px] shadow-lg shadow-black/5" : "w-64 py-2 text-sm"}`}
+          className={`input !rounded-full !pl-11 !border-transparent !bg-[var(--surface-2)] focus:!border-[var(--ring)] focus:!bg-[var(--surface)] ${q || big ? "!pr-16" : "!pr-4"} ${big ? "!min-h-[42px] !py-2 text-[15px]" : "w-64 py-2 text-sm"}`}
           role="combobox"
           aria-expanded={open}
         />
@@ -160,7 +160,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
       </form>
 
       {open && (loading || res || showRecent) && (
-        <div className={`bg-surface border-line absolute z-50 mt-2 max-h-[70vh] overflow-auto rounded-2xl border shadow-2xl ${big ? "left-0 right-0" : "right-0 w-[min(24rem,calc(100vw-2rem))]"}`}>
+        <div className={`popover absolute z-50 mt-2 max-h-[70vh] overflow-auto ${big ? "left-0 right-0 max-sm:fixed max-sm:left-2 max-sm:right-2 max-sm:top-14 max-sm:mt-1" : "right-0 w-[min(24rem,calc(100vw-2rem))]"}`}>
           {showRecent && (
             <div className="p-2">
               <p className="text-muted px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide">Recent searches</p>
@@ -208,7 +208,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
                   <button key={a.slug} onClick={() => go(`/authors/${a.slug}`, a.name)}
                     onMouseEnter={() => setActive(i)}
                     className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${active === i ? "bg-brand-50 dark:bg-white/5" : ""}`}>
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-600/15 text-sm font-bold text-brand-600">{a.name[0]}</span>
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-600/15 text-sm font-bold text-brand-700">{a.name[0]}</span>
                     <span className="text-sm font-medium">{mark(a.name)}</span>
                   </button>
                 );
@@ -225,7 +225,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
                   <button key={p.slug} onClick={() => go(`/publications/${p.slug}`, p.name)}
                     onMouseEnter={() => setActive(i)}
                     className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${active === i ? "bg-brand-50 dark:bg-white/5" : ""}`}>
-                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600/15 text-sm font-bold text-brand-600">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600/15 text-sm font-bold text-brand-700">
                       <Icon name="building" size={14} />
                     </span>
                     <span className="text-sm font-medium">{mark(p.name)}</span>
@@ -244,7 +244,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
                   return (
                     <button key={c.name} onClick={() => go(`/books?category=${encodeURIComponent(c.name)}`, c.name)}
                       onMouseEnter={() => setActive(i)}
-                      className={`pill ${active === i ? "!bg-brand-600 !text-white" : ""}`}>
+                      className={`pill ${active === i ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                       {mark(c.name)} <span className="ml-1 opacity-60">{c.count}</span>
                     </button>
                   );
@@ -260,7 +260,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
                 return (
                   <button key={t.name} onClick={() => go(`/books?tag=${encodeURIComponent(t.name)}`, t.name)}
                     onMouseEnter={() => setActive(i)}
-                    className={`pill ${active === i ? "!bg-brand-600 !text-white" : ""}`}>
+                    className={`pill ${active === i ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                     #{t.name}
                   </button>
                 );
@@ -270,7 +270,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
 
           {res && !empty && (
             <button onClick={() => go(`/books?q=${encodeURIComponent(q.trim())}`, q.trim())}
-              className="border-line block w-full border-t px-4 py-3 text-center text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:hover:bg-white/5">
+              className="border-line block w-full border-t px-4 py-3 text-center text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:hover:bg-white/5">
               View all results for “{q}” →
             </button>
           )}

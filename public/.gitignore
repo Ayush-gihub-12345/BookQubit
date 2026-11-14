@@ -4,3 +4,9 @@ node_modules/
 .wrangler/
 .dev.vars
 .env*.local
+
+# D1 exports contain personal data — never commit (see scripts/backup-d1.mjs)
+backups/
+
+# local SQLite stand-in for D1 (scripts/local-d1.mjs)
+.local-d1/

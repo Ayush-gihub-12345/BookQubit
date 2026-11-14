@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCatalogDb } from "@/lib/db";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { ENTITIES, isKnownEntity } from "@/lib/admin-entities";
+import { getCf } from "@/lib/cf/env";
+import { bumpGroup } from "@/lib/cache-versions";
 
 async function guard(entity) {
   if (!isKnownEntity(entity)) return NextResponse.json({ error: "unknown entity" }, { status: 404 });
@@ -38,6 +40,7 @@ export async function PATCH(request, { params }) {
   const db = await getCatalogDb();
   await db.prepare(`UPDATE ${config.table} SET ${sets} WHERE id = ?${cols.length + 1}`)
     .bind(...values, id).run();
+  { const { env } = await getCf(); await bumpGroup(env, "catalog"); }
   return NextResponse.json({ ok: true });
 }
 
@@ -48,5 +51,6 @@ export async function DELETE(request, { params }) {
   const config = ENTITIES[entity];
   const db = await getCatalogDb();
   await db.prepare(`DELETE FROM ${config.table} WHERE id = ?1`).bind(id).run();
+  { const { env } = await getCf(); await bumpGroup(env, "catalog"); }
   return NextResponse.json({ ok: true });
 }

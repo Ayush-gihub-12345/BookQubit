@@ -25,7 +25,7 @@ export default function WishlistButton({ book, labels }) {
   };
 
   return (
-    <button onClick={toggle} className={`btn-ghost w-full ${saved ? "!border-brand-500 !text-brand-600" : ""}`}>
+    <button onClick={toggle} className={`btn-ghost w-full ${saved ? "!border-brand-500 !text-brand-700" : ""}`}>
       <Icon name="heart" size={15} filled={saved} /> {saved ? labels.saved : labels.save}
     </button>
   );

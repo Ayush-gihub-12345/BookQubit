@@ -7,6 +7,7 @@ import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import { SITE_URL } from "@/lib/site";
 import { t } from "@/lib/i18n";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 export const dynamic = "force-dynamic";
 
@@ -70,10 +71,10 @@ export default async function ComparePage({ params }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
 
       <nav className="text-muted mb-6 text-sm">
-        <Link href={`/${lang}/compare`} className="hover:text-brand-600">{_("compareCrumb")}</Link>
+        <Link href={`/${lang}/compare`} className="hover:text-brand-700">{_("compareCrumb")}</Link>
         <span className="mx-1.5">/</span>
         <span className="text-[var(--fg)]">{heading}</span>
       </nav>
@@ -91,7 +92,7 @@ export default async function ComparePage({ params }) {
                 <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
               </div>
             </Link>
-            <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="mt-3 block font-bold hover:text-brand-600">
+            <Link href={`/${lang}/books/${encodeURIComponent(b.slug)}`} className="mt-3 block font-bold hover:text-brand-700">
               <TitleTransliterated text={b.title} />
             </Link>
             <p className="text-muted text-xs"><TitleTransliterated text={b.author} /></p>
@@ -125,7 +126,7 @@ export default async function ComparePage({ params }) {
                 <ul className="space-y-2">
                   {J(b.key_points).map((k) => (
                     <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-3 py-2 text-xs leading-relaxed">
-                      <span className="text-brand-600">✓</span> {k}
+                      <span className="text-brand-700">✓</span> {k}
                     </li>
                   ))}
                 </ul>

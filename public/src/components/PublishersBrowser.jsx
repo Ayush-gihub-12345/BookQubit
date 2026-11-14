@@ -92,7 +92,7 @@ export default function PublishersBrowser({ lang, initialPublications, initialHa
         <div className="hscroll mt-5">
           {types.map(({ name, count }) => (
             <button key={name} onClick={() => setType(type === name ? "" : name)}
-              className={`pill whitespace-nowrap ${type === name ? "!bg-brand-600 !text-white" : ""}`}>
+              className={`pill whitespace-nowrap ${type === name ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
               {name} <span className="ml-1 opacity-60">{count}</span>
             </button>
           ))}

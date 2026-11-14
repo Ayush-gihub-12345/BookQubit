@@ -43,10 +43,10 @@ export default function ReadersBrowser({ topReaders, popularReaders, lang }) {
       </div>
 
       <div className="mt-5 flex gap-2">
-        <button onClick={() => setTab("top")} className={`pill !text-sm ${tab === "top" ? "!bg-brand-600 !text-white" : ""}`}>
+        <button onClick={() => setTab("top")} className={`pill !text-sm ${tab === "top" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
           <Icon name="trendingUp" size={14} /> Top Readers
         </button>
-        <button onClick={() => setTab("popular")} className={`pill !text-sm ${tab === "popular" ? "!bg-brand-600 !text-white" : ""}`}>
+        <button onClick={() => setTab("popular")} className={`pill !text-sm ${tab === "popular" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
           <Icon name="heart" size={14} /> Most Followed
         </button>
       </div>
@@ -61,7 +61,7 @@ export default function ReadersBrowser({ topReaders, popularReaders, lang }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={r.photo_url} alt="" className="mx-auto h-14 w-14 rounded-full object-cover" />
                   ) : (
-                    <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-600 text-lg font-bold text-white">
+                    <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-600 text-lg font-bold text-[var(--on-brand)]">
                       {(r.name || "R")[0].toUpperCase()}
                     </span>
                   )}
