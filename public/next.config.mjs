@@ -1,7 +1,9 @@
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 // Makes env.DB / env.CACHE bindings available in plain `next dev` too.
-initOpenNextCloudflareForDev();
+// remoteBindings:false — AI/Vectorize only exist remotely; without this, dev/build
+// demand a Cloudflare login. src/lib/cf/* treats them as absent (graceful degrade).
+initOpenNextCloudflareForDev({ remoteBindings: false });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

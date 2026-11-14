@@ -15,6 +15,10 @@ import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
+import SummaryReader from "@/components/player/SummaryReader";
+import { getCf } from "@/lib/cf/env";
+import { availability } from "@/lib/cf/geo-affiliate";
+import { baselineSummary, resolveSummary } from "@/lib/summary";
 import { t } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 
@@ -70,6 +74,30 @@ export default async function BookPage({ params }) {
   ]);
   const moreInCollectionFiltered = moreInCollection.filter((b) => b.slug !== book.slug).slice(0, 4);
   const _ = t(lang);
+
+  // 60-second summary. The baseline is built from stored data (no AI), so this can never
+  // leave the page without one; KV/D1/AI only improve it. Any failure falls back silently.
+  let initialSummary = baselineSummary(book);
+  let initialAudioUrl = null;
+  try {
+    const { env } = await getCf();
+    const r = await resolveSummary(env, book, lang, "general");
+    initialSummary = r.summary;
+    initialAudioUrl = r.audioUrl;
+  } catch {
+    /* keep the baseline */
+  }
+  const slugQ = encodeURIComponent(book.slug);
+  // Geo-routed, click-logged outbound links (see /api/go). Replaces the old fixed amazon.com URL.
+  const goBuy = `/api/go?slug=${slugQ}&lang=${lang}&kind=buy`;
+  const goAudible = `/api/go?slug=${slugQ}&lang=${lang}&kind=audible`;
+  const bookForActions = { ...book, buyUrl: goBuy };
+  const availabilityBadge = availability({
+    hasFullAudio: false, // we never claim unlicensed full audiobooks
+    hasSummaryAudio: true, // narrated file or the reader's own device voice
+    hasSummaryText: true,
+    hasExternalAudio: true,
+  });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -141,7 +169,7 @@ export default async function BookPage({ params }) {
           by the layout's own pb-[calc(4rem+...)]) AND the sticky "Get Book"
           bar rendered below, which floats just above the tab bar on mobile.
           Only needed when that sticky bar actually renders (book.buyUrl). */}
-      <div className={`mx-auto max-w-7xl px-4 pt-6 sm:pt-10 ${book.buyUrl ? "pb-36 lg:pb-10" : "pb-6 sm:pb-10"}`}>
+      <div className="mx-auto max-w-7xl px-4 pt-6 pb-6 sm:pt-10 sm:pb-10">
         <nav className="text-muted mb-6 text-sm">
           <Link href={withLang("/books")} className="hover:text-brand-600">{_("books")}</Link>
           {book.category && (
@@ -171,7 +199,7 @@ export default async function BookPage({ params }) {
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
 
-            <QuickActions book={book} />
+            <QuickActions book={bookForActions} />
 
             {related.length > 0 && (
               <div className="mt-5 border-t border-line pt-4">
@@ -256,6 +284,23 @@ export default async function BookPage({ params }) {
                   {book.collection}
                 </Link>
               )}
+            </div>
+
+            <SummaryReader
+              book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }}
+              initial={initialSummary}
+              initialAudioUrl={initialAudioUrl}
+              fullText={book.summary}
+            />
+
+            <div className="text-muted mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <span className="pill !text-[11px]">{availabilityBadge}</span>
+              <a href={goBuy} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-600 inline-flex items-center gap-1.5">
+                <Icon name="cart" size={14} /> Buy the book <span className="text-xs opacity-70">(Affiliate link)</span>
+              </a>
+              <a href={goAudible} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-600 inline-flex items-center gap-1.5">
+                <Icon name="external" size={14} /> Listen on Audible <span className="text-xs opacity-70">(External provider)</span>
+              </a>
             </div>
 
             {moreInCollectionFiltered.length > 0 && (
@@ -424,28 +469,8 @@ export default async function BookPage({ params }) {
         </div>
       </div>
 
-      {/* Sticky mobile-only "Get Book" bar — a reachable duplicate of the
-          primary action in QuickActions (which scrolls away with the rest of
-          the column) so it's always available while deep in the page.
-          Sits just above the sitewide MobileTabBar: offset by that bar's own
-          height (4rem + safe-area) so the two stack instead of overlapping,
-          and z-30 (one below the tab bar's z-40). Doesn't render at all when
-          the book has no purchase link, rather than showing an empty bar. */}
-      {book.buyUrl && (
-        <div
-          className="border-line bg-surface/95 fixed inset-x-0 z-30 border-t p-3 backdrop-blur-lg lg:hidden"
-          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
-        >
-          <a
-            href={book.buyUrl}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="btn-primary w-full"
-          >
-            <Icon name="cart" size={16} /> {_("getBookAction")}
-          </a>
-        </div>
-      )}
+      {/* The old fixed "Get Book" bar is gone on purpose: the mini player is the only fixed bar
+          above the tab bar; buy lives in the quiet row under the summary and in QuickActions. */}
 
       {related.length > 0 && (
         <Section id="related" title={_("related")}>

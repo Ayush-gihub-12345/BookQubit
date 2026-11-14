@@ -22,25 +22,57 @@
      variables are ever missing. */
   --font-display: var(--font-sora), "Sora", ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), "Newsreader", Georgia, "Times New Roman", serif;
 }
 
 /* ── Themes: bg is softly tinted so surfaces (cards/nav) visibly lift ──
    --pill-bg/--pill-fg drive tags/chips per theme so they always have
    readable contrast (brand-50/100 double as hover backgrounds and CANNOT
    be reused as text colors in dark themes). */
+/* Light = warm-paper editorial canvas with emerald accent; Dark = OLED-friendly.
+   The emerald scale is set on :root so every `brand-*` utility picks it up; the
+   other (user-selectable) themes keep their own palettes below. brand-600 is
+   #047857 (not #059669) so white-on-brand buttons and brand text on the cream
+   canvas stay >= 4.5:1 (WCAG AA); #059669/#10b981 are used for accents. */
 :root, [data-theme="light"] {
-  --bg: #f6f7fb; --surface: #ffffff; --fg: #1f2437;
-  --muted: #6b7288; --line: #e6e8f0;
-  --pill-bg: #e8ecfd; --pill-fg: #4338ca;
+  --bg: #faf9f6; --surface: #ffffff; --fg: #0f172a;
+  --muted: #64707f; --line: #e8e5de;
+  --gold: #f59e0b;
+  --color-brand-50: #ecfdf5; --color-brand-100: #d1fae5;
+  --color-brand-500: #059669; --color-brand-600: #047857; --color-brand-700: #065f46;
+  --pill-bg: #d9f5e8; --pill-fg: #065f46;
 }
 [data-theme="dark"] {
-  --bg: #0d1322; --surface: #161e33; --fg: #e4e8f4;
-  --muted: #98a2bd; --line: #232d47;
-  --color-brand-50: #1c2440; --color-brand-100: #26305a;
-  --color-brand-500: #818cf8; --color-brand-600: #6366f1; --color-brand-700: #4f46e5;
-  --pill-bg: #232d54; --pill-fg: #b3bcfa;
+  --bg: #0b0f17; --surface: #131a26; --fg: #e6ebf3;
+  --muted: #94a0b4; --line: #212b3b;
+  --gold: #fbbf24;
+  --color-brand-50: #0f2a22; --color-brand-100: #14382d;
+  --color-brand-500: #34d399; --color-brand-600: #10b981; --color-brand-700: #059669;
+  --pill-bg: #123629; --pill-fg: #6ee7b7;
   --pill-hover-brightness: 1.25;
 }
+/* Sepia Reader Mode — applied by wrapping long-form content (summaries, MindSpace
+   notes) in `.reader-sepia`; works inside any theme. Serif, generous measure. */
+.reader-sepia {
+  --bg: #f4ecdd; --surface: #fbf5e8; --fg: #40331f; --muted: #7d6c50; --line: #e3d6bb;
+  background: var(--surface); color: var(--fg);
+  font-family: var(--font-serif);
+  line-height: 1.75;
+}
+.font-editorial { font-family: var(--font-serif); }
+/* Skeleton shimmer — fixed-size placeholders keep CLS at ~0. */
+.skeleton {
+  background: linear-gradient(90deg, var(--line) 0%, color-mix(in srgb, var(--line) 40%, var(--surface)) 50%, var(--line) 100%);
+  background-size: 200% 100%;
+  animation: bq-shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+@keyframes bq-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+/* Reserve room for the docked mini player so page content never hides behind it. */
+body[data-player="on"] main { padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { body[data-player="on"] main { padding-bottom: 6rem; } }
 [data-theme="sepia"] {
   --bg: #f4ecdd; --surface: #fdf8ee; --fg: #40331f;
   --muted: #8b7a5e; --line: #e7dbc4;

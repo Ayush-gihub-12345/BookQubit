@@ -669,6 +669,86 @@ async function edgePut(vkey, body, ttl) {
   }
 }
 
+// ── L2.5: Workers KV (optional binding `CACHE_KV`) ─────────────────────────
+// Global, so a value cached in one region is a hit everywhere — this is what keeps
+// D1 reads flat as traffic (and the number of colos/isolates) grows. It sits between
+// the per-colo edge cache and D1.
+//
+// KV was removed once before: a write-metered tier silently degraded into uncached
+// reads. This version cannot take the site down or silently cost reads, because:
+//   • it is strictly additive — a miss/failure just falls through to D1 (L3);
+//   • writes are budgeted per isolate (KV_WRITES_PER_MIN) so a miss storm can't burn
+//     the write allowance;
+//   • any error trips a breaker that switches the tier off for a while (10 min when the
+//     message looks like a quota/limit error, 30 s otherwise) instead of retrying
+//     into a failing service;
+//   • user-scoped keys never go to KV (same rule as the edge cache).
+// Entries live ttl + STALE_GRACE so stale-while-revalidate and last-known-good still
+// work from KV when D1 is refusing reads.
+const KV_WRITES_PER_MIN = 120;
+let kvDownUntil = 0;
+let kvWindowStart = 0;
+let kvWrites = 0;
+
+function kvTrip(err) {
+  const msg = String((err && err.message) || err);
+  kvDownUntil = Date.now() + (/limit|quota|too many|exceeded/i.test(msg) ? 600_000 : 30_000);
+}
+
+async function kvBinding() {
+  if (Date.now() < kvDownUntil) return undefined;
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    return env?.CACHE_KV || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// KV keys max out at 512 bytes and slugs can be long/unicode — hash to a fixed key.
+async function kvKey(vkey) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(vkey));
+  return "c:" + [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function kvGet(vkey) {
+  if (USER_SCOPED.test(vkey)) return undefined;
+  try {
+    const kv = await kvBinding();
+    if (!kv) return undefined;
+    // cacheTtl lets the colo keep the KV value briefly, cutting KV read operations too.
+    const raw = await kv.get(await kvKey(vkey), { type: "text", cacheTtl: 60 });
+    return raw ? unwrap(JSON.parse(raw)) : undefined;
+  } catch (err) {
+    kvTrip(err);
+    return undefined;
+  }
+}
+
+async function kvPut(vkey, body, ttl) {
+  if (USER_SCOPED.test(vkey)) return;
+  const now = Date.now();
+  if (now - kvWindowStart > 60_000) { kvWindowStart = now; kvWrites = 0; }
+  if (kvWrites >= KV_WRITES_PER_MIN) return; // budget spent: skip, never block or error
+  try {
+    const kv = await kvBinding();
+    if (!kv) return;
+    kvWrites++;
+    await kv.put(await kvKey(vkey), body, { expirationTtl: Math.max(60, ttl + STALE_GRACE_SECONDS) });
+  } catch (err) {
+    kvTrip(err);
+  }
+}
+
+async function kvDelete(vkey) {
+  try {
+    const kv = await kvBinding();
+    if (kv) await kv.delete(await kvKey(vkey));
+  } catch (err) {
+    kvTrip(err);
+  }
+}
+
 // The cache's durable tier deliberately does NOT go through getDb(). Doing so
 // dragged the main database's whole schema batch into every cache miss —
 // including misses for catalog data that has nothing to do with that database
@@ -769,7 +849,10 @@ async function background(promise) {
 
 async function store(vkey, value, ttl) {
   const body = envelope(value, ttl);
-  if (body.length <= MAX_EDGE_BYTES) await edgePut(vkey, body, ttl);
+  if (body.length <= MAX_EDGE_BYTES) {
+    await edgePut(vkey, body, ttl);
+    await kvPut(vkey, body, ttl);
+  }
   if (body.length <= MAX_ROW_BYTES) await rowPut(vkey, body, ttl);
 }
 
@@ -814,12 +897,24 @@ export async function cached(key, fn, ttl = 300) {
       return revalidate(edgeHit.value);
     }
 
+    // L2.5 — global KV, before touching D1.
+    const kvHit = await kvGet(vkey);
+    if (kvHit) {
+      if (!kvHit.stale) {
+        memSet(vkey, kvHit.value, ttl);
+        await background(edgePut(vkey, envelope(kvHit.value, ttl), ttl));
+        return kvHit.value;
+      }
+      return revalidate(kvHit.value);
+    }
+
     const rowHit = await rowGet(vkey);
     if (rowHit) {
       if (!rowHit.stale) {
         memSet(vkey, rowHit.value, ttl);
-        // Re-seed this colo's edge cache so the next hit here skips D1.
-        await background(edgePut(vkey, envelope(rowHit.value, ttl), ttl));
+        // Re-seed this colo's edge cache (and global KV) so the next hit skips D1.
+        const reseed = envelope(rowHit.value, ttl);
+        await background(Promise.all([edgePut(vkey, reseed, ttl), kvPut(vkey, reseed, ttl)]));
         return rowHit.value;
       }
       return revalidate(rowHit.value);
@@ -854,6 +949,7 @@ export async function invalidate(key) {
       await c.delete(await edgeKey(vkey));
     } catch { /* nothing cached at the edge */ }
   }
+  await kvDelete(vkey);
   try {
     const db = await cacheDb();
     if (db) await db.prepare("DELETE FROM app_cache WHERE key = ?1").bind(vkey).run();

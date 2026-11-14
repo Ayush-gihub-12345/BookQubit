@@ -39,6 +39,11 @@ const PATHS = {
   award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zm-3.5-1.5L7 22l5-3 5 3-1.5-8.5",
   play: "M6 3v18l15-9z",
   pause: "M6 4h4v16H6zm8 0h4v16h-4z",
+  rewind: "M1 4v6h6M3.51 15a9 9 0 1 0 2.13-9.36L1 10",
+  fastForward: "M23 4v6h-6M20.49 15a9 9 0 1 1-2.12-9.36L23 10",
+  moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z",
+  chevronUp: "m18 15-6-6-6 6",
+  external: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3",
 };
 
 export default function Icon({ name, size = 16, className = "", strokeWidth = 2, filled = false }) {

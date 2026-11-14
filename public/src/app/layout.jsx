@@ -1,5 +1,5 @@
 import Script from "next/script";
-import { Inter, Sora } from "next/font/google";
+import { Inter, Sora, Newsreader } from "next/font/google";
 import "./globals.css";
 
 // Downloaded at build time and served from our own origin, instead of the
@@ -26,7 +26,15 @@ const sora = Sora({
   variable: "--font-sora",
   display: "swap",
 });
+// Editorial serif for book titles, quote cards and long-form summaries.
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-newsreader",
+  display: "swap",
+});
 import { getLang, RTL } from "@/lib/lang";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { getTheme, getCustomThemeColors } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
 import { ToastProvider } from "@/components/Toast";
@@ -43,7 +51,8 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#047857",
+  viewportFit: "cover", // lets env(safe-area-inset-*) work on notched phones
 };
 
 export default async function RootLayout({ children }) {
@@ -61,7 +70,7 @@ export default async function RootLayout({ children }) {
       data-theme={theme}
       style={customStyle}
       translate="no"
-      className={`${inter.variable} ${sora.variable} notranslate`}
+      className={`${inter.variable} ${sora.variable} ${newsreader.variable} notranslate`}
     >
       <head>
         {/* The site already ships its own translation/transliteration for
@@ -73,6 +82,7 @@ export default async function RootLayout({ children }) {
             tells Chrome (and other browsers honoring the convention) to never
             offer its own translate UI here. */}
         <meta name="google" content="notranslate" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         {/* No font <link> — next/font inlines @font-face and serves the files
             from this origin, so the googleapis/gstatic preconnects are gone
             too (they warmed connections we no longer make).
@@ -96,6 +106,7 @@ export default async function RootLayout({ children }) {
           `}
         </Script>
         <GoogleAnalytics />
+        <ServiceWorkerRegister />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

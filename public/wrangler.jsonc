@@ -3,7 +3,7 @@
   "name": "bookqubitdev",
   "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
-  "main": ".open-next/worker.js",
+  "main": "worker-entry.js",
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -26,6 +26,24 @@
       "service": "bookqubit-import-cron"
     }
   ],
+  // ── Added for the BookQubit overhaul (see ../ARCHITECTURE_PLAN.md). Every one of
+  // these is OPTIONAL at runtime — src/lib/cf/* degrades gracefully if absent.
+  // Before deploying: run the commands in ../DEPLOYMENT_CHECKLIST.md
+  // (Queue + Vectorize index must exist; KV/R2 auto-provision on deploy).
+  "kv_namespaces": [{ "binding": "CACHE_KV" }],
+  "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "bookqubit-media" }],
+  "ai": { "binding": "AI" },
+  "vectorize": [{ "binding": "BOOK_VECTORS", "index_name": "bookqubit-vectors" }],
+  "queues": {
+    "producers": [{ "binding": "JOBS_QUEUE", "queue": "bookqubit-jobs" }],
+    "consumers": [{ "queue": "bookqubit-jobs", "max_batch_size": 10, "max_batch_timeout": 5 }]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "READING_ROOM_DO", "class_name": "ReadingRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReadingRoom"] }],
+  // Structured JSON logs from src/lib/cf/logger.js land in Workers Logs; traces need their own flag.
+  "observability": { "enabled": true, "traces": { "enabled": true } },
   "vars": {
     // "1" re-applies SCHEMA/CATALOG_SCHEMA + migrations on database access.
     // Keep at "0" in normal operation: applying them on every isolate cold

@@ -2,6 +2,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import MobileTabBar from "@/components/MobileTabBar";
+import SideRail from "@/components/SideRail";
+import PlayerProvider from "@/components/player/PlayerProvider";
+import MiniPlayer from "@/components/player/MiniPlayer";
 import { getLang, LANGUAGES } from "@/lib/lang";
 import { getTheme, THEMES } from "@/lib/theme";
 import { t } from "@/lib/i18n";
@@ -19,7 +22,7 @@ export default async function PublicLayout({ children }) {
   };
 
   return (
-    <>
+    <PlayerProvider>
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
       <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels} />
       {/* Reserves space for MobileTabBar (fixed, lg:hidden) so page content
@@ -27,11 +30,15 @@ export default async function PublicLayout({ children }) {
           the same safe-area inset it pads itself with on notched phones.
           lg:pb-0 removes that space on desktop where the bar doesn't render
           at all. */}
-      <main id="main-content" className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
+      <SideRail />
+      <main id="main-content" className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:ps-16 lg:pb-0">{children}</main>
       <ConditionalFooter>
-        <Footer lang={lang} />
+        <div className="lg:ps-16">
+          <Footer lang={lang} />
+        </div>
       </ConditionalFooter>
       <MobileTabBar />
-    </>
+      <MiniPlayer />
+    </PlayerProvider>
   );
 }
