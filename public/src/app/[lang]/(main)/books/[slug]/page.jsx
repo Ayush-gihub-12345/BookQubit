@@ -16,6 +16,8 @@ import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
 import BookTabs from "@/components/book/BookTabs";
 import WhereToGet from "@/components/book/WhereToGet";
+import BookStats from "@/components/book/BookStats";
+import KeyIdeasList from "@/components/book/KeyIdeasList";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
 import SummaryReader from "@/components/player/SummaryReader";
@@ -98,6 +100,12 @@ export default async function BookPage({ params }) {
   const goBuy = `/api/go?slug=${slugQ}&lang=${lang}&kind=buy`;
   const goAudible = `/api/go?slug=${slugQ}&lang=${lang}&kind=audible`;
   const bookForActions = { ...book, buyUrl: goBuy };
+  // Key ideas + summary length for the at-a-glance strip, from the summary actually being shown.
+  const keyIdeas = (initialSummary?.takeaways?.length ? initialSummary.takeaways : book.keyPoints || [])
+    .map((x) => (typeof x === "string" ? x : x?.text || x?.title || ""))
+    .filter(Boolean);
+  const summaryWords = String(initialSummary?.script || "").split(/\s+/).filter(Boolean).length;
+  const summaryMinutes = summaryWords ? Math.max(1, Math.round(summaryWords / 170)) : null;
   const availabilityBadge = availability({
     hasFullAudio: false, // we never claim unlicensed full audiobooks
     hasSummaryAudio: true, // narrated file or the reader's own device voice
@@ -283,6 +291,8 @@ export default async function BookPage({ params }) {
               )}
             </div>
 
+            <BookStats rating={book.rating} minutes={summaryMinutes} ideas={keyIdeas.length} />
+
             <SummaryReader
               book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }}
               initial={initialSummary}
@@ -317,6 +327,8 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
+            <KeyIdeasList ideas={keyIdeas} title={`Summary of ${keyIdeas.length} key ${keyIdeas.length === 1 ? "idea" : "ideas"}`} />
+
             <BookTabs
               label={_("onThisPage")}
               tabs={[
@@ -343,7 +355,7 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
-            {book.keyPoints.length > 0 && (
+            {keyIdeas.length === 0 && book.keyPoints.length > 0 && (
               <div id="takeaways" className="mt-8 scroll-mt-32">
                 <h2 className="text-lg font-bold sm:text-xl">{_("keyTakeaways")}</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">

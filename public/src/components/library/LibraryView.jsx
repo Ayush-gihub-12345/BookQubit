@@ -5,6 +5,7 @@ import Link from "next/link";
 import { authFetch } from "@/lib/authFetch";
 import { useLang } from "@/lib/useLang";
 import Icon from "@/components/Icon";
+import DashboardHero from "./DashboardHero";
 
 const STATUSES = [
   ["reading", "Currently reading"],
@@ -179,7 +180,8 @@ export default function LibraryView({ user }) {
 
   return (
     <>
-      <div role="tablist" aria-label="Shelves" className="flex flex-wrap gap-2">
+      <DashboardHero books={books} lang={lang} />
+      <div role="tablist" aria-label="Shelves" className="hscroll mt-6 gap-2 [&>*]:shrink-0">
         {STATUSES.map(([v, l]) => (
           <button key={v} role="tab" type="button" aria-selected={tab === v} onClick={() => setTab(v)}
             className={`rounded-full border px-4 py-1.5 text-sm ${tab === v ? "border-brand-600 bg-brand-600 text-[var(--on-brand)]" : "border-line"}`}>

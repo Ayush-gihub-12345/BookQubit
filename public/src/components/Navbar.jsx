@@ -165,7 +165,11 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
         { label: tr("allBooksMenu"), href: "/books", icon: "book" },
         { label: tr("newReleases"), href: "/books?sort=new", icon: "sparkles", badge: "NEW" },
         { label: tr("topRated"), href: "/books?sort=rating", icon: "star" },
+        { label: "Bestsellers", href: "/books?shelf=bestsellers", icon: "trophy" },
+        { label: "Classics", href: "/books?shelf=classics", icon: "feather" },
         { label: labels.comics, href: "/comics", icon: "layers" },
+        { label: "Listen", href: "/listen", icon: "headphones", badge: "NEW" },
+        { label: "Feed", href: "/feed", icon: "newspaper" },
       ],
     },
     {
@@ -218,7 +222,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
     { label: labels.authors, href: "/authors", active: under("/authors") },
     { label: labels.collections, href: "/collections", active: under("/collections") },
   ];
-  const discoverActive = under("/books", "/categories", "/tags", "/comics", "/publications", "/compare");
+  const discoverActive = under("/books", "/categories", "/tags", "/comics", "/publications", "/compare", "/listen", "/authors");
   const communityActive = under("/community", "/readers", "/leaderboard", "/feed", "/connect", "/mindspace");
 
   const themeSwatches = (

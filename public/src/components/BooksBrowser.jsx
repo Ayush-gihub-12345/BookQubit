@@ -120,10 +120,12 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
     debounceRef.current = setTimeout(() => apply({ q: v || undefined }), 350);
   };
 
-  const { q, category, collection, tag, format, author, publisher, country, rating, mood, sort, view } = params;
+  const { q, category, collection, tag, format, author, publisher, country, rating, mood, sort, view, shelf } = params;
   const isList = view === "list";
+  const SHELF_LABEL = { bestsellers: "Bestsellers", classics: "Classics", top: "Top rated (4.5+)" };
 
   const activeFilters = [
+    shelf && { key: "shelf", label: SHELF_LABEL[shelf] || shelf },
     q && { key: "q", label: `“${q}”` },
     category && { key: "category", label: category },
     collection && { key: "collection", label: collection },

@@ -40,11 +40,13 @@ export default function FilterableBookGrid({ books, emptyMessage }) {
   return (
     <div>
       {/* Filter bar — applies instantly, no reload */}
-      <div className="border-line bg-surface sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-y px-4 py-3 sm:top-16 lg:static lg:mx-0 lg:rounded-xl lg:border">
+      {/* Not sticky: on a phone the wrapped chips took a third of the screen and hid the books scrolling under them.
+          On small screens it is one swipeable row; from sm up it wraps normally. */}
+      <div className="border-line bg-surface -mx-4 flex flex-col gap-2 border-y px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center lg:mx-0 lg:rounded-xl lg:border">
         <span className="text-muted flex items-center gap-1.5 text-xs font-semibold">
           <Icon name="layers" size={13} /> {tr("filtersLabel")}
         </span>
-        <div className="flex flex-1 flex-wrap gap-2">
+        <div className="hscroll flex flex-1 items-center gap-2 pb-0.5 sm:flex-wrap sm:overflow-visible [&>*]:shrink-0">
           {SORTS.map(([v, label]) => (
             <button key={label} onClick={() => setSort(v)} aria-pressed={sort === v}
               className={`pill !text-xs ${sort === v ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>

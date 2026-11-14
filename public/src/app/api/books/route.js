@@ -18,6 +18,7 @@ export async function GET(request) {
     minRating: searchParams.get("rating") || undefined,
     mood: searchParams.get("mood") || undefined,
     sort: searchParams.get("sort") || undefined,
+    shelf: ["bestsellers", "classics", "top"].includes(searchParams.get("shelf")) ? searchParams.get("shelf") : undefined,
     page: parseInt(searchParams.get("page")) || 1,
     perPage: parseInt(searchParams.get("perPage")) || 32,
   };

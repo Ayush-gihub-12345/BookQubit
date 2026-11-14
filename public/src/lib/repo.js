@@ -174,7 +174,7 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
 // SQL-level catalog query with real pagination — scales to very large catalogs
 // (never loads the full table). Used by the /books browser.
 export async function queryBooks(lang, opts = {}) {
-  const { q, category, collection, tag, format, author, publisher, country, minRating, mood, sort, page = 1 } = opts;
+  const { q, category, collection, tag, format, author, publisher, country, minRating, mood, sort, shelf, page = 1 } = opts;
   // Clamped regardless of caller — protects against an accidental (or
   // malicious) request for perPage=1000000 forcing a huge unbounded read.
   const perPage = Math.min(Math.max(1, Number(opts.perPage) || 32), 200);
@@ -219,6 +219,11 @@ export async function queryBooks(lang, opts = {}) {
   }
   if (country) { where.push("country = ?"); binds.push(country); }
   if (minRating) { where.push("rating >= ?"); binds.push(Number(minRating)); }
+  // Curated shelves (qubitbook-style shortcuts). Fixed, whitelisted clauses with no user input in the SQL.
+  //  bestsellers: the admin-set flag · classics: first published before 1980 · award: well-loved (4.5+) books
+  if (shelf === "bestsellers") where.push("bestseller = 1");
+  else if (shelf === "classics") where.push("CAST(substr(published, 1, 4) AS INTEGER) BETWEEN 1 AND 1979");
+  else if (shelf === "top") where.push("rating >= 4.5");
   // `tags LIKE '%"Fiction"%'` was 39.9% of ALL database runtime on its own
   // (measured live: 1.86M rows read / 413 calls) — a leading wildcard can
   // never use an index, so it scanned every book in the language on every
@@ -315,7 +320,7 @@ export async function queryBooks(lang, opts = {}) {
   // measured at 81% of all D1 runtime, purely to print a number. The UI now
   // says "showing 32 of many" instead, and pagination is driven by the rows
   // themselves (below), so nothing here scales with catalog size.
-  const rowsKey = JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort });
+  const rowsKey = JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort, shelf });
 
   // Fetches ONE row more than the page needs. If that extra row comes back,
   // there's another page — which is all "Load more" ever needed to know.

@@ -58,6 +58,11 @@ export default function MiniPlayer() {
           <button type="button" onClick={p.toggle} className="bg-brand-600 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--on-brand)]" aria-label={playing ? "Pause" : "Play"}>
             <Icon name={playing ? "pause" : "play"} size={16} filled />
           </button>
+          {p.queue.length > 0 && (
+            <button type="button" onClick={p.advance} className="text-muted hover:text-fg p-2" aria-label={`Next: ${p.queue[0].title}`}>
+              <Icon name="fastForward" size={18} />
+            </button>
+          )}
           <button type="button" onClick={p.close} className="text-muted hover:text-fg p-2" aria-label="Close player">
             <Icon name="x" size={16} />
           </button>
@@ -102,6 +107,26 @@ export default function MiniPlayer() {
               </button>
               <button type="button" onClick={() => p.skip(15)} className="text-fg p-3" aria-label="Forward 15 seconds"><Icon name="fastForward" size={26} /></button>
             </div>
+
+            {p.queue.length > 0 && (
+              <section className="mt-7" aria-label="Up next">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-muted text-xs font-medium">Up next · {p.queue.length}</h3>
+                  <button type="button" onClick={p.clearQueue} className="text-muted hover:text-fg text-xs underline">Clear</button>
+                </div>
+                <ol className="mt-2 space-y-1">
+                  {p.queue.slice(0, 5).map((q) => (
+                    <li key={q.slug} className="flex items-center gap-3 rounded-lg p-1.5">
+                      {q.cover
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={q.cover} alt="" className="h-10 w-7 shrink-0 rounded object-cover" />
+                        : <span className="bg-brand-100 h-10 w-7 shrink-0 rounded" />}
+                      <span className="min-w-0"><span className="block truncate text-sm font-semibold">{q.title}</span><span className="text-muted block truncate text-xs">{q.author}</span></span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
 
             <fieldset className="mt-8">
               <legend className="text-muted mb-2 text-xs font-medium">Speed</legend>
