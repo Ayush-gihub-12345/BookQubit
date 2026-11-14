@@ -49,3 +49,15 @@ Rollback: remove the new bindings from `wrangler.jsonc` and redeploy; the new ta
 9. Workers Logs: confirm `affiliate_click`, `audio_play` and `ai_cache` events are arriving.
 
 Rollback: remove the new bindings from `wrangler.jsonc` and redeploy. All new tables are additive and unused by old code.
+
+## UI v2.1 and caching notes
+
+- **Design:** gold brand, 9 themes plus "Match device". Theme is a cookie (no flash). Check all themes, a phone at 375 px, and an
+  RTL language (Arabic/Urdu) after deploying.
+- **KV cache:** the dev Worker now declares `CACHE_KV` with no id (wrangler creates a namespace for that Worker on deploy).
+  If the dev build reports a KV provisioning error, remove that one line from `env.dev` in `public/wrangler.jsonc`; the app
+  runs without it (memory, edge and database caches still serve). For production, add the same binding when ready.
+- **Cache lifetimes:** lookups 1 h, lists 5 min, browser router cache 30 s / 3 min. Admin catalog and settings edits clear the
+  matching group automatically; Admin -> Caches shows hit rates and has a Clear button per group.
+- **Search suggestions:** the palette uses `/api/search` (needs migrations/catalog/0001 for full-text; falls back to a plain
+  match without it) and `/api/suggest` for authors.

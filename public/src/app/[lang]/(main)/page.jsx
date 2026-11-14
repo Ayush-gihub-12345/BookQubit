@@ -4,6 +4,13 @@ import Section from "@/components/Section";
 import FeaturedPick from "@/components/FeaturedPick";
 import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
+import { SurpriseLink } from "@/components/surprise/SurpriseMe";
+import PickCarousel from "@/components/home/PickCarousel";
+import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
+import { cached } from "@/lib/db";
+import { TTL } from "@/lib/cache-policy";
+import { getCf } from "@/lib/cf/env";
+import { feedLoaders } from "@/lib/feed-server";
 import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import TitleTransliterated from "@/components/TitleTransliterated";
@@ -28,12 +35,29 @@ export async function generateMetadata() {
 // the site. It used to be seventeen blocks and thirteen queries, including
 // three whole-table reads (every author, publisher and comic) to render a
 // handful of cards each.
+// One reader-saved quote per day, stable until midnight and cached with the feed group.
+async function quoteOfTheDay() {
+  try {
+    const day = Math.floor(Date.now() / 86400000);
+    return await cached(`feed:quote-of-day:${day}`, async () => {
+      const { env } = await getCf();
+      const loaders = feedLoaders(env, "en");
+      let rows = await loaders.quotes(1, day % 20);
+      if (!rows.length) rows = await loaders.quotes(1, 0);
+      const q = rows[0];
+      return q ? { text: q.text, bookSlug: q.book.slug, bookTitle: q.book.title, author: q.book.author || "" } : null;
+    }, TTL.lists);
+  } catch {
+    return null;
+  }
+}
+
 export default async function Home() {
   const lang = await getLang();
   const _ = t(lang);
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
 
-  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods] = await Promise.all([
+  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods, quote] = await Promise.all([
     getFeaturedBooks(lang, 5),
     getBestsellerBooks(lang, 12),
     listBooks(lang, { sort: "rating", limit: 12 }),
@@ -41,6 +65,7 @@ export default async function Home() {
     facets(lang),
     getFeaturedAuthors(lang, 10),
     getMoodCounts(),
+    quoteOfTheDay(),
   ]);
 
   // Today's pick rotates daily through the curated featured books (or the
@@ -55,6 +80,13 @@ export default async function Home() {
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
   const pick = pool.length ? pool[dayOfYear % pool.length] : null;
 
+  // The hero rotates through up to five picks, starting with today's.
+  const pickLabels = {
+    pick: _("todaysPick"), by: _("byWord"), rating: _("ratingLabel"), pages: _("pagesLabel"),
+    published: _("publishedLabel"), keyPoints: _("keyFeatures"), summary: _("summary"), getBook: _("getBook"),
+  };
+  const picks = pool.length ? pool.map((_, i) => pool[(dayOfYear + i) % pool.length]).slice(0, 5) : [];
+
   // Chained fallback rather than trusting `bestseller` alone: that flag is
   // admin-set and unset on every book in the catalog at the time of writing,
   // so querying it alone would leave signed-out visitors an empty section.
@@ -64,13 +96,6 @@ export default async function Home() {
   // these tiles can lead to an empty page (see lib/genres.js).
   const genres = resolveGenres(f.categories, { limit: 12 });
   const collections = f.collections.filter((c) => c.count >= 3).slice(0, 8);
-
-  const MORE = [
-    { icon: "building", title: _("publishers"), href: withLang("/publications") },
-    { icon: "zap", title: _("comics"), href: withLang("/comics") },
-    { icon: "users", title: _("navCommunity"), href: withLang("/community") },
-    { icon: "trophy", title: _("navBookwormRanking"), href: withLang("/leaderboard") },
-  ];
 
   return (
     <>
@@ -84,18 +109,15 @@ export default async function Home() {
             <p className="text-muted mt-5 max-w-xl text-lg leading-relaxed">{_("heroSub")}</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href={withLang("/books")} className="btn-primary btn-lg"><Icon name="book" size={19} />{_("browse")}</Link>
-              <Link href={withLang("/surprise")} prefetch={false} className="btn-ghost btn-lg"><Icon name="dice" size={19} />{_("navSurpriseMe")}</Link>
+              <SurpriseLink locale={lang} className="btn-ghost btn-lg"><Icon name="dice" size={19} />{_("navSurpriseMe")}</SurpriseLink>
             </div>
           </div>
-          {pick && (
-            <FeaturedPick
-              lang={lang}
-              book={pick}
-              labels={{
-                pick: _("todaysPick"), by: _("byWord"), rating: _("ratingLabel"), pages: _("pagesLabel"),
-                published: _("publishedLabel"), keyPoints: _("keyFeatures"), summary: _("summary"), getBook: _("getBook"),
-              }}
-            />
+          {picks.length > 0 && (
+            <PickCarousel label={_("todaysPick")}>
+              {picks.map((b, i) => (
+                <FeaturedPick key={b.slug} lang={lang} book={b} priority={i === 0} labels={pickLabels} />
+              ))}
+            </PickCarousel>
           )}
         </div>
       </section>
@@ -113,11 +135,24 @@ export default async function Home() {
         </nav>
       )}
 
+      <section className="container-bq py-6" aria-label="Quick links">
+        <QuickHub lang={lang} labels={{
+          library: _("browse"), books: _("booksWord"), libraryHint: "Every book we have",
+          shelf: _("navLibrary"), shelfHint: "Shelves, stats and goals",
+          comics: _("comics"), comicsHint: "Marvel, DC, manga",
+          community: _("navCommunity"), communityHint: "Discuss and connect",
+        }} />
+      </section>
+
       {/* Signed-in only: each renders nothing otherwise. ForYou doubles as the
           "popular right now" shelf for signed-out visitors. */}
       <ContinueReading />
       <ForYou lang={lang} fallbackBooks={popularBooks} />
       <RecentlyViewed />
+
+      {quote && (
+        <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
+      )}
 
       {genres.length > 0 && (
         <Section title={_("genresAndCategories")} viewAllLabel={_("viewAll")} href={withLang("/categories")}>
@@ -183,30 +218,31 @@ export default async function Home() {
 
       {collections.length > 0 && (
         <Section title={_("featuredCollectionsTitle")} viewAllLabel={_("viewAll")} href={withLang("/collections")}>
-          <ul className="flex flex-wrap gap-2.5">
-            {collections.map((c) => (
-              <li key={c.name}>
-                <Link href={withLang(`/collections/${encodeURIComponent(c.name)}`)} className="pill !min-h-11 !px-4 !text-sm">
-                  {c.name} <span className="ms-1.5 opacity-70">{c.count}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <HScrollRow>
+            {collections.map((c) => <CollectionCard key={c.name} lang={lang} c={c} booksLabel={_("booksWord")} />)}
+          </HScrollRow>
         </Section>
       )}
 
-      <Section title={_("moreToExplore")}>
-        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {MORE.map((m) => (
-            <li key={m.href}>
-              <Link href={m.href} className="card flex min-h-14 items-center gap-3 px-4 py-3 font-semibold">
-                <Icon name={m.icon} size={20} className="shrink-0 text-brand-700" />
-                {m.title}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {f.tags?.length >= 6 && (
+        <Section title="Popular tags" subtitle="Jump straight to a topic">
+          <TagCloud lang={lang} tags={f.tags.slice(0, 16)} />
+        </Section>
+      )}
+
+      <section className="container-bq py-8">
+        <DiscoverStrip lang={lang} labels={{
+          title: _("heroHeadlinePrefix") + " " + _("heroHeadlineHighlight"), sub: "Browse the shelves, let us pick for you, or see what top readers are into.",
+          browse: _("browse"), surprise: _("navSurpriseMe"), ranking: _("navBookwormRanking"),
+        }} />
+      </section>
+
+      <section className="container-bq pb-10 pt-4">
+        <NewsletterBanner lang={lang} labels={{
+          kicker: "Free · Weekly", title: _("newsletterTitle"), sub: _("newsletterSub"),
+          placeholder: _("newsletterPlaceholder"), button: _("newsletterButton"), success: _("newsletterSuccess"),
+        }} />
+      </section>
     </>
   );
 }

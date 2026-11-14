@@ -9,14 +9,14 @@ import Icon from "./Icon";
 // hasn't decided yet, and the book page is where that decision gets made. A single static pick replaces the old
 // auto-advancing slider (WCAG 2.2.2) and costs no client JavaScript: it is a server component, and only the pieces
 // that translate in the browser (title, author, takeaways) are client components inside it.
-export default function FeaturedPick({ lang, book, labels }) {
+export default function FeaturedPick({ lang, book, labels, priority = true }) {
   const href = `/${lang}/books/${encodeURIComponent(book.slug)}`;
   const points = (book.keyPoints || []).slice(0, 3);
 
   return (
     <article className="card relative grid gap-5 p-5 sm:grid-cols-[160px_minmax(0,1fr)] sm:p-6 lg:shadow-[var(--shadow-2)]">
       <Link href={href} className="cover mx-auto block w-[150px] sm:w-full" aria-label={book.title}>
-        <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority />
+        <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority={priority} />
       </Link>
 
       <div className="min-w-0">

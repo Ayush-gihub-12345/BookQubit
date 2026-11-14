@@ -5,6 +5,7 @@ import MobileTabBar from "@/components/MobileTabBar";
 import SideRail from "@/components/SideRail";
 import PlayerProvider from "@/components/player/PlayerProvider";
 import MiniPlayer from "@/components/player/MiniPlayer";
+import { SurpriseProvider } from "@/components/surprise/SurpriseMe";
 import { getLang, LANGUAGES } from "@/lib/lang";
 import { getTheme, THEMES } from "@/lib/theme";
 import { t } from "@/lib/i18n";
@@ -32,6 +33,7 @@ export default async function PublicLayout({ children }) {
 
   return (
     <PlayerProvider>
+      <SurpriseProvider locale={lang}>
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
       <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels}
         genres={genres} countries={countries} collections={collections} />
@@ -49,6 +51,7 @@ export default async function PublicLayout({ children }) {
       </div>
       <MobileTabBar />
       <MiniPlayer />
+      </SurpriseProvider>
     </PlayerProvider>
   );
 }

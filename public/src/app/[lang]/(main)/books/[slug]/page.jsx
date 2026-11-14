@@ -14,6 +14,7 @@ import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
+import BookTabs from "@/components/book/BookTabs";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
 import SummaryReader from "@/components/player/SummaryReader";
@@ -319,18 +320,16 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
-            <nav aria-label={_("onThisPage")} className="tabs sticky top-14 z-20 mt-6 bg-[var(--bg)] sm:top-16">
-              {[
-                book.keyPoints.length > 0 && ["#takeaways", _("keyTakeaways")],
-                book.summary && ["#summary", _("summary")],
-                meta.length > 0 && ["#details", _("details")],
-                ["#reviews", _("communityTitle")],
-                related.length > 0 && ["#related", _("related")],
-              ].filter(Boolean).map(([href, label]) => (
-                <a key={href} href={href} className="tab">{label}</a>
-              ))}
-            </nav>
-
+            <BookTabs
+              label={_("onThisPage")}
+              tabs={[
+                { id: "summary", label: _("summary") },
+                { id: "details", label: _("details") },
+                { id: "quotes", label: "Quotes" },
+                { id: "reviews", label: _("communityTitle"), count: community.reviews.length },
+              ]}
+            >
+              <div>
             {book.description && <Translated as="p" className="mt-6 max-w-[70ch] text-lg leading-relaxed" text={book.description} />}
 
             {(book.category || book.subjects?.length > 0) && (
@@ -367,6 +366,8 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
+              </div>
+              <div>
             {meta.length > 0 && (
               <div id="details" className="mt-8 scroll-mt-32">
                 <h2 className="text-lg font-bold sm:text-xl">{_("details")}</h2>
@@ -385,15 +386,6 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
-            {/* Reader quotes */}
-            <div className="mt-8">
-              <QuotesSection bookSlug={book.slug} />
-            </div>
-
-            <div className="mt-10 scroll-mt-24" id="write-review">
-              <ShelfControls slug={book.slug} />
-            </div>
-
             {book.tags.length > 0 && (
               <div className="mt-8 flex flex-wrap gap-2">
                 {book.tags.map((t) => (
@@ -401,6 +393,19 @@ export default async function BookPage({ params }) {
                 ))}
               </div>
             )}
+
+              </div>
+              <div>
+            {/* Reader quotes */}
+            <div className="mt-8">
+              <QuotesSection bookSlug={book.slug} />
+            </div>
+
+              </div>
+              <div>
+            <div className="mt-10 scroll-mt-24" id="write-review">
+              <ShelfControls slug={book.slug} />
+            </div>
 
             {/* Community section */}
             <div id="reviews" className="mt-10 scroll-mt-32">
@@ -472,6 +477,8 @@ export default async function BookPage({ params }) {
                 </div>
               )}
             </div>
+              </div>
+            </BookTabs>
           </div>
         </div>
       </div>

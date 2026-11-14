@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthButton from "./AuthButton";
-import SearchBar from "./SearchBar";
+import CommandPalette from "./search/CommandPalette";
 import Icon from "./Icon";
 import { LogoMark, Wordmark } from "./Logo";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { authFetch } from "@/lib/authFetch";
 import CustomThemeModal from "./CustomThemeModal";
 import { t } from "@/lib/i18n";
+import { SurpriseLink } from "./surprise/SurpriseMe";
 
 // BookQubit UI v2 header: a 64px glass bar with a Discover menu (built from real catalog counts, so no link
 // can lead to an empty page), a Community menu, search, Surprise me, Library, notifications, one
@@ -69,6 +70,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   const [myGenres, setMyGenres] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
   const [showCustomTheme, setShowCustomTheme] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
@@ -104,6 +106,18 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
     drawerPanel.current?.focus();
     return () => { document.body.style.overflow = prev; };
   }, [drawerOpen]);
+
+  // Ctrl/Cmd+K opens search from anywhere; "/" does too unless the reader is typing in a field.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPaletteOpen((o) => !o); return; }
+      const el = document.activeElement;
+      const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
+      if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setPaletteOpen(true); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Signed-in extras: the reader's own genres and the unread notification count.
   useEffect(() => {
@@ -278,13 +292,18 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
 
         <div className="min-w-0 flex-1">
           <div className="mx-auto max-w-xl">
-            <SearchBar lang={lang} placeholder={labels.search} big />
+            <button type="button" onClick={() => setPaletteOpen(true)} aria-haspopup="dialog" aria-keyshortcuts="Control+K"
+              className="input flex !min-h-[42px] w-full items-center gap-3 !rounded-full !border-transparent !bg-[var(--surface-2)] !py-0 text-start text-[15px] text-[var(--muted)] hover:!bg-[var(--surface-3)]">
+              <Icon name="search" size={18} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{labels.search}</span>
+              <kbd className="kbd hidden sm:block">Ctrl K</kbd>
+            </button>
           </div>
         </div>
 
-        <Link href={withLang("/surprise")} prefetch={false} className="btn-icon hidden sm:inline-flex" aria-label={labels.surpriseMe} title={labels.surpriseMe}>
+        <SurpriseLink locale={lang} className="btn-icon hidden sm:inline-flex" aria-label={labels.surpriseMe} title={labels.surpriseMe}>
           <Icon name="dice" size={19} />
-        </Link>
+        </SurpriseLink>
 
         <Link href={withLang("/library")} prefetch={false} className="nav-link max-xl:!hidden"
           aria-current={under("/library", "/account", "/liked") ? "page" : undefined}>
@@ -375,11 +394,11 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
                   </ul>
                 </div>
               ))}
-              <Link href={withLang("/surprise")} prefetch={false} className="hero-glow flex flex-col justify-end gap-2 rounded-[var(--radius-md)] border border-[var(--line)] p-4">
+              <SurpriseLink locale={lang} onNavigate={() => setDiscoverOpen(false)} className="hero-glow flex flex-col justify-end gap-2 rounded-[var(--radius-md)] border border-[var(--line)] p-4">
                 <Icon name="dice" size={22} className="text-brand-700" />
                 <b className="font-display text-lg leading-tight">{tr("navSurpriseHint")}</b>
                 <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700">{labels.surpriseMe}<Icon name="arrowRight" size={15} /></span>
-              </Link>
+              </SurpriseLink>
             </div>
           </div>
         </div>
@@ -391,7 +410,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <div id="site-menu" ref={drawerPanel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={labels.menu}
             className="animate-pop flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
             <div className="px-3 pt-3">
-              <Link href={withLang("/surprise")} prefetch={false} className="btn-primary mb-3 w-full"><Icon name="dice" size={18} />{labels.surpriseMe}</Link>
+              <SurpriseLink locale={lang} onNavigate={() => setDrawerOpen(false)} className="btn-primary mb-3 w-full"><Icon name="dice" size={18} />{labels.surpriseMe}</SurpriseLink>
               {!user && firebaseEnabled && (
                 <Link href={withLang("/login")} prefetch={false} className="btn-ghost mb-2 w-full">{labels.signIn}</Link>
               )}
@@ -454,6 +473,8 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           </div>
         </div>
       )}
+
+      <CommandPalette lang={lang} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
       {showCustomTheme && <CustomThemeModal onClose={() => setShowCustomTheme(false)} />}
     </header>

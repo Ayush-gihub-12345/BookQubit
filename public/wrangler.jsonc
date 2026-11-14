@@ -71,6 +71,10 @@
         { "binding": "CATALOG_DB", "database_name": "bookqubit-dev-catalog", "database_id": "a95e1940-7268-4f0d-bf47-a3b86f27f9de" }
       ],
       "services": [],
+      // Workers KV for the shared cache tier (see src/lib/db.js). No id on purpose: wrangler creates a namespace
+      // for THIS Worker on deploy, so dev never shares a namespace with production. If KV is missing or errors,
+      // the cache simply skips that layer (memory, edge and database still serve).
+      "kv_namespaces": [{ "binding": "CACHE_KV" }],
       "vars": { "RUN_SCHEMA": "0" }
     }
   }
