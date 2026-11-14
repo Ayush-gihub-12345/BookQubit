@@ -34,3 +34,18 @@ npm run deploy
 ```
 
 Rollback: remove the new bindings from `wrangler.jsonc` and redeploy; the new tables are unused by old code and can stay.
+
+## After deploying: smoke tests (about 10 minutes)
+
+1. `/en/books/<any-slug>`: the "Understand in 60 seconds" card renders; **Listen** plays (device voice if no audio file).
+2. `/en/feed`: mixed cards appear; filter tabs switch; one card is labelled "Sponsored · Affiliate link".
+3. Search for a phrase ("how to build habits") and for a Hindi title: results appear; a nonsense query logs `search_zero`.
+4. Signed in: `/en/library` (move a book between shelves), `/en/library/stats`, import a small Goodreads CSV.
+5. `/en/mindspace`: create a space, add a note and a book, connect them, view the Graph tab; make it public and open the
+   public URL signed out; make it private again and confirm the public URL now shows "Space not found".
+6. Open the same discussion in two browsers: "N readers here now" appears and a message shows up without waiting 4 s.
+7. Block a reader from the message menu: their messages disappear; unblock on `/en/connect`.
+8. Admin → Community reports: a report from step 7's menu is listed.
+9. Workers Logs: confirm `affiliate_click`, `audio_play` and `ai_cache` events are arriving.
+
+Rollback: remove the new bindings from `wrangler.jsonc` and redeploy. All new tables are additive and unused by old code.

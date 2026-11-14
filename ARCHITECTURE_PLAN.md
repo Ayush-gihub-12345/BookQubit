@@ -79,3 +79,31 @@ npx wrangler d1 execute catalog  --remote --file=migrations/catalog/0001_fts_sum
 ## 5. Environment status (this machine)
 - `workerd` cannot start until the Microsoft Visual C++ x64 redistributable is installed (`0xC0000135`); `next dev`, `wrangler d1 --local`, and `preview` all need it.
 - Cloudflare MCP token cannot list D1/KV/R2/Queues/Vectorize/Workers (401/403), so existing remote resources were taken from the repo config, not enumerated live.
+
+## 6. Status and known gaps (end of build session)
+
+**Built** (each part unit-tested against the real SQL schemas where it touches data; see git log):
+Phase 1 infra and helpers · Phase 2 design tokens, rail, PWA, offline · Phase 3 book page, 60-second reader, global player ·
+Phase 4 hybrid search + connected feed · Phase 5 library, stats, custom shelves, Goodreads import ·
+Phase 6 MindSpace (list/graph, public SEO pages, save-from-anywhere) · Phase 7 safety, privacy, reading twins, live rooms, admin review of reports.
+
+**Not verified in a browser or on Cloudflare.** `workerd` could not start on the build machine (missing VC++ runtime), so
+nothing was run end to end and no UI was looked at. Treat the first real run as the real test.
+
+**Deviations from the original brief (deliberate):**
+- JavaScript, not TypeScript (the codebase is JS); `tsc --noEmit` does not apply.
+- Four databases by workload (see 2b) instead of one, to keep write bursts off accounts and the catalog.
+- The feed lives at `/feed`; the existing home page (`/`) is unchanged.
+- "Book clubs" reuse the existing discussion rooms (join/leave/archive/chat) and add live presence, spoiler text and
+  moderation, rather than a second parallel system. There is no separate `/community/clubs` route.
+- Goodreads import runs in the browser in 25-row chunks (live progress, no queue); the queue job slot is reserved.
+- Karaoke highlighting for audio files is proportional to sentence length (no word timestamps).
+- New UI strings are English only; the existing 21-language dictionary was not extended.
+
+**Not built:** editorial/article cards (no content source), audio bookmarks and chapter-based sleep timer (need
+chaptered audio), Framer Motion, the `Following` feed filter, server-side block enforcement on profile pages
+(blocks hide content client-side), a public shelf page (shelves show as lists on profiles).
+
+**Needs your decision before production:** run DEPLOYMENT_CHECKLIST.md in order; review the emerald/warm-paper
+palette against real pages; set per-country affiliate tags; decide whether to keep `AI_ONE_MINUTE` on for the importer
+(extra AI output per imported book).
