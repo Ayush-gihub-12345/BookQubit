@@ -14,14 +14,14 @@ export default function FeaturedPick({ lang, book, labels, priority = true }) {
   const points = (book.keyPoints || []).slice(0, 3);
 
   return (
-    <article className="card relative grid gap-5 p-5 sm:grid-cols-[160px_minmax(0,1fr)] sm:p-6 lg:shadow-[var(--shadow-2)]">
-      <Link href={href} className="cover mx-auto block w-[150px] sm:w-full" aria-label={book.title}>
+    <article className="card relative grid grid-cols-[88px_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-5 sm:p-6 lg:shadow-[var(--shadow-2)]">
+      <Link href={href} className="cover mx-auto block w-full" aria-label={book.title}>
         <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority={priority} />
       </Link>
 
       <div className="min-w-0">
         <span className="badge badge-marker">{labels.pick}</span>
-        <h2 className="mt-3 text-2xl font-bold leading-tight sm:text-[1.7rem]">
+        <h2 className="mt-2 line-clamp-2 text-lg font-bold leading-tight sm:mt-3 sm:line-clamp-none sm:text-[1.7rem]">
           <Link href={href} className="hover:text-brand-700"><TitleTransliterated text={book.title} /></Link>
         </h2>
         <p className="text-muted mt-1">
@@ -42,14 +42,14 @@ export default function FeaturedPick({ lang, book, labels, priority = true }) {
         {points.length > 0 && (
           <>
             <h3 className="sr-only">{labels.keyPoints}</h3>
-            <ul className="mt-4 space-y-2 text-[15px]">
+            <ul className="mt-4 hidden space-y-2 text-[15px] sm:block">
               {points.map((k) => (
                 <li key={k} className="flex gap-2.5"><span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" /><Translated text={k} /></li>
               ))}
             </ul>
           </>
         )}
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 sm:mt-5">
           <Link href={`${href}#summary`} className="btn-primary btn-sm"><Icon name="book" size={16} />{labels.summary}</Link>
           {book.buyUrl && (
             <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-ghost btn-sm">

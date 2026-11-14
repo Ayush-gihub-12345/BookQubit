@@ -19,6 +19,7 @@ export default async function BooksPage({ searchParams }) {
     q: sp.q, category: sp.category, tag: sp.tag, collection: sp.collection,
     sort: sp.sort, rating: sp.rating, format: sp.format, country: sp.country,
     author: sp.author, publisher: sp.publisher,
+    shelf: ["bestsellers", "classics", "top"].includes(sp.shelf) ? sp.shelf : undefined,
     mood: sp.mood, view: sp.view, page: sp.page ? parseInt(sp.page) : undefined,
   };
 

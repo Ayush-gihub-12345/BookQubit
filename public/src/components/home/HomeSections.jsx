@@ -19,9 +19,9 @@ export function QuickHub({ lang, labels, counts }) {
     <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {items.map(({ k, t, d, h, i, c }) => (
         <li key={k}>
-          <Link href={L(lang, h)} prefetch={false} className="card card-hover group flex items-center gap-3.5 p-4 sm:p-5">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white shadow-[var(--shadow-1)]" style={{ background: `linear-gradient(140deg, ${c}, color-mix(in srgb, ${c} 60%, #000))` }}><Icon name={i} size={22} /></span>
-            <span className="min-w-0"><b className="block">{t}</b><span className="block truncate text-sm text-[var(--muted)]">{d}</span></span>
+          <Link href={L(lang, h)} prefetch={false} className="card card-hover group flex items-center gap-2.5 p-3 sm:gap-3.5 sm:p-5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-[var(--shadow-1)] sm:h-12 sm:w-12 sm:rounded-2xl" style={{ background: `linear-gradient(140deg, ${c}, color-mix(in srgb, ${c} 60%, #000))` }}><Icon name={i} size={22} /></span>
+            <span className="min-w-0 flex-1"><b className="block truncate text-[15px] sm:text-base">{t}</b><span className="hidden truncate text-sm text-[var(--muted)] sm:block">{d}</span></span>
             <Icon name="arrowRight" size={18} className="ms-auto hidden shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-1 rtl:rotate-180 sm:block" />
           </Link>
         </li>
@@ -70,7 +70,7 @@ export function CollectionCard({ lang, c, booksLabel, covers = [] }) {
   const color = colorFor(c.name);
   return (
     <Link href={L(lang, `/collections/${encodeURIComponent(c.name)}`)} prefetch={false}
-      className="card-hover group relative flex h-44 w-[240px] flex-col justify-end overflow-hidden rounded-[var(--radius-lg)] p-5 text-white"
+      className="card-hover group relative flex h-36 w-[min(240px,72vw)] flex-col justify-end overflow-hidden rounded-[var(--radius-lg)] p-4 text-white sm:h-44 sm:p-5"
       style={{ background: `linear-gradient(150deg, ${color}, color-mix(in srgb, ${color} 35%, #000))` }}>
       {covers.length > 0 ? (
         <span aria-hidden className="absolute end-4 top-4 flex">
@@ -109,7 +109,7 @@ export function TagCloud({ lang, tags }) {
 
 export function NewsletterBanner({ lang, labels }) {
   return (
-    <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] p-7 sm:p-10"
+    <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] p-5 sm:p-10"
       style={{ background: "radial-gradient(60% 120% at 100% 0%, color-mix(in srgb, var(--color-qubit-500) 22%, transparent), transparent 60%), linear-gradient(135deg, color-mix(in srgb, var(--color-brand-400) 16%, var(--surface)), var(--surface))" }}>
       <div className="grid items-center gap-6 md:grid-cols-[1.1fr_1fr]">
         <div>

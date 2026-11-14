@@ -103,16 +103,16 @@ export default async function Home() {
   return (
     <>
       <section className="hero-glow border-b border-[var(--line)]">
-        <div className="container-bq grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-20">
+        <div className="container-bq grid items-center gap-6 py-6 sm:gap-10 sm:py-14 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-20">
           <div>
-            <p className="eyebrow">Discover · Summarize · Buy</p>
-            <h1 className="mt-4 text-[2.5rem] font-bold leading-[1.05] sm:text-5xl lg:text-[3.6rem]">
+            <p className="eyebrow max-sm:!text-[10px]">Discover · Summarize · Buy</p>
+            <h1 className="mt-2 text-[1.75rem] font-bold leading-[1.1] sm:mt-4 sm:text-5xl lg:text-[3.6rem]">
               {_("heroHeadlinePrefix")} <em className="font-medium italic text-brand-700">{_("heroHeadlineHighlight")}</em>
             </h1>
-            <p className="text-muted mt-5 max-w-xl text-lg leading-relaxed">{_("heroSub")}</p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href={withLang("/books")} className="btn-primary btn-lg"><Icon name="book" size={19} />{_("browse")}</Link>
-              <SurpriseLink locale={lang} className="btn-ghost btn-lg"><Icon name="dice" size={19} />{_("navSurpriseMe")}</SurpriseLink>
+            <p className="text-muted mt-2 line-clamp-2 max-w-xl text-[13px] leading-snug sm:mt-5 sm:line-clamp-none sm:text-lg sm:leading-relaxed">{_("heroSub")}</p>
+            <div className="mt-4 flex gap-2 sm:mt-7 sm:flex-wrap sm:gap-3">
+              <Link href={withLang("/books")} className="btn-primary btn-lg max-sm:!min-h-10 max-sm:!px-4 max-sm:!text-sm"><Icon name="book" size={17} />{_("browse")}</Link>
+              <SurpriseLink locale={lang} className="btn-ghost btn-lg max-sm:!min-h-10 max-sm:!px-4 max-sm:!text-sm"><Icon name="dice" size={17} />{_("navSurpriseMe")}</SurpriseLink>
             </div>
           </div>
           {picks.length > 0 && (

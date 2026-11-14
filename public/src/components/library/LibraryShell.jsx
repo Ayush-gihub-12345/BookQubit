@@ -12,7 +12,7 @@ const TABS = [
   ["/import", "Import"],
 ];
 // MindSpace lives at /mindspace (outside /library); listed here so mobile readers can reach it.
-const EXTRA = [["mindspace", "MindSpace"]];
+const EXTRA = [["mindspace", "MindSpace"], ["listen", "Listen"]];
 
 // Shared frame for /library, /library/stats, /library/import: tab bar + sign-in gate.
 // `children` is a render function receiving the signed-in Firebase user.
@@ -24,9 +24,9 @@ export default function LibraryShell({ children }) {
   const base = `/${lang}/library`;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="font-editorial text-3xl font-semibold">Your library</h1>
-      <nav aria-label="Library sections" className="border-line mt-4 flex gap-6 border-b">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
+      <h1 className="font-editorial text-2xl font-semibold sm:text-3xl">Your library</h1>
+      <nav aria-label="Library sections" className="border-line hscroll mt-3 gap-6 border-b sm:mt-4 [&>*]:shrink-0">
         {TABS.map(([path, label]) => {
           const active = pathname.replace(/\/$/, "") === base + path;
           return (

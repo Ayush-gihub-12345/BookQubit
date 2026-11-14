@@ -98,6 +98,14 @@
 
 html { scroll-behavior: smooth; }
 
+/* Mobile width guard. `clip` (not `hidden`) so position:sticky keeps working; media never exceeds its box; and
+   grid/flex children may shrink below their content width, which is what pushed long names and fixed-width
+   cards past the screen edge on a phone. */
+html, body { max-width: 100%; overflow-x: clip; }
+img, svg, video, canvas, iframe { max-width: 100%; }
+.grid > *, .flex > .min-w-0 { min-width: 0; }
+.card { min-width: 0; }
+
 body {
   font-family: var(--font-body);
   background: var(--bg);

@@ -18,7 +18,9 @@
       "binding": "CATALOG_DB",
       "database_name": "catalog",
       "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
-    }
+    },
+    { "binding": "ENGAGEMENT_DB", "database_name": "engagement" },
+    { "binding": "MINDSPACE_DB", "database_name": "mindspace" }
   ],
   "services": [
     {
@@ -26,6 +28,35 @@
       "service": "bookqubit-import-cron"
     }
   ],
+
+  // ---------------------------------------------------------------------------
+  // PRODUCTION data and edge services (the architecture in ARCHITECTURE_PLAN.md). Each line below is optional at
+  // runtime: if a binding is missing or errors, that feature reports "unavailable" or skips the layer, so the site
+  // keeps serving. Resources WITHOUT an id are created by wrangler on the first deploy (wrangler >= 4.45).
+  //
+  //   CACHE_KV        shared cache tier: hot lists, search, feed, cache-group versions (lib/db.js, cache-versions.js)
+  //   ENGAGEMENT_DB   write-heavy reader data: shelves, reading log, streaks, audio checkpoints (lib/library-server.js)
+  //   MINDSPACE_DB    users' own notes, quotes and idea graphs (lib/mindspace-*.js)
+  //   AI              Workers AI: summaries, embeddings, import enrichment (lib/summary.js, lib/cf/ai.js)
+  //
+  // After the first deploy apply the SQL once (all of it is idempotent), see DEPLOYMENT_CHECKLIST.md:
+  //   wrangler d1 execute engagement --remote --file=migrations/engagement/0001_engagement.sql
+  //   wrangler d1 execute mindspace  --remote --file=migrations/mindspace/0001_mindspace.sql
+  //   wrangler d1 execute catalog    --remote --file=migrations/catalog/0001_fts_summaries.sql
+  //   wrangler d1 execute catalog    --remote --command="INSERT INTO books_fts(books_fts) VALUES('rebuild'); INSERT INTO authors_fts(authors_fts) VALUES('rebuild');"
+  //
+  // PHASE 2 (needs resources created by hand first, so it is NOT enabled here; see DEPLOYMENT_CHECKLIST.md):
+  //   "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "bookqubit-media" }]   (R2 must be enabled on the account;
+  //     generated audio files. Without it the player reads summaries aloud with the device voice)
+  //   "queues": { "producers": [{ "binding": "JOBS", "queue": "bookqubit-jobs" }], "consumers": [{ "queue": "bookqubit-jobs" }] }
+  //   "vectorize": [{ "binding": "BOOK_VECTORS", "index_name": "bookqubit-vectors" }]
+  //   "durable_objects": { "bindings": [{ "name": "READING_ROOM_DO", "class_name": "ReadingRoom" }] },
+  //     "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReadingRoom"] }]
+  //   "triggers": { "crons": ["*/30 * * * *"] }   and   "main": "worker-entry.js"   (adds queue, cron and Durable Object handlers)
+  // ---------------------------------------------------------------------------
+  "kv_namespaces": [{ "binding": "CACHE_KV" }],
+  "ai": { "binding": "AI" },
+
   // Workers Logs. It was OFF in production (confirmed from the account's
   // Worker settings: no `observability` block), so failures were invisible:
   // between 1% and 9% of requests end in `exceededResources` every day and
@@ -68,8 +99,13 @@
       "observability": { "enabled": true, "head_sampling_rate": 1 },
       "d1_databases": [
         { "binding": "DB", "database_name": "bookqubit-dev-database", "database_id": "48a757c3-22d8-4f03-9180-7075f04f2825" },
-        { "binding": "CATALOG_DB", "database_name": "bookqubit-dev-catalog", "database_id": "a95e1940-7268-4f0d-bf47-a3b86f27f9de" }
+        { "binding": "CATALOG_DB", "database_name": "bookqubit-dev-catalog", "database_id": "a95e1940-7268-4f0d-bf47-a3b86f27f9de" },
+        // Created by wrangler on the first dev deploy (no id) and filled by scripts/deploy-dev.mjs, which applies the
+        // idempotent SQL in migrations/ after each deploy. Never the production databases.
+        { "binding": "ENGAGEMENT_DB", "database_name": "bookqubit-dev-engagement" },
+        { "binding": "MINDSPACE_DB", "database_name": "bookqubit-dev-mindspace" }
       ],
+      "ai": { "binding": "AI" },
       "services": [],
       // Workers KV for the shared cache tier (see src/lib/db.js). No id on purpose: wrangler creates a namespace
       // for THIS Worker on deploy, so dev never shares a namespace with production. If KV is missing or errors,

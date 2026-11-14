@@ -3,6 +3,8 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getCf } from "@/lib/cf/env";
 import { cacheStats } from "@/lib/db";
 import { bumpGroup, readVersions } from "@/lib/cache-versions";
+import { getCatalogDb } from "@/lib/db";
+import { rebuildReadModels, readModelMeta } from "@/lib/read-models";
 import { CACHE_GROUPS, TTL, STALE_IF_ERROR_SECONDS } from "@/lib/cache-policy";
 
 // Cache management for admins.
@@ -23,12 +25,25 @@ export async function GET() {
     groups: CACHE_GROUPS,
     ttl: { ...TTL, staleIfErrorSeconds: STALE_IF_ERROR_SECONDS },
     kvBound: !!env.CACHE_KV,
+    readModels: await readModelMeta(await getCatalogDb()).catch(() => null),
   });
 }
 
 export async function POST(request) {
   if (!(await isAdminAuthenticated())) return unauthorized();
-  const { group } = await request.json().catch(() => ({}));
+  const { group, action } = await request.json().catch(() => ({}));
+  // Rebuild the catalog read models (tag / author / publisher / format lookups and facet counts) after an import or a
+  // bulk edit, then clear the catalog cache group so pages pick them up. One atomic batch; readers never see half.
+  if (action === "rebuild-read-models") {
+    try {
+      const meta = await rebuildReadModels(await getCatalogDb());
+      const { env } = await getCf();
+      await bumpGroup(env, "catalog");
+      return NextResponse.json({ ok: true, readModels: meta });
+    } catch (e) {
+      return NextResponse.json({ ok: false, message: "Couldn't rebuild: apply migrations/catalog/0002_read_models.sql first." }, { status: 500 });
+    }
+  }
   if (group !== "all" && !CACHE_GROUPS.includes(group)) return NextResponse.json({ error: "unknown group" }, { status: 400 });
   const { env } = await getCf();
   const versions = await bumpGroup(env, group);

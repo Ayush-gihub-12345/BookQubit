@@ -64,6 +64,10 @@ export default function PlayerProvider({ children }) {
   const refs = useRef({});
   refs.current = { track, speed, sentences, engine, duration, position, playing };
   const genRef = useRef(0);
+  const advanceRef = useRef(null);
+  const [queue, setQueue] = useState([]);
+  const queueRef = useRef([]);
+  queueRef.current = queue;
   const sentStartRef = useRef(0);
   const lastSyncRef = useRef(0);
 
@@ -76,7 +80,7 @@ export default function PlayerProvider({ children }) {
     const run = (k) => {
       const { sentences: ss2, track: tr, speed: sp } = refs.current;
       if (gen !== genRef.current) return;
-      if (k >= ss2.length) { setPlaying(false); setActiveIndex(0); setPosition(0); return; }
+      if (k >= ss2.length) { setPlaying(false); setActiveIndex(0); setPosition(0); advanceRef.current?.(); return; }
       setActiveIndex(k);
       sentStartRef.current = performance.now();
       const u = new SpeechSynthesisUtterance(ss2[k]);
@@ -191,6 +195,43 @@ export default function PlayerProvider({ children }) {
   }, [play]);
   const pendingRef = useRef(null);
 
+  // ── queue (audiobook shelves, "Play all", up next) ───────────────────────
+  // A queue entry is a light descriptor { slug, lang, title, author, cover }; the script and audio are fetched
+  // only when its turn comes (/api/summary is cached), so queueing twenty books costs nothing up front.
+  const loadBook = useCallback(async (d, opts) => {
+    try {
+      const r = await fetch(`/api/summary?slug=${encodeURIComponent(d.slug)}&lang=${d.lang || "en"}&intent=general`);
+      const j = await r.json();
+      if (!r.ok || !j.summary?.script) return false;
+      await load({
+        id: `${d.slug}:${d.lang || "en"}:general`, slug: d.slug, lang: d.lang || "en", title: d.title, subtitle: d.author || "",
+        cover: d.cover, src: j.audioUrl, text: j.summary.script,
+      }, opts);
+      return true;
+    } catch { return false; }
+  }, [load]);
+
+  const advance = useCallback(async () => {
+    const q = queueRef.current;
+    if (!q.length) return;
+    const [next, ...rest] = q;
+    queueRef.current = rest; setQueue(rest);
+    if (!(await loadBook(next))) advanceRef.current?.(); // skip a book with no summary rather than stall
+  }, [loadBook]);
+  advanceRef.current = advance;
+
+  const playQueue = useCallback(async (list) => {
+    if (!list?.length) return;
+    const rest = list.slice(1);
+    queueRef.current = rest; setQueue(rest);
+    if (!(await loadBook(list[0]))) advanceRef.current?.();
+  }, [loadBook]);
+  const enqueue = useCallback((d) => {
+    if (queueRef.current.some((x) => x.slug === d.slug) || refs.current.track?.slug === d.slug) return;
+    const next = [...queueRef.current, d]; queueRef.current = next; setQueue(next);
+  }, []);
+  const clearQueue = useCallback(() => { queueRef.current = []; setQueue([]); }, []);
+
   // apply a pending load once the new track's refs are in place
   useEffect(() => {
     if (!track || !pendingRef.current) return;
@@ -266,6 +307,7 @@ export default function PlayerProvider({ children }) {
     track, playing, position, duration, speed, engine, expanded, setExpanded, activeIndex,
     segments: sentences, sleepEndsAt,
     load, toggle, play, pause, seek, seekToSentence, skip, setSpeed, setSleep, close,
+    queue, playQueue, enqueue, clearQueue, advance, loadBook,
   };
 
   return (
@@ -283,7 +325,7 @@ export default function PlayerProvider({ children }) {
           setActiveIndex(idx);
         }}
         onLoadedMetadata={(e) => setFileDuration(e.currentTarget.duration || 0)}
-        onEnded={() => { setPlaying(false); logClient("audio_complete", { slug: refs.current.track?.slug }); }}
+        onEnded={() => { setPlaying(false); logClient("audio_complete", { slug: refs.current.track?.slug }); advanceRef.current?.(); }}
         onPause={() => engine === "file" && setPlaying(false)}
         onPlay={() => engine === "file" && setPlaying(true)}
       />

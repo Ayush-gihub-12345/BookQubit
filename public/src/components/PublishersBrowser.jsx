@@ -68,7 +68,7 @@ export default function PublishersBrowser({ lang, initialPublications, initialHa
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{tr("publishers")}</h1>
@@ -111,20 +111,22 @@ export default function PublishersBrowser({ lang, initialPublications, initialHa
           ))}
         </div>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {publications.map((p) => (
-            <Link key={p.id} href={`/${lang}/publications/${p.slug}`} prefetch={false} className="card p-5">
-              <div className="flex items-center gap-4">
-                {p.logo_url && (
+            <Link key={p.id} href={`/${lang}/publications/${p.slug}`} prefetch={false} className="card block p-4 sm:p-5">
+              <div className="flex items-center gap-3 sm:gap-4">
+                {p.logo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.logo_url} alt={p.name} className="h-14 w-14 rounded-xl object-cover" loading="lazy" />
+                  <img src={p.logo_url} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover sm:h-14 sm:w-14" loading="lazy" />
+                ) : (
+                  <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-lg font-bold text-brand-700 sm:h-14 sm:w-14">{(p.name || "?")[0]}</span>
                 )}
-                <div>
-                  <h2 className="font-semibold"><TitleTransliterated text={p.name} /></h2>
-                  <p className="text-muted text-xs">{[p.type, p.headquarters].filter(Boolean).join(" · ")}</p>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate font-semibold"><TitleTransliterated text={p.name} /></h2>
+                  <p className="text-muted truncate text-xs">{[p.type, p.headquarters].filter(Boolean).join(" · ")}</p>
                 </div>
               </div>
-              <Translated as="p" className="text-muted mt-3 line-clamp-2 text-sm" text={p.description} />
+              <Translated as="p" className="text-muted mt-2 line-clamp-2 text-sm sm:mt-3" text={p.description} />
             </Link>
           ))}
         </div>

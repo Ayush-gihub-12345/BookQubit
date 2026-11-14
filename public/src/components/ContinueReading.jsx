@@ -41,7 +41,7 @@ export default function ContinueReading() {
       <HScrollRow>
         {items.map((s) => (
           <Link key={s.book_slug} href={`/${lang}/books/${encodeURIComponent(s.book_slug)}`}
-            className="card flex w-64 shrink-0 gap-4 p-4 sm:w-72">
+            className="card flex w-[min(256px,78vw)] shrink-0 gap-3 p-3 sm:w-72 sm:gap-4 sm:p-4">
             <div className="cover h-24 w-16 shrink-0">
               <BookCover title={s.title || s.book_slug} author={s.author} cover_url={s.cover_url} />
             </div>

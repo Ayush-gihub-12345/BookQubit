@@ -27,9 +27,12 @@ function assertDevConfigIsIsolated() {
   const fail = (m) => { console.error("deploy:dev refused: " + m); process.exit(1); };
   if (!dev) fail("wrangler.jsonc has no env.dev block");
   if (dev.name !== DEV_WORKER) fail("env.dev.name is " + dev.name + ", expected " + DEV_WORKER);
-  const prodIds = new Set((cfg.d1_databases || []).map((d) => d.database_id));
+  // Databases without an id are created by wrangler at deploy time; compare real ids and names only.
+  const prodIds = new Set((cfg.d1_databases || []).map((d) => d.database_id).filter(Boolean));
+  const prodNames = new Set((cfg.d1_databases || []).map((d) => d.database_name));
   for (const d of dev.d1_databases || []) {
-    if (prodIds.has(d.database_id)) fail("env.dev binds a PRODUCTION database (" + d.binding + ")");
+    if (d.database_id && prodIds.has(d.database_id)) fail("env.dev binds a PRODUCTION database (" + d.binding + ")");
+    if (prodNames.has(d.database_name)) fail("env.dev reuses a PRODUCTION database name (" + d.database_name + ")");
   }
   if ((dev.services || []).length) fail("env.dev has service bindings (the importer writes to production)");
 }
@@ -48,3 +51,24 @@ const run = (args) => {
 // builds hit the same check; moving to a supported Next.js is a separate upgrade.
 run(["opennextjs-cloudflare", "build", "--env=dev", "--dangerouslyUseUnsupportedNextVersion"]);
 run(["opennextjs-cloudflare", "deploy", "--env=dev"]);
+
+// The dev-only engagement / mindspace / catalog schema. Every statement is idempotent (CREATE ... IF NOT EXISTS), so
+// running it on each deploy is safe. A failure here is reported but does not fail the deploy: the site is already live
+// and those features simply stay "unavailable" until the SQL lands.
+const sql = [
+  ["bookqubit-dev-engagement", "migrations/engagement/0001_engagement.sql"],
+  ["bookqubit-dev-mindspace", "migrations/mindspace/0001_mindspace.sql"],
+  ["bookqubit-dev-catalog", "migrations/catalog/0001_fts_summaries.sql"],
+  ["bookqubit-dev-catalog", "migrations/catalog/0002_read_models.sql"],
+  ["bookqubit-dev-database", "migrations/main/0001_search_safety.sql"],
+];
+for (const [db, file] of sql) {
+  const args = ["wrangler", "d1", "execute", db, "--remote", "--env=dev", "--file=" + file];
+  console.log("> npx " + args.join(" "));
+  const r = spawnSync(npx, args, { stdio: "inherit", env, shell: process.platform === "win32" });
+  if (r.status !== 0) console.warn("note: could not apply " + file + " to " + db + "; apply it by hand (see DEPLOYMENT_CHECKLIST.md)");
+}
+
+// Fill the catalog read models (idempotent; one pass over the dev catalog). Same SQL as Admin -> Caches -> Rebuild.
+const rebuild = spawnSync(process.execPath, ["scripts/rebuild-read-models.mjs", "--env=dev"], { stdio: "inherit", env });
+if (rebuild.status !== 0) console.warn("note: could not rebuild the read models; run scripts/rebuild-read-models.mjs --env=dev by hand");
