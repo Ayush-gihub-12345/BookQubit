@@ -62,6 +62,55 @@ function MenuLink({ href, label, icon, desc, badge, onClick }) {
   );
 }
 
+// One mega-menu panel: link groups in columns, plus an optional feature card (Surprise me / collections / ranking).
+function MegaPanel({ menu, withLang, lang, labels, tr, onClose }) {
+  const cols = menu.groups.length + (menu.feature ? 1 : 0);
+  const width = cols >= 4 ? "w-[min(1040px,calc(100vw-2rem))]" : cols === 3 ? "w-[min(800px,calc(100vw-2rem))]" : "w-[min(600px,calc(100vw-2rem))]";
+  return (
+    <div id={`${menu.key}-panel`} className="absolute left-0 top-full pt-2">
+      <div className={`panel animate-pop grid gap-x-6 gap-y-4 p-5 ${width}`}
+        style={{ gridTemplateColumns: `repeat(${menu.groups.length}, minmax(0,1fr))${menu.feature ? " 220px" : ""}` }}>
+        {menu.groups.map((g) => (
+          <div key={g.title} className="min-w-0">
+            <p className="eyebrow mb-2 px-2 !text-[var(--muted)]">{g.title}</p>
+            <ul className="space-y-0.5">
+              {g.links.map((l) => (
+                <li key={l.label}>
+                  {l.icon
+                    ? <MenuLink href={withLang(l.href)} label={l.label} icon={l.icon} badge={l.badge} desc={l.desc} onClick={onClose} />
+                    : <Link href={withLang(l.href)} prefetch={false} className="menu-item !py-2" onClick={onClose}>{l.flag && <span aria-hidden className="w-5 shrink-0 text-center">{l.flag}</span>}<span className="truncate">{l.label}</span></Link>}
+                </li>
+              ))}
+              {g.all && <li><Link href={withLang(g.all.href)} prefetch={false} className="menu-item font-semibold text-brand-700" onClick={onClose}>{g.all.label}</Link></li>}
+            </ul>
+          </div>
+        ))}
+        {menu.feature === "surprise" && (
+          <SurpriseLink locale={lang} onNavigate={onClose} className="hero-glow flex flex-col justify-end gap-2 rounded-[var(--radius-md)] border border-[var(--line)] p-4">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-400 text-[var(--on-brand)]"><Icon name="dice" size={22} /></span>
+            <b className="font-display text-lg leading-tight">{tr("navSurpriseHint")}</b>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700">{labels.surpriseMe}<Icon name="arrowRight" size={15} /></span>
+          </SurpriseLink>
+        )}
+        {menu.feature === "collection" && (
+          <Link href={withLang("/collections")} prefetch={false} onClick={onClose} className="hero-glow flex flex-col justify-end gap-2 rounded-[var(--radius-md)] border border-[var(--line)] p-4">
+            <Icon name="layers" size={24} className="text-brand-700" /><b className="font-display text-lg leading-tight">Curated by editors and readers</b>
+            <span className="text-muted text-sm">Themed shelves worth working through.</span>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700">{tr("allCollectionsMenu")}<Icon name="arrowRight" size={15} /></span>
+          </Link>
+        )}
+        {menu.feature === "ranking" && (
+          <Link href={withLang("/leaderboard")} prefetch={false} onClick={onClose} className="hero-glow flex flex-col justify-end gap-2 rounded-[var(--radius-md)] border border-[var(--line)] p-4">
+            <Icon name="trophy" size={24} className="text-brand-700" /><b className="font-display text-lg leading-tight">{tr("navBookwormRanking")}</b>
+            <span className="text-muted text-sm">Earn points for reading, reviewing and helping others.</span>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700">See the board<Icon name="arrowRight" size={15} /></span>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Navbar({ lang, theme, languages, themes, labels, genres = [], countries = [], collections = [] }) {
   const tr = t(lang);
   const pathname = usePathname();
@@ -73,30 +122,25 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   const [showCustomTheme, setShowCustomTheme] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  const [discoverOpen, setDiscoverOpen] = useState(false);
-  const [communityOpen, setCommunityOpen] = useState(false);
+  const [open, setOpen] = useState(null); // which mega menu is open: discover | browse | collections | community
+  const hoverT = useRef(null);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [prefsTab, setPrefsTab] = useState("theme");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const discoverBox = useRef(null);
-  const discoverPanel = useRef(null);
-  const discoverBtn = useRef(null);
-  const communityBox = useRef(null);
-  const communityBtn = useRef(null);
+  const navBox = useRef(null);
   const prefsBox = useRef(null);
   const prefsBtn = useRef(null);
   const drawerPanel = useRef(null);
   const drawerBtn = useRef(null);
 
-  useDismiss(discoverOpen, () => setDiscoverOpen(false), [discoverBox, discoverPanel], discoverBtn);
-  useDismiss(communityOpen, () => setCommunityOpen(false), [communityBox], communityBtn);
+  useDismiss(!!open, () => setOpen(null), [navBox]);
   useDismiss(prefsOpen, () => setPrefsOpen(false), [prefsBox], prefsBtn);
   useDismiss(drawerOpen, () => setDrawerOpen(false), [drawerPanel, drawerBtn], drawerBtn);
 
   // Any navigation closes whatever was open, so a panel never lingers over the page it just led to.
   useEffect(() => {
-    setDiscoverOpen(false); setCommunityOpen(false); setPrefsOpen(false); setDrawerOpen(false);
+    setOpen(null); setPrefsOpen(false); setDrawerOpen(false);
   }, [pathname]);
 
   // The mobile sheet covers the page: stop the page behind it scrolling and move focus into the sheet.
@@ -222,8 +266,51 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
     { label: labels.authors, href: "/authors", active: under("/authors") },
     { label: labels.collections, href: "/collections", active: under("/collections") },
   ];
-  const discoverActive = under("/books", "/categories", "/tags", "/comics", "/publications", "/compare", "/listen", "/authors");
-  const communityActive = under("/community", "/readers", "/leaderboard", "/feed", "/connect", "/mindspace");
+  // Four mega menus (UI v3): each group is built from real catalog data or fixed routes, and an empty group is dropped,
+  // so no link can lead to an empty page.
+  const MEGA = [
+    {
+      key: "discover", label: tr("navDiscover"), feature: "surprise", active: under("/listen", "/compare"),
+      groups: [
+        { title: tr("navStartHere"), links: [
+          { label: tr("allBooksMenu"), href: "/books", icon: "book", desc: "The full library" },
+          { label: tr("newReleases"), href: "/books?sort=new", icon: "sparkles", badge: "NEW", desc: "Fresh in the catalog" },
+          { label: tr("topRated"), href: "/books?sort=rating", icon: "star", desc: "Highest rated first" },
+          { label: "Bestsellers", href: "/books?shelf=bestsellers", icon: "trophy", desc: "What most people buy" },
+          { label: "Classics", href: "/books?shelf=classics", icon: "feather", desc: "Published before 1980" },
+        ] },
+        { title: "Ways to discover", links: [
+          { label: "Listen", href: "/listen", icon: "headphones", badge: "NEW", desc: "Audio summaries and queues" },
+          { label: "Feed", href: "/feed", icon: "flame", desc: "Books, quotes and summaries" },
+          { label: labels.comics, href: "/comics", icon: "layers", desc: "Comics and manga" },
+          { label: tr("compareWord"), href: "/compare", icon: "gitCompare", desc: "Side by side" },
+          { label: tr("requestABookTitle"), href: "/request-a-book", icon: "bookmark", desc: "Tell us what is missing" },
+        ] },
+      ],
+    },
+    {
+      key: "browse", label: "Browse", active: under("/books", "/categories", "/tags", "/publications"),
+      groups: [
+        { title: tr("navGenres"), links: genres.map((g) => ({ label: g.label, href: `/books?category=${encodeURIComponent(g.category)}` })), all: { label: tr("navAllGenres"), href: "/categories" } },
+        { title: tr("booksByCountry"), links: countries.map((c) => ({ label: c.name, href: `/books?country=${encodeURIComponent(c.name)}`, flag: countryFlag(c.name) })) },
+        { title: "Directory", links: [
+          { label: labels.authors, href: "/authors", icon: "feather" },
+          { label: labels.publishers, href: "/publications", icon: "building" },
+          { label: labels.tags, href: "/tags", icon: "hash" },
+        ] },
+      ],
+    },
+    {
+      key: "collections", label: labels.collections, feature: "collection", active: under("/collections"),
+      groups: [{ title: labels.collections, links: collections.map((c) => ({ label: c.name, href: `/collections/${encodeURIComponent(c.name)}` })), all: { label: tr("allCollectionsMenu"), href: "/collections" } }],
+    },
+    {
+      key: "community", label: tr("navCommunity"), feature: "ranking", active: under("/community", "/readers", "/leaderboard", "/feed", "/connect", "/mindspace"),
+      groups: COMMUNITY.map((g) => ({ ...g })),
+    },
+  ].map((m) => ({ ...m, groups: m.groups.filter((g) => g.links.length > 0 || g.all) })).filter((m) => m.groups.length > 0);
+  const enter = (k) => { clearTimeout(hoverT.current); hoverT.current = setTimeout(() => setOpen(k), 90); };
+  const leave = () => { clearTimeout(hoverT.current); hoverT.current = setTimeout(() => setOpen(null), 180); };
 
   const themeSwatches = (
     <div className="grid grid-cols-2 gap-2">
@@ -261,38 +348,20 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <Wordmark className="hidden sm:inline" />
         </Link>
 
-        <nav aria-label={tr("navPrimaryLabel")} className="ml-2 hidden items-center gap-0.5 lg:flex">
-          <div ref={discoverBox} className="relative">
-            <button ref={discoverBtn} type="button" className="nav-link" aria-expanded={discoverOpen} aria-haspopup="true"
-              aria-controls="discover-panel" aria-current={discoverActive ? "page" : undefined}
-              onClick={() => { setDiscoverOpen((o) => !o); setCommunityOpen(false); }}>
-              {tr("navDiscover")}
-              <Icon name="chevronDown" size={15} className={`opacity-60 transition-transform ${discoverOpen ? "rotate-180" : ""}`} />
-            </button>
-          </div>
-          <div ref={communityBox} className="relative">
-            <button ref={communityBtn} type="button" className="nav-link" aria-expanded={communityOpen} aria-haspopup="true"
-              aria-controls="community-panel" aria-current={communityActive ? "page" : undefined}
-              onClick={() => { setCommunityOpen((o) => !o); setDiscoverOpen(false); }}>
-              {tr("navCommunity")}
-              <Icon name="chevronDown" size={15} className={`opacity-60 transition-transform ${communityOpen ? "rotate-180" : ""}`} />
-            </button>
-            {communityOpen && (
-              <div id="community-panel" className="absolute left-0 top-full pt-2">
-                <div className="panel animate-pop grid w-[min(520px,calc(100vw-2rem))] gap-6 p-5 sm:grid-cols-2">
-                  {COMMUNITY.map((g) => (
-                    <div key={g.title}>
-                      <p className="eyebrow mb-2 !text-[var(--muted)]">{g.title}</p>
-                      <ul className="space-y-0.5">{g.links.map((l) => <li key={l.href}><MenuLink {...l} href={withLang(l.href)} /></li>)}</ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          {PRIMARY.map((p) => (
-            <Link key={p.href} href={withLang(p.href)} prefetch={false} className="nav-link" aria-current={p.active ? "page" : undefined}>{p.label}</Link>
+        <nav ref={navBox} aria-label={tr("navPrimaryLabel")} className="ml-1 hidden items-center gap-0.5 lg:flex">
+          {MEGA.map((m) => (
+            <div key={m.key} className="relative" onMouseEnter={() => enter(m.key)} onMouseLeave={leave}>
+              <button type="button" className="nav-link" aria-expanded={open === m.key} aria-haspopup="true" aria-controls={`${m.key}-panel`}
+                aria-current={m.active ? "page" : undefined}
+                onClick={() => { clearTimeout(hoverT.current); setOpen(open === m.key ? null : m.key); }}
+                onKeyDown={(e) => { if (e.key === "ArrowDown") { e.preventDefault(); setOpen(m.key); } }}>
+                {m.label}
+                <Icon name="chevronDown" size={15} className={`opacity-60 transition-transform duration-200 ${open === m.key ? "rotate-180" : ""}`} />
+              </button>
+              {open === m.key && <MegaPanel menu={m} withLang={withLang} lang={lang} labels={labels} tr={tr} onClose={() => setOpen(null)} />}
+            </div>
           ))}
+          <Link href={withLang("/authors")} prefetch={false} className="nav-link max-xl:!hidden" aria-current={under("/authors") ? "page" : undefined}>{labels.authors}</Link>
         </nav>
 
         <div className="min-w-0 flex-1">
@@ -306,11 +375,18 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           </div>
         </div>
 
-        <SurpriseLink locale={lang} className="btn-icon hidden sm:inline-flex" aria-label={labels.surpriseMe} title={labels.surpriseMe}>
+        <SurpriseLink locale={lang} className="btn-soft btn-sm hidden !min-h-[42px] 2xl:inline-flex" title={labels.surpriseMe}>
+          <Icon name="dice" size={18} />{labels.surpriseMe}
+        </SurpriseLink>
+        <SurpriseLink locale={lang} className="btn-icon hidden sm:inline-flex 2xl:!hidden" aria-label={labels.surpriseMe} title={labels.surpriseMe}>
           <Icon name="dice" size={19} />
         </SurpriseLink>
 
-        <Link href={withLang("/library")} prefetch={false} className="nav-link max-xl:!hidden"
+        <Link href={withLang("/liked")} prefetch={false} className="btn-icon hidden md:inline-flex" aria-label={labels.likedBooks} title={labels.likedBooks}>
+          <Icon name="heart" size={18} />
+        </Link>
+
+        <Link href={withLang("/library")} prefetch={false} className="nav-link max-2xl:!hidden"
           aria-current={under("/library", "/account", "/liked") ? "page" : undefined}>
           <Icon name="bookmark" size={16} /> {tr("navLibrary")}
         </Link>
@@ -369,46 +445,6 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
         </div>
       </div>
 
-      {/* Discover: the whole catalog in one panel */}
-      {discoverOpen && (
-        <div id="discover-panel" className="absolute inset-x-0 top-full hidden px-4 lg:block">
-          <div ref={discoverPanel} className="panel animate-pop mx-auto max-w-[88rem] !rounded-t-none border-t-0 p-6">
-            {myGenres.length > 0 && (
-              <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-[var(--line)] pb-5">
-                <span className="text-muted mr-1 text-xs font-semibold">{tr("navYourGenres")}</span>
-                {myGenres.map((g) => (
-                  <Link key={g} href={withLang(`/books?category=${encodeURIComponent(g)}`)} prefetch={false} className="pill">{g}</Link>
-                ))}
-              </div>
-            )}
-            <div className="grid gap-x-6 gap-y-4 lg:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))_240px]">
-              {GROUPS.map((g) => (
-                <div key={g.title}>
-                  <p className="eyebrow mb-2 !text-[var(--muted)]">{g.title}</p>
-                  <ul className="space-y-0.5">
-                    {g.links.map((l) => (
-                      <li key={l.label}>
-                        {l.icon
-                          ? <MenuLink href={withLang(l.href)} label={l.label} icon={l.icon} badge={l.badge} />
-                          : <Link href={withLang(l.href)} prefetch={false} className="menu-item">{l.flag && <span aria-hidden className="w-5 shrink-0 text-center">{l.flag}</span>}<span className="truncate">{l.label}</span></Link>}
-                      </li>
-                    ))}
-                    {g.all && (
-                      <li><Link href={withLang(g.all.href)} prefetch={false} className="menu-item font-semibold text-brand-700">{g.all.label}</Link></li>
-                    )}
-                  </ul>
-                </div>
-              ))}
-              <SurpriseLink locale={lang} onNavigate={() => setDiscoverOpen(false)} className="hero-glow flex flex-col justify-end gap-2 rounded-[var(--radius-md)] border border-[var(--line)] p-4">
-                <Icon name="dice" size={22} className="text-brand-700" />
-                <b className="font-display text-lg leading-tight">{tr("navSurpriseHint")}</b>
-                <span className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700">{labels.surpriseMe}<Icon name="arrowRight" size={15} /></span>
-              </SurpriseLink>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Phone and tablet: a full-height sheet with the same structure */}
       {drawerOpen && (
         <div className="absolute inset-x-0 top-full z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
@@ -441,20 +477,30 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
             </div>
 
             <div className="mt-2 border-t border-[var(--line)] px-3 pt-2">
-              {[...COMMUNITY, ...GROUPS].map((g, i) => (
-                <details key={g.title} open={i === 0} className="group">
-                  <summary className="menu-item !min-h-11 cursor-pointer list-none font-semibold [&::-webkit-details-marker]:hidden">
-                    {g.title}
-                    <Icon name="chevronDown" size={15} className="text-muted ml-auto transition-transform group-open:rotate-180" />
+              {MEGA.map((m, i) => (
+                <details key={m.key} open={i === 0} className="group">
+                  <summary className="menu-item !min-h-12 cursor-pointer list-none font-display text-lg font-semibold [&::-webkit-details-marker]:hidden">
+                    {m.label}
+                    <Icon name="chevronDown" size={16} className="text-muted ml-auto transition-transform group-open:rotate-180" />
                   </summary>
-                  <ul className="pb-2 pl-3">
-                    {g.links.map((l) => (
-                      <li key={l.label}><Link href={withLang(l.href)} prefetch={false} className="menu-item !min-h-11">{l.flag && <span aria-hidden>{l.flag}</span>}{l.label}</Link></li>
+                  <div className="pb-2 pl-1">
+                    {m.groups.map((g) => (
+                      <div key={g.title} className="mb-2">
+                        <p className="eyebrow px-3 py-1 !text-[var(--muted)]">{g.title}</p>
+                        <ul>
+                          {g.links.map((l) => (
+                            <li key={l.label}>
+                              <Link href={withLang(l.href)} prefetch={false} className="menu-item !min-h-11">
+                                {l.flag ? <span aria-hidden className="w-5 text-center">{l.flag}</span> : l.icon && <Icon name={l.icon} size={17} className="text-brand-700" />}
+                                {l.label}{l.badge && <span className="badge badge-marker ml-1 !h-5 !text-[10px]">{l.badge}</span>}
+                              </Link>
+                            </li>
+                          ))}
+                          {g.all && <li><Link href={withLang(g.all.href)} prefetch={false} className="menu-item !min-h-11 font-semibold text-brand-700">{g.all.label}</Link></li>}
+                        </ul>
+                      </div>
                     ))}
-                    {g.all && (
-                      <li><Link href={withLang(g.all.href)} prefetch={false} className="menu-item !min-h-11 font-semibold text-brand-700">{g.all.label}</Link></li>
-                    )}
-                  </ul>
+                  </div>
                 </details>
               ))}
             </div>
