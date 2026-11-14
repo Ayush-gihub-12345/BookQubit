@@ -17,6 +17,7 @@ import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
 import SummaryReader from "@/components/player/SummaryReader";
 import AddToShelf from "@/components/library/AddToShelf";
+import SaveToMindSpace from "@/components/mindspace/SaveToMindSpace";
 import { getCf } from "@/lib/cf/env";
 import { availability } from "@/lib/cf/geo-affiliate";
 import { baselineSummary, resolveSummary } from "@/lib/summary";
@@ -297,6 +298,7 @@ export default async function BookPage({ params }) {
             <div className="text-muted mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <span className="pill !text-[11px]">{availabilityBadge}</span>
               <AddToShelf slug={book.slug} />
+              <SaveToMindSpace node={{ kind: "book", bookSlug: book.slug, title: book.title }} />
               <a href={goBuy} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-600 inline-flex items-center gap-1.5">
                 <Icon name="cart" size={14} /> Buy the book <span className="text-xs opacity-70">(Affiliate link)</span>
               </a>

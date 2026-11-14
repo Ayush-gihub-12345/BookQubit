@@ -31,8 +31,8 @@ export default function MobileTabBar() {
     { href: "/", icon: "home", label: tr("homeWord"), match: (p) => p === "/" },
     { href: "/books", icon: "compass", label: tr("navDiscover"), match: (p) => p.startsWith("/books") },
     null, // search — handled separately, opens an overlay instead of navigating
-    { href: "/account", icon: "user", label: tr("shelfWord"), match: (p) => p.startsWith("/account") },
-    { href: "/leaderboard", icon: "trophy", label: tr("navBookwormRanking"), match: (p) => p.startsWith("/leaderboard") },
+    { href: "/library", icon: "bookmark", label: tr("shelfWord"), match: (p) => p.startsWith("/library") || p.startsWith("/account") },
+    { href: "/mindspace", icon: "layers", label: "MindSpace", match: (p) => p.startsWith("/mindspace") },
   ];
 
   return (

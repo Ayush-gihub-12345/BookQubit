@@ -12,6 +12,7 @@ import { t } from "@/lib/i18n";
 export const RAIL_ITEMS = [
   { href: "/", icon: "home", key: "homeWord", match: (p) => p === "/" },
   { href: "/books", icon: "compass", key: "navDiscover", match: (p) => p.startsWith("/books") || p.startsWith("/categories") || p.startsWith("/authors") },
+  { href: "/mindspace", icon: "layers", label: "MindSpace", match: (p) => p.startsWith("/mindspace") },
   { href: "/library", icon: "bookmark", key: "shelfWord", match: (p) => p.startsWith("/library") || p.startsWith("/account") || p.startsWith("/liked") },
   { href: "/community", icon: "users", key: "navCommunity", match: (p) => p.startsWith("/community") },
 ];
@@ -40,7 +41,7 @@ export default function SideRail() {
             }`}
           >
             <Icon name={item.icon} size={20} className="shrink-0" />
-            <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{tr(item.key)}</span>
+            <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{item.label || tr(item.key)}</span>
           </Link>
         );
       })}
