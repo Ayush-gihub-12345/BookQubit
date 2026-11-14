@@ -12,7 +12,7 @@ import { t } from "@/lib/i18n";
 export const RAIL_ITEMS = [
   { href: "/", icon: "home", key: "homeWord", match: (p) => p === "/" },
   { href: "/books", icon: "compass", key: "navDiscover", match: (p) => p.startsWith("/books") || p.startsWith("/categories") || p.startsWith("/authors") },
-  { href: "/account", icon: "bookmark", key: "shelfWord", match: (p) => p.startsWith("/account") || p.startsWith("/liked") },
+  { href: "/library", icon: "bookmark", key: "shelfWord", match: (p) => p.startsWith("/library") || p.startsWith("/account") || p.startsWith("/liked") },
   { href: "/community", icon: "users", key: "navCommunity", match: (p) => p.startsWith("/community") },
 ];
 

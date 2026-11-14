@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS book_summaries (
   PRIMARY KEY (book_slug, lang, intent)
 );
 
+-- ISBN lookups (Goodreads import, affiliate matching) would otherwise scan the whole table.
+CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn);
+
 -- Keyword search over books (external-content FTS5 + sync triggers).
 CREATE VIRTUAL TABLE IF NOT EXISTS books_fts USING fts5(
   title, author, description, summary, tags,
