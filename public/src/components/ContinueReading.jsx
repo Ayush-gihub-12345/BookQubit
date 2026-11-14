@@ -36,7 +36,7 @@ export default function ContinueReading() {
           <h2 className="text-xl font-bold sm:text-2xl">{tr("continueReadingTitle")}</h2>
           <p className="text-muted mt-1 text-sm">{tr("pickUpWhereLeftOff")}</p>
         </div>
-        <Link href={`/${lang}/account`} className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-brand-600 hover:underline">{tr("myShelfLink")}</Link>
+        <Link href={`/${lang}/account`} className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-brand-700 hover:underline">{tr("myShelfLink")}</Link>
       </div>
       <HScrollRow>
         {items.map((s) => (

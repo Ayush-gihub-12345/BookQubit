@@ -12,6 +12,10 @@ const SOCIALS = [
   ["social_youtube", "youtube", "YouTube"],
 ];
 
+// Counters only render once the catalog looks healthy: "12 books" under a headline about a library makes the
+// whole site look empty (UI v2 decision).
+const SHOW_STATS_FROM = 1000;
+
 export default async function Footer({ lang = "en" }) {
   const _ = t(lang);
   const [stats, settings] = await Promise.all([
@@ -20,19 +24,26 @@ export default async function Footer({ lang = "en" }) {
   ]);
   const socialLinks = SOCIALS.filter(([key]) => settings[key]);
   const withLang = (href) => `/${lang}${href}`;
+  const link = "inline-flex min-h-11 items-center hover:text-brand-700";
+
+  const COLS = [
+    { title: _("footerExplore"), links: [[_("browse"), "/books"], [_("topRated"), "/books?sort=rating"], [_("newReleases"), "/books?sort=new"], [_("collections"), "/collections"], [_("tags"), "/tags"]] },
+    { title: _("footerBrowse"), links: [[_("authors"), "/authors"], [_("publishers"), "/publications"], [_("comics"), "/comics"], [_("compareWord"), "/compare"], [_("requestABookTitle"), "/request-a-book"]] },
+    { title: _("navCommunity"), links: [["Feed", "/feed"], [_("communityTitle"), "/community"], [_("navBookwormRanking"), "/leaderboard"], ["MindSpace", "/mindspace"]] },
+    { title: _("footerCompany"), links: [[_("footerAbout"), "/about"], [_("footerContact"), "/contact"], [_("footerPrivacy"), "/privacy"], [_("footerTerms"), "/terms"]] },
+  ];
 
   return (
-    <footer className="border-line bg-surface mt-16 border-t">
-      {/* Trust bar */}
-      {stats && (
-        <div className="border-line border-b">
-          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 py-6 text-center sm:grid-cols-4">
+    <footer className="mt-16 border-t border-[var(--line)] bg-[var(--surface)] pb-20 lg:pb-0">
+      {stats && stats.books >= SHOW_STATS_FROM && (
+        <div className="border-b border-[var(--line)]">
+          <div className="container-bq grid grid-cols-2 gap-4 py-6 text-center sm:grid-cols-4">
             {[
               [stats.books, _("booksStat")], [stats.authors, _("authors")],
               [stats.reviews, _("readerReviewsLabel")], [stats.readers, _("readersStat")],
             ].map(([n, label]) => (
               <div key={label}>
-                <p className="text-2xl font-extrabold text-brand-600">{n.toLocaleString()}+</p>
+                <p className="font-display text-2xl font-bold text-brand-700">{n.toLocaleString()}+</p>
                 <p className="text-muted text-xs">{label}</p>
               </div>
             ))}
@@ -40,17 +51,15 @@ export default async function Footer({ lang = "en" }) {
         </div>
       )}
 
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="lg:col-span-2">
+      <div className="container-bq grid gap-10 py-12 md:grid-cols-[1.6fr_repeat(4,1fr)]">
+        <div className="max-w-sm">
           <Logo size={32} />
-          <p className="text-muted mt-3 max-w-xs text-sm">{_("footerTagline")}</p>
+          <p className="text-muted mt-3 text-sm">{_("footerTagline")}</p>
           {socialLinks.length > 0 && (
             <div className="mt-4 flex gap-2">
               {socialLinks.map(([key, icon, label]) => (
                 <a key={key} href={settings[key]} target="_blank" rel="noopener noreferrer" aria-label={label}
-                  className="border-line text-muted grid h-11 w-11 place-items-center rounded-full border transition-colors hover:border-brand-600 hover:text-brand-600">
-                  <SocialIcon name={icon} size={16} />
-                </a>
+                  className="btn-icon text-muted hover:text-brand-700"><SocialIcon name={icon} size={16} /></a>
               ))}
             </div>
           )}
@@ -65,41 +74,21 @@ export default async function Footer({ lang = "en" }) {
           </div>
         </div>
 
-        <div>
-          <p className="text-muted mb-1 text-sm font-semibold">{_("footerExplore")}</p>
-          <ul className="text-sm">
-            <li><Link href={withLang("/books")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("browse")}</Link></li>
-            <li><Link href={withLang("/books?sort=rating")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("topRated")}</Link></li>
-            <li><Link href={withLang("/books?sort=new")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("newReleases")}</Link></li>
-            <li><Link href={withLang("/collections")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("collections")}</Link></li>
-            <li><Link href={withLang("/tags")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("tags")}</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <p className="text-muted mb-1 text-sm font-semibold">{_("footerBrowse")}</p>
-          <ul className="text-sm">
-            <li><Link href={withLang("/authors")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("authors")}</Link></li>
-            <li><Link href={withLang("/publications")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("publishers")}</Link></li>
-            <li><Link href={withLang("/comics")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("comics")}</Link></li>
-            <li><Link href={withLang("/community")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("communityTitle")}</Link></li>
-            <li><Link href={withLang("/leaderboard")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("navBookwormRanking")}</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <p className="text-muted mb-1 text-sm font-semibold">{_("footerCompany")}</p>
-          <ul className="text-sm">
-            <li><Link href={withLang("/about")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerAbout")}</Link></li>
-            <li><Link href={withLang("/contact")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerContact")}</Link></li>
-            <li><Link href={withLang("/privacy")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerPrivacy")}</Link></li>
-            <li><Link href={withLang("/terms")} prefetch={false} className="inline-flex min-h-11 items-center hover:text-brand-600">{_("footerTerms")}</Link></li>
-          </ul>
-        </div>
+        {COLS.map((c) => (
+          <div key={c.title}>
+            <p className="eyebrow mb-2 !text-[var(--muted)]">{c.title}</p>
+            <ul className="text-sm">
+              {c.links.map(([label, href]) => (
+                <li key={href}><Link href={withLang(href)} prefetch={false} className={link}>{label}</Link></li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
 
-      <div className="border-line border-t px-4 py-4">
-        <p className="text-muted text-center text-xs">© {new Date().getFullYear()} BookQubit. {_("rightsReserved")}</p>
+      <div className="container-bq flex flex-wrap justify-between gap-3 border-t border-[var(--line)] py-5 text-xs text-[var(--muted)]">
+        <span>© {new Date().getFullYear()} BookQubit. {_("rightsReserved")}</span>
+        <span>As an Amazon Associate, BookQubit earns from qualifying purchases.</span>
       </div>
     </footer>
   );

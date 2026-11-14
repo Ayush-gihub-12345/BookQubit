@@ -196,7 +196,7 @@ export default async function BookPage({ params }) {
 
             {related.length > 0 && (
               <div className="mt-5 border-t border-line pt-4">
-                <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
+                <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
                   <Icon name="layers" size={14} /> {_("browseSimilarBooks")}
                 </a>
               </div>
@@ -206,7 +206,7 @@ export default async function BookPage({ params }) {
               <p className="text-muted mb-2 text-xs font-semibold">{_("readWithOthers")}</p>
               {bookDiscussions.map((d) => (
                 <Link key={d.id} href={withLang(`/community?open=${d.id}`)}
-                  className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
+                  className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
                   <Icon name="users" size={13} className="shrink-0" />
                   <span className="truncate">{d.title}</span>
                   <span className="shrink-0 text-xs opacity-70">· {d.members}</span>
@@ -214,7 +214,7 @@ export default async function BookPage({ params }) {
               ))}
               <Link
                 href={withLang(`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`)}
-                className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600"
+                className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700"
               >
                 <Icon name="feather" size={14} /> {_("startDiscussion")}
               </Link>
@@ -241,7 +241,7 @@ export default async function BookPage({ params }) {
                     <Link
                       href={withLang(a.profile ? `/authors/${a.profile.slug}` : `/books?q=${encodeURIComponent(a.name)}`)}
                       prefetch={false}
-                      className="font-medium text-brand-600 hover:underline"
+                      className="font-medium text-brand-700 hover:underline"
                     >
                       <TitleTransliterated text={a.name} />
                     </Link>
@@ -267,7 +267,7 @@ export default async function BookPage({ params }) {
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <Rating value={book.rating} />
               {community.reviews.length > 0 && (
-                <a href="#reviews" className="text-muted hover:text-brand-600">
+                <a href="#reviews" className="text-muted hover:text-brand-700">
                   {community.reviews.length} {community.reviews.length === 1 ? _("reviewWord") : _("reviewsWord")}
                 </a>
               )}
@@ -290,10 +290,10 @@ export default async function BookPage({ params }) {
               <span className="pill !text-[11px]">{availabilityBadge}</span>
               <AddToShelf slug={book.slug} />
               <SaveToMindSpace node={{ kind: "book", bookSlug: book.slug, title: book.title }} />
-              <a href={goBuy} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-600 inline-flex items-center gap-1.5">
+              <a href={goBuy} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-700 inline-flex items-center gap-1.5">
                 <Icon name="cart" size={14} /> Buy the book <span className="text-xs opacity-70">(Affiliate link)</span>
               </a>
-              <a href={goAudible} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-600 inline-flex items-center gap-1.5">
+              <a href={goAudible} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-700 inline-flex items-center gap-1.5">
                 <Icon name="external" size={14} /> Listen on Audible <span className="text-xs opacity-70">(External provider)</span>
               </a>
             </div>
@@ -311,7 +311,7 @@ export default async function BookPage({ params }) {
                           imgClassName="transition duration-500 group-hover:scale-105" />
                       </div>
                       <div className="p-2">
-                        <p className="line-clamp-2 text-xs font-semibold group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
+                        <p className="line-clamp-2 text-xs font-semibold group-hover:text-brand-700"><TitleTransliterated text={b.title} /></p>
                       </div>
                     </Link>
                   ))}
@@ -335,7 +335,7 @@ export default async function BookPage({ params }) {
 
             {(book.category || book.subjects?.length > 0) && (
               <div className="tint-brand mt-6 rounded-xl p-5">
-                <p className="text-sm font-semibold text-brand-600">{_("whosItFor")}</p>
+                <p className="text-sm font-semibold text-brand-700">{_("whosItFor")}</p>
                 <p className="mt-2 text-sm leading-relaxed">
                   {_("whosItForBody", {
                     category: book.category ? book.category.toLowerCase() : _("thisGenre"),
@@ -353,7 +353,7 @@ export default async function BookPage({ params }) {
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {book.keyPoints.map((k) => (
                     <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
-                      <Icon name="check" size={15} className="mt-0.5 text-brand-600" /> <Translated text={k} />
+                      <Icon name="check" size={15} className="mt-0.5 text-brand-700" /> <Translated text={k} />
                     </li>
                   ))}
                 </ul>
@@ -376,7 +376,7 @@ export default async function BookPage({ params }) {
                       <dt className="text-muted text-xs">{k}</dt>
                       <dd className="text-sm font-medium">
                         {k === _("metaPublisher") && publisherProfile ? (
-                          <Link href={withLang(`/publications/${publisherProfile.slug}`)} className="text-brand-600 hover:underline">{v}</Link>
+                          <Link href={withLang(`/publications/${publisherProfile.slug}`)} className="text-brand-700 hover:underline">{v}</Link>
                         ) : v}
                       </dd>
                     </div>

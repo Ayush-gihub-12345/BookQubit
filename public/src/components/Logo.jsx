@@ -1,11 +1,30 @@
-// BookQubit logo — open-book mark + wordmark. Vector, so it stays crisp
-// at any size and inherits theme brand colors.
-export function LogoMark({ size = 36, className = "" }) {
+// BookQubit "Q" mark (UI v2): magnifier ring + open book + qubit dot. Pure SVG, scales to any size.
+// Gradient ids are unique per instance so several logos on one page never collide.
+import { useId } from "react";
+
+export function LogoMark({ size = 34, className = "" }) {
+  const id = useId().replace(/:/g, "");
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" className={className} aria-hidden="true">
-      <path fill="var(--color-brand-700)" d="M32 16.5c-5.8-4.6-13.2-6.5-20-6.5-1.1 0-2 .9-2 2v33c0 1.1.9 2 2 2 6.8 0 14.2 1.9 18.6 6 .8.7 2 .7 2.8 0 4.4-4.1 11.8-6 18.6-6 1.1 0 2-.9 2-2V12c0-1.1-.9-2-2-2-6.8 0-14.2 1.9-20 6.5z"/>
-      <path fill="var(--surface)" d="M29.5 21.8c-4.2-3.1-9.6-4.5-14.5-4.7v27.4c4.9.3 10.1 1.6 14.5 4.3V21.8zM34.5 21.8v27c4.4-2.7 9.6-4 14.5-4.3V17.1c-4.9.2-10.3 1.6-14.5 4.7z"/>
+    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true" className={className}>
+      <defs>
+        <linearGradient id={`${id}r`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#FBE08A" /><stop offset=".55" stopColor="#E0AE34" /><stop offset="1" stopColor="#A9770A" /></linearGradient>
+        <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#F9D976" /><stop offset="1" stopColor="#C8961E" /></linearGradient>
+        <linearGradient id={`${id}a`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#F6A04A" /><stop offset="1" stopColor="#C9521B" /></linearGradient>
+      </defs>
+      <path d="M155.9,175.5 A80,80 0 1 1 175.5,155.9" fill="none" stroke={`url(#${id}r)`} strokeWidth="20" strokeLinecap="round" />
+      <line x1="163" y1="163" x2="208" y2="208" stroke={`url(#${id}a)`} strokeWidth="22" strokeLinecap="round" />
+      <path d="M106,93 C93,84 75,82 58,87 L58,140 C75,135 93,137 106,147 Z" fill={`url(#${id}g)`} />
+      <path d="M114,93 C127,84 145,82 162,87 L162,140 C145,135 127,137 114,147 Z" fill={`url(#${id}a)`} />
+      <circle cx="110" cy="64" r="8.5" fill="#8B6CFF" />
     </svg>
+  );
+}
+
+export function Wordmark({ className = "" }) {
+  return (
+    <span className={`font-display text-[1.35rem] font-bold tracking-tight ${className}`}>
+      Book<span className="text-brand-700">Qubit</span>
+    </span>
   );
 }
 
@@ -13,11 +32,7 @@ export default function Logo({ size = 34, text = true, className = "" }) {
   return (
     <span className={`flex items-center gap-2 ${className}`}>
       <LogoMark size={size} />
-      {text && (
-        <span className="text-xl font-extrabold tracking-tight">
-          Book<span className="text-brand-600">Qubit</span>
-        </span>
-      )}
+      {text && <Wordmark />}
     </span>
   );
 }

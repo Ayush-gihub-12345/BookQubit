@@ -16,16 +16,20 @@ import { useLang } from "@/lib/useLang";
 // `hrefBase` defaults to the current language's /books, derived via useLang()
 // (URL-based, works with zero setup), so callers that don't override it
 // still link to a correctly language-prefixed book page.
-export default function BookCard({ book, hrefBase, note }) {
+export default function BookCard({ book, hrefBase, note, rank, isNew = false }) {
   const lang = useLang();
   const base = hrefBase ?? `/${lang}/books`;
   return (
-    <Link href={`${base}/${encodeURIComponent(book.slug)}`} prefetch={false} className="group block">
-      <div className="cover aspect-[2/3] bg-[color-mix(in_srgb,var(--fg)_8%,var(--surface))]">
+    <Link href={`${base}/${encodeURIComponent(book.slug)}`} prefetch={false} className="group relative block">
+      {rank !== undefined && (
+        <span aria-hidden className="font-display pointer-events-none absolute -left-2 -top-3 z-10 text-6xl font-black leading-none text-[var(--fg)] [-webkit-text-stroke:3px_var(--bg)] [paint-order:stroke]">{rank}</span>
+      )}
+      <div className="cover transition-transform duration-300 group-hover:-translate-y-1">
         <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
+        {isNew && <span className="badge badge-marker absolute bottom-2 left-2">NEW</span>}
       </div>
       <div className="pt-3">
-        <TitleTransliterated as="h3" className="line-clamp-2 text-[15px] font-semibold leading-snug group-hover:text-brand-600" text={book.title} />
+        <TitleTransliterated as="h3" className="line-clamp-2 text-[15px] font-semibold leading-snug group-hover:text-brand-700" text={book.title} />
         <TitleTransliterated as="p" className="text-muted mt-0.5 line-clamp-1 text-sm" text={book.author} />
         <div className="mt-1"><Rating value={book.rating} /></div>
         {note && <p className="text-muted mt-1 line-clamp-2 text-xs">{note}</p>}

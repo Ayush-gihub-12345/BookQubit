@@ -178,7 +178,7 @@ export default function AccountPage() {
       {/* Onboarding nudge — only shown until profile setup is completed */}
       {prefs && !prefs.onboarded && (
         <div className="card mb-6 flex flex-col items-center gap-4 border-brand-500/30 p-5 hover:!translate-y-0 sm:flex-row">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600/10 text-brand-700">
             <Icon name="compass" size={20} />
           </span>
           <div className="flex-1 text-center sm:text-left">
@@ -195,7 +195,7 @@ export default function AccountPage() {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.photoURL} alt="" className="h-20 w-20 rounded-full ring-4 ring-brand-500/30" />
         ) : (
-          <span className="grid h-20 w-20 place-items-center rounded-full bg-brand-600 text-3xl font-bold text-white">
+          <span className="grid h-20 w-20 place-items-center rounded-full bg-brand-600 text-3xl font-bold text-[var(--on-brand)]">
             {(user.displayName || user.email)[0].toUpperCase()}
           </span>
         )}
@@ -227,9 +227,9 @@ export default function AccountPage() {
           </Link>
           <div className="flex-1">
             <p className="text-muted flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider">
-              <Icon name="bookOpen" size={13} className="text-brand-600" /> {tr("currentlyReadingAction")}
+              <Icon name="bookOpen" size={13} className="text-brand-700" /> {tr("currentlyReadingAction")}
             </p>
-            <Link href={withLang(`/books/${encodeURIComponent(currentlyReading.book_slug)}`)} className="mt-1 block text-lg font-bold hover:text-brand-600">
+            <Link href={withLang(`/books/${encodeURIComponent(currentlyReading.book_slug)}`)} className="mt-1 block text-lg font-bold hover:text-brand-700">
               <TitleTransliterated text={currentlyReading.title || currentlyReading.book_slug} />
             </Link>
             {currentlyReading.author && <p className="text-muted text-sm"><TitleTransliterated text={currentlyReading.author} /></p>}
@@ -260,9 +260,9 @@ export default function AccountPage() {
         <div className="card mt-6 p-5 hover:!translate-y-0">
           <div className="flex items-center justify-between">
             <p className="flex items-center gap-2 text-sm font-bold">
-              <Icon name="grid" size={16} className="text-brand-600" /> {tr("readingPreferencesTitle")}
+              <Icon name="grid" size={16} className="text-brand-700" /> {tr("readingPreferencesTitle")}
             </p>
-            <button onClick={() => setEditingPrefs((v) => !v)} className="text-xs font-semibold text-brand-600 hover:underline">
+            <button onClick={() => setEditingPrefs((v) => !v)} className="text-xs font-semibold text-brand-700 hover:underline">
               {editingPrefs ? tr("doneWord") : tr("edit")}
             </button>
           </div>
@@ -273,7 +273,7 @@ export default function AccountPage() {
                 <button
                   key={g}
                   onClick={() => editingPrefs && toggleGenre(g)}
-                  className={`pill !text-xs ${prefs.genres.includes(g) ? "!bg-brand-600 !text-white" : ""} ${!editingPrefs ? "cursor-default" : ""}`}
+                  className={`pill !text-xs ${prefs.genres.includes(g) ? "!bg-brand-600 !text-[var(--on-brand)]" : ""} ${!editingPrefs ? "cursor-default" : ""}`}
                 >
                   {g}
                 </button>
@@ -295,7 +295,7 @@ export default function AccountPage() {
           ["star", stats.avgRating, tr("avgRatingStat")],
         ].map(([icon, val, label]) => (
           <div key={label} className="card p-3 text-center hover:!translate-y-0 sm:p-4">
-            <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+            <span className="mx-auto grid h-9 w-9 place-items-center rounded-xl bg-brand-600/10 text-brand-700">
               <Icon name={icon} size={18} />
             </span>
             <p className="mt-2 text-xl font-extrabold sm:text-2xl">{val}</p>
@@ -323,7 +323,7 @@ export default function AccountPage() {
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
-                <Icon name="calendar" size={16} className="text-brand-600" /> {tr("readingChallengeTitle", { year: goal.year })}
+                <Icon name="calendar" size={16} className="text-brand-700" /> {tr("readingChallengeTitle", { year: goal.year })}
               </h3>
               <p className="text-muted mt-1 text-sm">
                 {goal.done >= goal.target
@@ -338,7 +338,7 @@ export default function AccountPage() {
         ) : (
           <div className="flex-1 text-center sm:text-left">
             <h3 className="flex items-center justify-center gap-1.5 font-bold sm:justify-start">
-              <Icon name="calendar" size={16} className="text-brand-600" /> {tr("setYourReadingChallenge", { year: new Date().getFullYear() })}
+              <Icon name="calendar" size={16} className="text-brand-700" /> {tr("setYourReadingChallenge", { year: new Date().getFullYear() })}
             </h3>
             <p className="text-muted mt-1 text-sm">{tr("howManyBooksThisYear")}</p>
           </div>
@@ -374,7 +374,7 @@ export default function AccountPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="card p-5 hover:!translate-y-0">
           <p className="mb-4 flex items-center gap-2 text-sm font-bold">
-            <Icon name="trendingUp" size={16} className="text-brand-600" /> {tr("readingActivityTitle")}
+            <Icon name="trendingUp" size={16} className="text-brand-700" /> {tr("readingActivityTitle")}
             <span className="text-muted font-normal">{tr("booksFinishedLast6Months")}</span>
           </p>
           <div className="flex h-28 items-end gap-3">
@@ -393,7 +393,7 @@ export default function AccountPage() {
 
         <div className="card p-5 hover:!translate-y-0">
           <p className="mb-4 flex items-center gap-2 text-sm font-bold">
-            <Icon name="barChart" size={16} className="text-brand-600" /> {tr("mostReadGenres")}
+            <Icon name="barChart" size={16} className="text-brand-700" /> {tr("mostReadGenres")}
           </p>
           {genres.length ? (
             <div className="flex flex-wrap gap-2">
@@ -414,15 +414,15 @@ export default function AccountPage() {
         <div className="card mt-6 p-5 hover:!translate-y-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="flex items-center gap-2 text-sm font-bold">
-              <Icon name="users" size={16} className="text-brand-600" /> {tr("yourNetworkTitle")}
+              <Icon name="users" size={16} className="text-brand-700" /> {tr("yourNetworkTitle")}
             </p>
             <div className="ml-auto flex flex-wrap gap-1.5">
               <button onClick={() => setNetworkTab("following")}
-                className={`pill !text-xs ${networkTab === "following" ? "!bg-brand-600 !text-white" : ""}`}>
+                className={`pill !text-xs ${networkTab === "following" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                 {tr("followingCountLabel", { n: network.followingCount })}
               </button>
               <button onClick={() => setNetworkTab("followers")}
-                className={`pill !text-xs ${networkTab === "followers" ? "!bg-brand-600 !text-white" : ""}`}>
+                className={`pill !text-xs ${networkTab === "followers" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                 {tr("followersCountLabel", { n: network.followerCount })}
               </button>
             </div>
@@ -434,11 +434,11 @@ export default function AccountPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={r.photo_url} alt="" className="h-12 w-12 rounded-full ring-2 ring-transparent transition group-hover:ring-brand-500" />
                 ) : (
-                  <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white ring-2 ring-transparent transition group-hover:ring-brand-500">
+                  <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-sm font-bold text-[var(--on-brand)] ring-2 ring-transparent transition group-hover:ring-brand-500">
                     {(r.name || "R")[0].toUpperCase()}
                   </span>
                 )}
-                <span className="line-clamp-1 text-[11px] font-medium group-hover:text-brand-600">{r.name}</span>
+                <span className="line-clamp-1 text-[11px] font-medium group-hover:text-brand-700">{r.name}</span>
               </Link>
             ))}
             {(networkTab === "following" ? network.following : network.followers).length === 0 && (
@@ -456,7 +456,7 @@ export default function AccountPage() {
         <div className="flex flex-wrap gap-2">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`pill flex items-center gap-1.5 ${tab === t.id ? "!bg-brand-600 !text-white" : ""}`}>
+              className={`pill flex items-center gap-1.5 ${tab === t.id ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
               {t.icon && <Icon name={t.icon} size={13} />} {t.label}
             </button>
           ))}
@@ -491,7 +491,7 @@ export default function AccountPage() {
         </div>
       ) : (
         <div className="text-muted mt-10 text-center">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
             <Icon name="book" size={24} />
           </span>
           <p className="mt-3">{tr("emptyShelfMsg")}</p>

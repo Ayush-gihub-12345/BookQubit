@@ -27,7 +27,7 @@ export default function AddToShelf({ slug }) {
 
   if (!ready) return null;
   if (!shelves.length) {
-    return <Link href={`/${lang}/library`} className="hover:text-brand-600 inline-flex items-center gap-1.5"><Icon name="bookmark" size={14} /> Create a shelf</Link>;
+    return <Link href={`/${lang}/library`} className="hover:text-brand-700 inline-flex items-center gap-1.5"><Icon name="bookmark" size={14} /> Create a shelf</Link>;
   }
 
   async function add(id, name) {
@@ -39,7 +39,7 @@ export default function AddToShelf({ slug }) {
 
   return (
     <span className="relative inline-block">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" className="hover:text-brand-600 inline-flex items-center gap-1.5">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" className="hover:text-brand-700 inline-flex items-center gap-1.5">
         <Icon name="bookmark" size={14} /> Add to shelf
       </button>
       {open && (

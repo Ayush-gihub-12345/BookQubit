@@ -43,7 +43,7 @@ const urdu = Noto_Nastaliq_Urdu({ display: "swap", preload: false, subsets: ["ar
 const literata = Literata({ display: "swap", subsets: ["latin", "latin-ext"], variable: "--font-literata" });
 const FONT_VARS = [literata, noto, deva, beng, taml, telu, gujr, knda, mlym, guru, arab, urdu].map((f) => f.variable).join(" ");
 import { getLang, RTL } from "@/lib/lang";
-import { getTheme, getCustomThemeColors } from "@/lib/theme";
+import { getTheme, getCustomThemeColors, SYSTEM_THEME_SCRIPT } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
 import { ToastProvider } from "@/components/Toast";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
@@ -81,12 +81,14 @@ export default async function RootLayout({ children }) {
     <html
       lang={lang}
       dir={RTL.includes(lang) ? "rtl" : "ltr"}
-      data-theme={theme}
+      data-theme={theme === "system" ? "light" : theme}
+      suppressHydrationWarning
       style={customStyle}
       translate="no"
       className={`${FONT_VARS} notranslate`}
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: SYSTEM_THEME_SCRIPT }} />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         {/* The site already ships its own translation/transliteration for
             every language (i18n.js dictionaries, Translated/TitleTransliterated

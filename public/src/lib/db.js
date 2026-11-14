@@ -1,4 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { groupOf, freshness } from "@/lib/cache-policy";
+import { getGroupVersion } from "@/lib/cache-versions";
 import { SITE_URL } from "@/lib/site";
 
 // Two D1 databases: `catalog` holds the large, mostly-static reference data
@@ -613,7 +615,7 @@ const inflight = new Map();
 const envelope = (value, ttl) => JSON.stringify({ v: value, e: Date.now() + ttl * 1000 });
 const unwrap = (env) =>
   env && typeof env === "object" && "v" in env
-    ? { value: env.v, stale: Date.now() > (env.e || 0) }
+    ? { value: env.v, stale: Date.now() > (env.e || 0), exp: env.e || 0 }
     : undefined;
 
 const edgeCache = () => (typeof caches !== "undefined" ? caches.default : undefined);
@@ -856,70 +858,121 @@ async function store(vkey, value, ttl) {
   if (body.length <= MAX_ROW_BYTES) await rowPut(vkey, body, ttl);
 }
 
+// Counters (per isolate) so cache behaviour can be seen instead of guessed: which tier answers, how often a
+// stale copy had to be refreshed, how often a failed refresh fell back to an old copy. Read by /api/admin/cache.
+const stats = { mem: 0, edge: 0, kv: 0, d1: 0, miss: 0, swr: 0, refresh: 0, staleError: 0, since: Date.now() };
+export function cacheStats() {
+  return { ...stats, kvPaused: Date.now() < kvDownUntil, kvWritesThisMinute: kvWrites, uptimeSeconds: Math.round((Date.now() - stats.since) / 1000) };
+}
+
+// Grouped keys carry their group's version as a suffix ("@2"), so bumping the group (admin edit, or "clear caches")
+// makes every old entry unreachable in every tier at once. Version 0 adds no suffix, so deploying this changes no
+// existing key. The suffix goes at the END so the USER_SCOPED prefix test above still matches.
+async function versionedKey(key) {
+  const g = groupOf(key);
+  if (!g) return `${CACHE_VERSION}:${key}`;
+  let ver = "0";
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    ver = await getGroupVersion(env, g);
+  } catch {
+    /* no request context (build): behave as version 0 */
+  }
+  return ver === "0" ? `${CACHE_VERSION}:${key}` : `${CACHE_VERSION}:${key}@${ver}`;
+}
+
 export async function cached(key, fn, ttl = 300) {
-  const vkey = `${CACHE_VERSION}:${key}`;
+  const vkey = await versionedKey(key);
 
   const memHit = memGet(vkey);
-  if (memHit !== undefined) return memHit;
+  if (memHit !== undefined) {
+    stats.mem++;
+    return memHit;
+  }
 
   const pending = inflight.get(vkey);
   if (pending) return pending;
 
-  // Serve a stale value now, refresh it behind the response. Awaits the
-  // waitUntil registration (not the refresh itself) — ctx.waitUntil has to
-  // be called while the request is still open, and returning first would
-  // race the refresh against the response being sent.
+  const refresh = async () => {
+    const fresh = await fn();
+    memSet(vkey, fresh, ttl);
+    await store(vkey, fresh, ttl);
+    return fresh;
+  };
+
+  // Serve a stale value now, refresh it behind the response. Awaits the waitUntil registration (not the refresh
+  // itself): ctx.waitUntil has to be called while the request is still open.
   const revalidate = async (stale) => {
     await background(
       (async () => {
         try {
-          const fresh = await fn();
-          memSet(vkey, fresh, ttl);
-          await store(vkey, fresh, ttl);
+          await refresh();
         } catch {
           /* keep serving the stale value until the source recovers */
         }
       })()
     );
-    // Short L1 TTL so the refreshed value is picked up promptly, while still
-    // collapsing the burst of requests arriving right now.
+    // Short L1 TTL so the refreshed value is picked up promptly, while still collapsing the burst arriving now.
     memSet(vkey, stale, Math.min(ttl, 60));
     return stale;
+  };
+
+  // An expired copy: if it expired recently, serve it now and refresh behind the response; if it is long
+  // expired, refresh FIRST so a visitor is never shown a day-old page, and use the old copy only when the
+  // refresh fails (D1 quota wall, outage).
+  const settleStale = async (hit, tier) => {
+    stats[tier]++;
+    if (freshness(hit, ttl) === "swr") {
+      stats.swr++;
+      return revalidate(hit.value);
+    }
+    stats.refresh++;
+    try {
+      return await refresh();
+    } catch {
+      stats.staleError++;
+      memSet(vkey, hit.value, Math.min(ttl, 60));
+      return hit.value;
+    }
   };
 
   const work = (async () => {
     const edgeHit = await edgeGet(vkey);
     if (edgeHit) {
       if (!edgeHit.stale) {
+        stats.edge++;
         memSet(vkey, edgeHit.value, ttl);
         return edgeHit.value;
       }
-      return revalidate(edgeHit.value);
+      return settleStale(edgeHit, "edge");
     }
 
-    // L2.5 — global KV, before touching D1.
+    // L2.5: global KV, before touching D1.
     const kvHit = await kvGet(vkey);
     if (kvHit) {
       if (!kvHit.stale) {
+        stats.kv++;
         memSet(vkey, kvHit.value, ttl);
         await background(edgePut(vkey, envelope(kvHit.value, ttl), ttl));
         return kvHit.value;
       }
-      return revalidate(kvHit.value);
+      return settleStale(kvHit, "kv");
     }
 
     const rowHit = await rowGet(vkey);
     if (rowHit) {
       if (!rowHit.stale) {
+        stats.d1++;
         memSet(vkey, rowHit.value, ttl);
         // Re-seed this colo's edge cache (and global KV) so the next hit skips D1.
         const reseed = envelope(rowHit.value, ttl);
         await background(Promise.all([edgePut(vkey, reseed, ttl), kvPut(vkey, reseed, ttl)]));
         return rowHit.value;
       }
-      return revalidate(rowHit.value);
+      return settleStale(rowHit, "d1");
     }
 
+    stats.miss++;
     const value = await fn();
     memSet(vkey, value, ttl);
     await background(store(vkey, value, ttl));
@@ -939,7 +992,7 @@ export async function cached(key, fn, ttl = 300) {
 export async function invalidate(key) {
   // Must apply the same version prefix cached() writes under, or this
   // deletes a key that was never written and the stale value survives.
-  const vkey = `${CACHE_VERSION}:${key}`;
+  const vkey = await versionedKey(key);
   memCache.delete(vkey);
   inflight.delete(vkey);
 

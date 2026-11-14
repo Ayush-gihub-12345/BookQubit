@@ -34,11 +34,11 @@ export function BookFeedCard({ b }) {
         <p className="text-muted mt-1 flex flex-wrap items-center gap-x-2 text-xs">
           {b.rating ? <span>★ {Number(b.rating).toFixed(1)}</span> : null}
           <span className="border-line rounded border px-1.5 uppercase">{b.lang}</span>
-          {b.category && <Link href={`/${lang}/books?category=${encodeURIComponent(b.category)}`} className="hover:text-brand-600 truncate">{b.category}</Link>}
+          {b.category && <Link href={`/${lang}/books?category=${encodeURIComponent(b.category)}`} className="hover:text-brand-700 truncate">{b.category}</Link>}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {b.hasSummary && (
-            <button type="button" onClick={listen} className="bg-brand-600 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium text-white" aria-label={`${playing ? "Pause" : "Listen to"} the 1-minute summary of ${b.title}`}>
+            <button type="button" onClick={listen} className="bg-brand-600 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium text-[var(--on-brand)]" aria-label={`${playing ? "Pause" : "Listen to"} the 1-minute summary of ${b.title}`}>
               <Icon name={playing ? "pause" : "headphones"} size={14} /> {playing ? "Pause" : "1 min"}
             </button>
           )}
@@ -64,9 +64,9 @@ export function QuoteCard({ q }) {
         {q.book.author ? <> · {q.book.author}</> : null}
       </p>
       <div className="text-muted mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <button type="button" onClick={copy} className="hover:text-brand-600 inline-flex items-center gap-1.5"><Icon name="check" size={14} /> Copy</button>
+        <button type="button" onClick={copy} className="hover:text-brand-700 inline-flex items-center gap-1.5"><Icon name="check" size={14} /> Copy</button>
         <SaveToMindSpace node={{ kind: "quote", body: q.text, bookSlug: q.book.slug, title: q.book.title }} label="Save" />
-        <button type="button" onClick={async () => flash((await shareQuoteImage({ text: q.text, title: q.book.title, author: q.book.author })) ? "Ready to share" : "")} className="hover:text-brand-600 inline-flex items-center gap-1.5"><Icon name="share" size={14} /> Share as image</button>
+        <button type="button" onClick={async () => flash((await shareQuoteImage({ text: q.text, title: q.book.title, author: q.book.author })) ? "Ready to share" : "")} className="hover:text-brand-700 inline-flex items-center gap-1.5"><Icon name="share" size={14} /> Share as image</button>
         <span role="status" className="text-brand-700 text-xs">{done}</span>
       </div>
     </article>

@@ -6,17 +6,16 @@ import Icon from "./Icon";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
-// Desktop-only left rail (lg+). Collapsed to icons; it expands OVER the page on
-// hover/keyboard focus (no layout shift) to reveal labels. Only routes that exist
-// are listed — new sections (MindSpace, Library) are added here as they ship.
+// Desktop left rail (lg+), UI v2: icons with labels underneath and an active pill. Sticky under the 64px header,
+// so it never overlaps content (the layout puts it in a flex row beside <main>). Every entry is a real route.
 export const RAIL_ITEMS = [
   { href: "/", icon: "home", key: "homeWord", match: (p) => p === "/" },
-  { href: "/feed", icon: "flame", label: "Feed", match: (p) => p.startsWith("/feed") },
-  { href: "/books", icon: "compass", key: "navDiscover", match: (p) => p.startsWith("/books") || p.startsWith("/categories") || p.startsWith("/authors") },
+  { href: "/feed", icon: "newspaper", label: "Feed", match: (p) => p.startsWith("/feed") },
+  { href: "/books", icon: "compass", key: "navDiscover", match: (p) => p.startsWith("/books") || p.startsWith("/categories") || p.startsWith("/authors") || p.startsWith("/collections") || p.startsWith("/tags") },
   { href: "/mindspace", icon: "layers", label: "MindSpace", match: (p) => p.startsWith("/mindspace") },
   { href: "/library", icon: "bookmark", key: "shelfWord", match: (p) => p.startsWith("/library") || p.startsWith("/account") || p.startsWith("/liked") },
-  { href: "/community", icon: "users", key: "navCommunity", match: (p) => p.startsWith("/community") },
-  { href: "/connect", icon: "award", label: "Connect", match: (p) => p.startsWith("/connect") },
+  { href: "/community", icon: "users", key: "navCommunity", match: (p) => p.startsWith("/community") || p.startsWith("/connect") || p.startsWith("/readers") },
+  { href: "/leaderboard", icon: "trophy", key: "navRankingShort", match: (p) => p.startsWith("/leaderboard") },
 ];
 
 export default function SideRail() {
@@ -26,10 +25,7 @@ export default function SideRail() {
   const rel = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
 
   return (
-    <nav
-      aria-label="Primary"
-      className="group border-line bg-surface fixed top-16 bottom-0 start-0 z-30 hidden w-16 flex-col gap-1 overflow-hidden border-e px-2 py-3 transition-[width] duration-200 hover:w-52 focus-within:w-52 lg:flex"
-    >
+    <nav aria-label="Sections" className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-[84px] shrink-0 flex-col items-center gap-1 overflow-y-auto border-e border-[var(--line)] py-4 lg:flex">
       {RAIL_ITEMS.map((item) => {
         const active = item.match(rel);
         return (
@@ -38,12 +34,12 @@ export default function SideRail() {
             href={`/${lang}${item.href === "/" ? "" : item.href}`}
             prefetch={false}
             aria-current={active ? "page" : undefined}
-            className={`flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium whitespace-nowrap transition ${
-              active ? "bg-brand-50 text-brand-700" : "text-muted hover:bg-brand-50 hover:text-fg"
-            }`}
+            className={`group flex w-[72px] flex-col items-center gap-1 rounded-[var(--radius-md)] py-2 text-[11px] font-semibold transition-colors ${active ? "text-[var(--fg)]" : "text-[var(--muted)] hover:text-[var(--fg)]"}`}
           >
-            <Icon name={item.icon} size={20} className="shrink-0" />
-            <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{item.label || tr(item.key)}</span>
+            <span className={`grid h-9 w-12 place-items-center rounded-full transition-colors ${active ? "bg-brand-400 text-[var(--on-brand)]" : "group-hover:bg-[var(--surface-2)]"}`}>
+              <Icon name={item.icon} size={20} strokeWidth={active ? 2.4 : 2} />
+            </span>
+            <span className="max-w-full truncate px-1">{item.label || tr(item.key)}</span>
           </Link>
         );
       })}

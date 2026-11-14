@@ -44,7 +44,7 @@ export default function AddNodeForm({ space, lang, onAdded }) {
       <div role="tablist" aria-label="Idea type" className="flex flex-wrap gap-1.5">
         {KINDS.map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={kind === k} onClick={() => { setKind(k); setError(""); }}
-            className={`rounded-full border px-3 py-1 text-xs ${kind === k ? "border-brand-600 bg-brand-600 text-white" : "border-line"}`}>{l}</button>
+            className={`rounded-full border px-3 py-1 text-xs ${kind === k ? "border-brand-600 bg-brand-600 text-[var(--on-brand)]" : "border-line"}`}>{l}</button>
         ))}
       </div>
 

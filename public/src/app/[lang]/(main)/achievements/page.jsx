@@ -33,7 +33,7 @@ export default function AchievementsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
           <Icon name="award" size={26} />
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{tr("achievementsLabel")}</h1>
@@ -45,7 +45,7 @@ export default function AchievementsPage() {
       <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {achievements.map((a) => (
           <div key={a.id} className={`card p-5 text-center hover:!translate-y-0 ${a.unlocked ? "!border-brand-500/40" : "opacity-60"}`}>
-            <span className={`mx-auto grid h-12 w-12 place-items-center rounded-2xl ${a.unlocked ? "bg-brand-600 text-white" : "bg-black/5 text-muted dark:bg-white/10"}`}>
+            <span className={`mx-auto grid h-12 w-12 place-items-center rounded-2xl ${a.unlocked ? "bg-brand-600 text-[var(--on-brand)]" : "bg-black/5 text-muted dark:bg-white/10"}`}>
               <Icon name={a.icon} size={22} />
             </span>
             <p className="mt-3 text-sm font-bold">{a.name}</p>

@@ -43,7 +43,7 @@ export default function SortDropdown({ value, options, onChange, label = "Sort" 
               onClick={() => { onChange(o.value); setOpen(false); }}
               role="option" aria-selected={o.value === value}
               className={`flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm hover:bg-brand-50 dark:hover:bg-white/5 ${
-                o.value === value ? "font-semibold text-brand-600" : ""
+                o.value === value ? "font-semibold text-brand-700" : ""
               }`}
             >
               {o.label}

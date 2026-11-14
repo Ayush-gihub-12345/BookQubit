@@ -71,7 +71,7 @@ export default function FilterableBookGrid({ books, emptyMessage }) {
           )}
         </div>
         {active && (
-          <button onClick={() => { setMinRating(""); setFormat(""); }} className="text-xs font-semibold text-brand-600 hover:underline">
+          <button onClick={() => { setMinRating(""); setFormat(""); }} className="text-xs font-semibold text-brand-700 hover:underline">
             {tr("resetLabel")}
           </button>
         )}

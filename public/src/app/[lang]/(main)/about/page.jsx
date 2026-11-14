@@ -47,7 +47,7 @@ export default async function AboutPage() {
         <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[[stats.books, _("booksStat")], [stats.authors, _("authors")], [stats.reviews, _("readerReviewsLabel")], [stats.readers, _("readersStat")]].map(([n, label]) => (
             <div key={label} className="card p-5 text-center hover:!translate-y-0">
-              <p className="text-3xl font-extrabold text-brand-600">{n.toLocaleString()}+</p>
+              <p className="text-3xl font-extrabold text-brand-700">{n.toLocaleString()}+</p>
               <p className="text-muted mt-1 text-xs">{label}</p>
             </div>
           ))}
@@ -71,7 +71,7 @@ export default async function AboutPage() {
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="card p-5 hover:!translate-y-0">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600/10 text-brand-700">
                 <Icon name={f.icon} size={18} />
               </span>
               <h3 className="mt-3 font-bold">{f.title}</h3>
@@ -83,7 +83,7 @@ export default async function AboutPage() {
 
       {/* Growing */}
       <div className="tint-brand mx-auto mt-14 max-w-2xl rounded-2xl p-6 text-center">
-        <p className="font-semibold text-brand-600">{_("activelyGrowingLabel")}</p>
+        <p className="font-semibold text-brand-700">{_("activelyGrowingLabel")}</p>
         <p className="text-muted mt-2 text-sm leading-relaxed">
           {_("activelyGrowingPara")}
         </p>

@@ -2,80 +2,60 @@ import Link from "next/link";
 import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
 import Translated from "./Translated";
+import Icon from "./Icon";
 
-// Today's pick: one book, shown properly, in place of the rotating slider.
-//
-// The slider it replaces advanced itself every six seconds with no way to
-// pause it (WCAG 2.2.2 requires one for moving content over five seconds),
-// hid four of its five books at any moment, and cost a client component with
-// a timer on the page that gets the most traffic. A single, static pick is
-// calmer, loads with the page, and gives the cover the room it needs.
-//
-// "Summary" is the primary action and "Get book" the secondary one on
-// purpose: someone arriving on the homepage hasn't decided yet, and the book
-// page, where the summary, takeaways and similar books sit around the buy
-// link, is where that decision gets made.
-//
-// It is a server component. Only the pieces that must translate in the
-// browser (title, author, takeaways) are client components inside it.
+// Today's pick (UI v2): one book, shown properly. The cover sits left, the facts and three takeaways right, and
+// "Read summary" is the primary action with "Get book" secondary, on purpose: someone arriving on the homepage
+// hasn't decided yet, and the book page is where that decision gets made. A single static pick replaces the old
+// auto-advancing slider (WCAG 2.2.2) and costs no client JavaScript: it is a server component, and only the pieces
+// that translate in the browser (title, author, takeaways) are client components inside it.
 export default function FeaturedPick({ lang, book, labels }) {
   const href = `/${lang}/books/${encodeURIComponent(book.slug)}`;
   const points = (book.keyPoints || []).slice(0, 3);
 
   return (
-    <article className="card p-4 sm:p-6 lg:p-8">
-      <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-4 gap-y-5 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-x-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <Link href={href} className="cover block aspect-[2/3] sm:row-span-2" aria-label={book.title}>
-          <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority />
-        </Link>
+    <article className="card relative grid gap-5 p-5 sm:grid-cols-[160px_minmax(0,1fr)] sm:p-6 lg:shadow-[var(--shadow-2)]">
+      <Link href={href} className="cover mx-auto block w-[150px] sm:w-full" aria-label={book.title}>
+        <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority />
+      </Link>
 
-        <div className="min-w-0 self-start">
-          <span className="inline-flex min-h-7 items-center rounded-md bg-marker px-2.5 text-xs font-semibold text-marker-ink">
-            {labels.pick}
-          </span>
-          <h2 className="mt-3 text-2xl font-bold sm:text-3xl lg:text-4xl">
-            <Link href={href} className="hover:text-brand-600">
-              <TitleTransliterated text={book.title} />
-            </Link>
-          </h2>
-          <p className="text-muted mt-1">
-            {labels.by} <span className="font-medium text-[var(--fg)]"><TitleTransliterated text={book.author} /></span>
-          </p>
-          <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-            {book.rating ? (
-              <div className="flex items-center gap-1">
-                <dt className="sr-only">{labels.rating}</dt>
-                <dd><span className="text-amber-500" aria-hidden>★</span> {Number(book.rating).toFixed(1)}</dd>
-              </div>
-            ) : null}
-            {book.page_count ? (
-              <div><dt className="sr-only">{labels.pages}</dt><dd>{book.page_count} {labels.pages}</dd></div>
-            ) : null}
-            {book.published ? (
-              <div><dt className="sr-only">{labels.published}</dt><dd>{labels.published} {book.published}</dd></div>
-            ) : null}
-          </dl>
-        </div>
+      <div className="min-w-0">
+        <span className="badge badge-marker">{labels.pick}</span>
+        <h2 className="mt-3 text-2xl font-bold leading-tight sm:text-[1.7rem]">
+          <Link href={href} className="hover:text-brand-700"><TitleTransliterated text={book.title} /></Link>
+        </h2>
+        <p className="text-muted mt-1">
+          {labels.by} <span className="font-semibold text-[var(--fg)]"><TitleTransliterated text={book.author} /></span>
+        </p>
+        <dl className="text-muted mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          {book.rating ? (
+            <div className="flex items-center gap-1">
+              <dt className="sr-only">{labels.rating}</dt>
+              <dd className="flex items-center gap-1"><Icon name="star" size={14} filled className="stars" /><b className="text-[var(--fg)]">{Number(book.rating).toFixed(1)}</b></dd>
+            </div>
+          ) : null}
+          {book.page_count ? <div><dt className="sr-only">{labels.pages}</dt><dd>{book.page_count} {labels.pages}</dd></div> : null}
+          {book.published ? <div><dt className="sr-only">{labels.published}</dt><dd>{book.published}</dd></div> : null}
+          {book.category ? <div><dt className="sr-only">Genre</dt><dd><span className="pill !h-7 !text-xs">{book.category}</span></dd></div> : null}
+        </dl>
 
-        <div className="col-span-2 min-w-0 sm:col-span-1">
-          {points.length > 0 && (
-            <>
-              <h3 className="text-sm font-semibold">{labels.keyPoints}</h3>
-              <ul className="mt-2 max-w-prose list-disc space-y-1.5 ps-5 text-[15px] marker:text-brand-600">
-                {points.map((k) => (
-                  <li key={k}><Translated text={k} /></li>
-                ))}
-              </ul>
-            </>
+        {points.length > 0 && (
+          <>
+            <h3 className="sr-only">{labels.keyPoints}</h3>
+            <ul className="mt-4 space-y-2 text-[15px]">
+              {points.map((k) => (
+                <li key={k} className="flex gap-2.5"><span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" /><Translated text={k} /></li>
+              ))}
+            </ul>
+          </>
+        )}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link href={`${href}#summary`} className="btn-primary btn-sm"><Icon name="book" size={16} />{labels.summary}</Link>
+          {book.buyUrl && (
+            <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-ghost btn-sm">
+              <Icon name="cart" size={16} />{labels.getBook}
+            </a>
           )}
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href={href} className="btn-primary">{labels.summary}</Link>
-            {book.buyUrl && (
-              <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-ghost">
-                {labels.getBook}
-              </a>
-            )}
-          </div>
         </div>
       </div>
     </article>

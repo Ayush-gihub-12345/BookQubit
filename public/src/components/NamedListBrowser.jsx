@@ -60,10 +60,10 @@ export default function NamedListBrowser({
         {filtered.map((c) => (
           <Link key={c.name} href={`${hrefPrefix}${encodeURIComponent(c.name)}`} prefetch={false} className="card group flex items-center justify-between gap-4 px-5 py-4" aria-label={`${c.name}: ${exploreLabel}`}>
             <span className="min-w-0">
-              <span className="font-display block truncate text-lg font-semibold group-hover:text-brand-600">{c.name}</span>
+              <span className="font-display block truncate text-lg font-semibold group-hover:text-brand-700">{c.name}</span>
               <span className="text-muted block text-sm">{c.count} {c.count === 1 ? itemNoun : `${itemNoun}s`}</span>
             </span>
-            <Icon name="chevronDown" size={16} className="text-muted shrink-0 -rotate-90 group-hover:text-brand-600 rtl:rotate-90" />
+            <Icon name="chevronDown" size={16} className="text-muted shrink-0 -rotate-90 group-hover:text-brand-700 rtl:rotate-90" />
           </Link>
         ))}
       </div>

@@ -30,7 +30,7 @@ export default function ReportIssueButton({ bookSlug }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-muted flex items-center gap-1.5 text-xs hover:text-brand-600">
+      <button onClick={() => setOpen(true)} className="text-muted flex items-center gap-1.5 text-xs hover:text-brand-700">
         <Icon name="shieldCheck" size={12} /> {tr("reportMissingInfo")}
       </button>
     );

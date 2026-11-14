@@ -142,12 +142,12 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
           <p className="truncate font-semibold">{thread.title}</p>
           <p className="text-muted flex flex-wrap items-center gap-x-2 text-xs">
             {thread.book_slug && (
-              <Link href={`/${lang}/books/${encodeURIComponent(thread.book_slug)}`} className="hover:text-brand-600">
+              <Link href={`/${lang}/books/${encodeURIComponent(thread.book_slug)}`} className="hover:text-brand-700">
                 <Icon name="book" size={11} className="inline" /> <TitleTransliterated text={thread.book_title || thread.book_slug} />
               </Link>
             )}
             {thread.author_name && <span><Icon name="feather" size={11} className="inline" /> <TitleTransliterated text={thread.author_name} /></span>}
-            <span>{tr("startedByLabel")} <Link href={`/${lang}/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-600 hover:underline">{thread.name}</Link></span>
+            <span>{tr("startedByLabel")} <Link href={`/${lang}/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-700 hover:underline">{thread.name}</Link></span>
             {room.connected && room.readers > 0 && <span className="text-brand-700 inline-flex items-center gap-1" role="status"><span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden />{room.readers} {room.readers === 1 ? "reader" : "readers"} here now</span>}
           </p>
         </div>
@@ -187,12 +187,12 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.photo_url} alt="" className="h-7 w-7 rounded-full" />
                 ) : (
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-[10px] font-bold text-[var(--on-brand)]">
                     {(m.name || "R")[0].toUpperCase()}
                   </span>
                 )}
               </Link>
-              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-brand-600 text-white" : "bg-black/5 dark:bg-white/5"}`}>
+              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-brand-600 text-[var(--on-brand)]" : "bg-black/5 dark:bg-white/5"}`}>
                 <Link href={`/${lang}/readers/${m.slug || m.user_id}`}
                   className={`mb-0.5 block text-[11px] font-semibold hover:underline ${mine ? "text-white/80" : "opacity-70"}`}>
                   {mine ? tr("youLabel") : m.name}

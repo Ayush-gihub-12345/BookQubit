@@ -138,7 +138,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
   const Toggle = ({ active, onClick, children }) => (
     <button onClick={onClick}
-      className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm transition hover:bg-brand-50 dark:hover:bg-white/5 ${active ? "bg-brand-50 font-semibold text-brand-600 dark:bg-white/5" : ""}`}>
+      className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm transition hover:bg-brand-50 dark:hover:bg-white/5 ${active ? "bg-brand-50 font-semibold text-brand-700 dark:bg-white/5" : ""}`}>
       {children}
     </button>
   );
@@ -157,7 +157,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
             {hasMore
               ? tr("showingOfMany", { count: books.length })
               : `${books.length} ${books.length === 1 ? tr("bookWord") : tr("booksWord")}`}
-            {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-600"><span className="spinner" /> {tr("updating")}</span>}
+            {loading && <span className="ml-2 inline-flex items-center gap-1 text-brand-700"><span className="spinner" /> {tr("updating")}</span>}
           </p>
         </div>
 
@@ -170,18 +170,18 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           <div className="border-line bg-surface hidden rounded-xl border p-1 text-xs font-semibold sm:flex">
             {SORTS.map(([v, label]) => (
               <button key={label} onClick={() => apply({ sort: v || undefined })}
-                className={`rounded-lg px-3 py-1.5 transition ${(sort || "") === v ? "bg-brand-600 text-[var(--on-brand)]" : "hover:text-brand-600"}`}>
+                className={`rounded-lg px-3 py-1.5 transition ${(sort || "") === v ? "bg-brand-600 text-[var(--on-brand)]" : "hover:text-brand-700"}`}>
                 {label}
               </button>
             ))}
           </div>
           <div className="border-line bg-surface flex rounded-xl border p-1">
             <button onClick={() => apply({ view: undefined })} aria-label={tr("gridView")} aria-pressed={!isList}
-              className={`rounded-lg px-2.5 py-1.5 ${!isList ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:text-brand-600"}`}>
+              className={`rounded-lg px-2.5 py-1.5 ${!isList ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:text-brand-700"}`}>
               <Icon name="grid" size={14} />
             </button>
             <button onClick={() => apply({ view: "list" })} aria-label={tr("listView")} aria-pressed={isList}
-              className={`rounded-lg px-2.5 py-1.5 ${isList ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:text-brand-600"}`}>
+              className={`rounded-lg px-2.5 py-1.5 ${isList ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:text-brand-700"}`}>
               <Icon name="menu" size={14} />
             </button>
           </div>
@@ -205,7 +205,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
               {fl.label} <Icon name="x" size={11} className="ml-1.5 opacity-60 group-hover:opacity-100" />
             </button>
           ))}
-          <button onClick={() => { setSearchInput(""); setParams({}); }} className="text-xs font-semibold text-brand-600 hover:underline">
+          <button onClick={() => { setSearchInput(""); setParams({}); }} className="text-xs font-semibold text-brand-700 hover:underline">
             {tr("clearAll")}
           </button>
         </div>
@@ -251,7 +251,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
               {RATINGS.map(([v, label]) => (
                 <li key={v}>
                   <button onClick={() => apply({ rating: rating === v ? undefined : v })}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition hover:bg-brand-50 dark:hover:bg-white/5 ${rating === v ? "bg-brand-50 font-semibold text-brand-600 dark:bg-white/5" : ""}`}>
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition hover:bg-brand-50 dark:hover:bg-white/5 ${rating === v ? "bg-brand-50 font-semibold text-brand-700 dark:bg-white/5" : ""}`}>
                     <span className="text-amber-400">★</span> {label}
                   </button>
                 </li>
@@ -320,7 +320,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
                     <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-bold hover:text-brand-600"><TitleTransliterated text={b.title} /></h2>
+                    <h2 className="font-bold hover:text-brand-700"><TitleTransliterated text={b.title} /></h2>
                     <p className="text-muted text-sm"><TitleTransliterated text={b.author} /></p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
                       <Rating value={b.rating} />

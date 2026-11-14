@@ -1,3 +1,4 @@
+import { TTL } from "@/lib/cache-policy";
 import { getDb, getCatalogDb, cached, invalidate } from "./db";
 import { sendEmail, verificationEmailHtml } from "./email";
 
@@ -190,7 +191,7 @@ export async function queryBooks(lang, opts = {}) {
   // each needing its own copy of this same fallback.
   const bounds = await cached(`book-bounds:${lang}`, () =>
     db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first()
-  , 10800);
+  , TTL.static);
   const effLang = bounds?.hi ? lang : "en";
 
   const where = ["lang = ?"];
@@ -455,7 +456,7 @@ export async function getFeaturedAuthors(lang, limit = 10) {
     // yet should show the English authors rather than an empty section.
     if (!out.length && lang !== "en") out = await run("en");
     return out;
-  }, 10800);
+  }, TTL.static);
 }
 
 // Admin-curated, not tied to import cadence — safe to cache far longer than
@@ -477,7 +478,7 @@ export async function getFeaturedBooks(lang, limit = 5) {
           .bind(limit).all());
       }
       return results;
-    }, 10800),
+    }, TTL.static),
     getSiteSettings(),
   ]);
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
@@ -502,7 +503,7 @@ export async function getBestsellerBooks(lang, limit = 12) {
           .bind(limit).all());
       }
       return results;
-    }, 10800),
+    }, TTL.static),
     getSiteSettings(),
   ]);
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
@@ -515,7 +516,7 @@ export async function getRandomBook(lang) {
   const db = await getCatalogDb();
   let bounds = await cached(`book-bounds:${lang}`, () =>
     db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first()
-  , 10800);
+  , TTL.static);
   // Same fallback as queryBooks(): "Surprise me" shouldn't come up empty just
   // because this language has no translated books yet.
   let effLang = lang;
@@ -523,7 +524,7 @@ export async function getRandomBook(lang) {
     effLang = "en";
     bounds = await cached(`book-bounds:en`, () =>
       db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang='en'").first()
-    , 10800);
+    , TTL.static);
   }
   if (!bounds?.hi) return null;
   const randomId = bounds.lo + Math.floor(Math.random() * (bounds.hi - bounds.lo + 1));
@@ -587,7 +588,7 @@ export async function getBookAlternates(book) {
       .bind(book.isbn || "", book.title)
       .all();
     return results;
-  }, 10800);
+  }, TTL.static);
 }
 
 // Direct SQL query, bounded by `limit` — matches on the same category or
@@ -699,7 +700,7 @@ export async function facets(lang) {
       countries: countries.results,
       tags: tags.results,
     };
-  }, 10800);
+  }, TTL.static);
 }
 
 // How readers actually felt about books, aggregated across every shelf entry
@@ -713,7 +714,7 @@ export async function getMoodCounts() {
       for (const m of J(row.moods)) counts.set(m, (counts.get(m) || 0) + 1);
     }
     return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-  }, 10800);
+  }, TTL.static);
 }
 
 // `columns` is deliberately explicit rather than `SELECT *` for the large
@@ -741,7 +742,7 @@ async function listEntity(table, lang, jsonCols, columns = "*") {
       jsonCols.forEach((c) => (out[c] = J(r[c])));
       return out;
     });
-  }, 10800);
+  }, TTL.static);
 }
 
 // Columns each list's consumers actually read. `bio`/`description` are
@@ -797,7 +798,7 @@ export async function listAuthors(lang) {
       })(),
     ]);
     return authors.filter((a) => bookAuthorNames.has(a.name.trim().toLowerCase()));
-  }, 10800);
+  }, TTL.static);
 }
 export const listPublications = (lang) =>
   listEntity("publications", lang, [], PUBLICATION_LIST_COLUMNS);
@@ -903,7 +904,7 @@ async function getEntityBySlug(table, slug, lang, jsonCols) {
     const out = { ...row };
     jsonCols.forEach((c) => (out[c] = J(row[c])));
     return out;
-  }, 10800);
+  }, TTL.static);
 }
 
 export const getAuthor = (slug, lang) => getEntityBySlug("authors", slug, lang, ["genres"]);
@@ -1004,7 +1005,7 @@ async function getAuthorBookIndex(lang) {
       }
     }
     return index;
-  }, 10800);
+  }, TTL.static);
 }
 
 // Every book an author worked on, whether they're the sole author or one
@@ -1027,7 +1028,7 @@ export async function booksByAuthor(name, lang) {
       if (!slugs.length) return [];
       const bySlug = await getBooksBySlug(slugs, lang, "*");
       return slugs.map((s) => bySlug.get(s)).filter(Boolean);
-    }, 10800),
+    }, TTL.static),
     getSiteSettings(),
   ]);
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
@@ -1080,7 +1081,7 @@ async function getPublisherBookIndex(lang) {
       (index[key] ||= []).push(slug);
     }
     return index;
-  }, 10800);
+  }, TTL.static);
 }
 
 export async function booksByPublisher(name, lang) {
@@ -1101,7 +1102,7 @@ export async function booksByPublisher(name, lang) {
       const bounded = slugs.slice(0, 200);
       const bySlug = await getBooksBySlug(bounded, lang, "*");
       return bounded.map((s) => bySlug.get(s)).filter(Boolean);
-    }, 10800),
+    }, TTL.static),
     getSiteSettings(),
   ]);
   return rows.map((r) => mapBook(r, amazon_assoc_tag));
@@ -1130,7 +1131,7 @@ async function getTagBookIndex(lang) {
       (index[key] ||= []).push(id);
     }
     return index;
-  }, 10800);
+  }, TTL.static);
 }
 
 // Distinct format string -> book ids, built once per TTL and shared by
@@ -1153,7 +1154,7 @@ async function getFormatBookIndex(lang) {
       (index[key] ||= []).push(id);
     }
     return index;
-  }, 10800);
+  }, TTL.static);
 }
 
 // ── Bookworm ranking ────────────────────────────────────────────────────────
@@ -1829,7 +1830,7 @@ export async function getSiteSettings() {
     } catch {
       return { ...SETTINGS_DEFAULTS };
     }
-  }, 10800);
+  }, TTL.static);
 }
 
 export async function updateSiteSettings(patch) {

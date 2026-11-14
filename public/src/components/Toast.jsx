@@ -8,7 +8,7 @@ const ToastContext = createContext(null);
 const STYLES = {
   success: { icon: "check", accent: "text-emerald-500" },
   error: { icon: "x", accent: "text-red-500" },
-  info: { icon: "bell", accent: "text-brand-600" },
+  info: { icon: "bell", accent: "text-brand-700" },
 };
 
 // Global toast system — mounted once at the true app root (src/app/layout.jsx)

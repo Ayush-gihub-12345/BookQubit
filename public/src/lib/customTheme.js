@@ -106,7 +106,20 @@ export function deriveFullPalette({ bg, fg, accent }) {
 // property names globals.css expects, for building an inline `style` object
 // on <html> (see app/layout.jsx).
 export function paletteToCssVars(palette) {
+  const dark = relativeLuminance(palette.bg) < 0.5;
+  // Tokens added by UI v2 (surface-2/3, line-strong, ring, header glass, hero glow) are derived from the
+  // same three picked colours, so existing saved themes (and the cookie format) keep working unchanged.
+  const v2 = {
+    "--surface-2": mix(palette.fg, palette.bg, dark ? 14 : 6),
+    "--surface-3": mix(palette.fg, palette.bg, dark ? 21 : 12),
+    "--line-strong": mix(palette.fg, palette.bg, dark ? 30 : 22),
+    "--ring": palette.brand500,
+    "--color-brand-400": palette.brand500,
+    "--header-bg": `color-mix(in srgb, ${palette.bg} 82%, transparent)`,
+    "--hero-glow": `radial-gradient(60% 80% at 85% 0%, color-mix(in srgb, ${palette.brand500} 18%, transparent), transparent 70%)`,
+  };
   return {
+    ...v2,
     "--bg": palette.bg,
     "--surface": palette.surface,
     "--fg": palette.fg,

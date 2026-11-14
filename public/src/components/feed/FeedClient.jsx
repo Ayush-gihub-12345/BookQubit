@@ -59,7 +59,7 @@ export default function FeedClient({ initial }) {
       <div role="tablist" aria-label="Feed filter" className="bg-[var(--bg)]/90 sticky top-0 z-20 -mx-4 flex gap-2 overflow-x-auto px-4 py-3 backdrop-blur lg:top-16">
         {FILTERS.map(([id, label]) => (
           <button key={id} role="tab" type="button" aria-selected={filter === id} onClick={() => pick(id)}
-            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${filter === id ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-surface"}`}>{label}</button>
+            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${filter === id ? "border-brand-600 bg-brand-600 text-[var(--on-brand)]" : "border-line bg-surface"}`}>{label}</button>
         ))}
       </div>
 

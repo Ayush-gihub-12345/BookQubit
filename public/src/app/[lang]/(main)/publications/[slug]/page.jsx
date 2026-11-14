@@ -54,7 +54,7 @@ export default async function PublicationPage({ params }) {
               <h1 className="text-3xl font-bold sm:text-4xl"><TitleTransliterated text={pub.name} /></h1>
               <Translated as="p" className="mt-3 max-w-[70ch] leading-relaxed" text={pub.about || pub.description} />
               {pub.website && (
-                <a href={pub.website} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
+                <a href={pub.website} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-brand-700 hover:underline">
                   {pub.website}
                 </a>
               )}

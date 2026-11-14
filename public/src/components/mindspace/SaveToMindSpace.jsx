@@ -49,7 +49,7 @@ export default function SaveToMindSpace({ node, label = "Save to MindSpace", cla
 
   return (
     <span className="relative inline-block">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="dialog" className={`hover:text-brand-600 inline-flex items-center gap-1.5 ${className}`}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="dialog" className={`hover:text-brand-700 inline-flex items-center gap-1.5 ${className}`}>
         <Icon name="layers" size={14} /> {label}
       </button>
       {open && (

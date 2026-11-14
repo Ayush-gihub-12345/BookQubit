@@ -17,6 +17,7 @@ const NAV = [
   { href: "/admin/discussions", icon: "bookOpen", label: "Discussions" },
   { href: "/admin/reports", icon: "shieldCheck", label: "Reports" },
   { href: "/admin/content-reports", icon: "users", label: "Community reports" },
+  { href: "/admin/cache", icon: "zap", label: "Caches" },
   { href: "/admin/contact", icon: "feather", label: "Contact" },
   { href: "/admin/requests", icon: "bookmark", label: "Book Requests" },
   { href: "/admin/settings", icon: "grid", label: "Settings" },
@@ -40,7 +41,7 @@ export default function AdminShell({ children }) {
         return (
           <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
             className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-              active ? "bg-brand-600 text-white shadow" : "text-muted hover:bg-white/5 hover:text-white"
+              active ? "bg-brand-600 text-[var(--on-brand)] shadow" : "text-muted hover:bg-white/5 hover:text-[var(--on-brand)]"
             }`}>
             <Icon name={n.icon} size={15} /> {n.label}
           </Link>

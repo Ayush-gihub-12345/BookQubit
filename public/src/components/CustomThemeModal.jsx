@@ -52,7 +52,7 @@ export default function CustomThemeModal({ onClose }) {
       <div className="card w-full max-w-md p-6 hover:!translate-y-0" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">{tr("customThemeModalTitle")}</h2>
-          <button onClick={onClose} className="text-muted hover:text-brand-600"><Icon name="x" size={18} /></button>
+          <button onClick={onClose} className="text-muted hover:text-brand-700"><Icon name="x" size={18} /></button>
         </div>
         <p className="text-muted mt-1.5 text-sm">{tr("customThemeModalDesc")}</p>
 

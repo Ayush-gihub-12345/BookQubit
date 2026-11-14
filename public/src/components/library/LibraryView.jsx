@@ -182,7 +182,7 @@ export default function LibraryView({ user }) {
       <div role="tablist" aria-label="Shelves" className="flex flex-wrap gap-2">
         {STATUSES.map(([v, l]) => (
           <button key={v} role="tab" type="button" aria-selected={tab === v} onClick={() => setTab(v)}
-            className={`rounded-full border px-4 py-1.5 text-sm ${tab === v ? "border-brand-600 bg-brand-600 text-white" : "border-line"}`}>
+            className={`rounded-full border px-4 py-1.5 text-sm ${tab === v ? "border-brand-600 bg-brand-600 text-[var(--on-brand)]" : "border-line"}`}>
             {l} <span className="opacity-70">{counts[v]}</span>
           </button>
         ))}

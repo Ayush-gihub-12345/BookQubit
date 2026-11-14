@@ -84,7 +84,7 @@ export default function ShelfControls({ slug }) {
         <p className="text-sm font-semibold">{entry?.review ? tr("yourReview") : tr("writeAReview")}</p>
         {entry?.review && (
           <div className="flex items-center gap-3 text-xs">
-            <button onClick={() => setReviewOpen(!reviewOpen)} className="font-medium text-brand-600 hover:underline">
+            <button onClick={() => setReviewOpen(!reviewOpen)} className="font-medium text-brand-700 hover:underline">
               {reviewOpen ? tr("cancel") : tr("edit")}
             </button>
             <button onClick={deleteReview} className="font-medium text-red-500 hover:underline">{tr("delete")}</button>
@@ -126,7 +126,7 @@ export default function ShelfControls({ slug }) {
                       const next = selected ? selectedMoods.filter((x) => x !== m) : [...selectedMoods, m].slice(-3);
                       update({ moods: next, status: entry?.status || "read" });
                     }}
-                    className={`pill !text-[11px] ${selected ? "!bg-brand-600 !text-white" : ""}`}>
+                    className={`pill !text-[11px] ${selected ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                     {m}
                   </button>
                 );
@@ -136,7 +136,7 @@ export default function ShelfControls({ slug }) {
               {PACES.map((p) => (
                 <button key={p} disabled={busy}
                   onClick={() => update({ pace: p, status: entry?.status || "read" })}
-                  className={`pill !text-[11px] ${entry?.pace === p ? "!bg-brand-600 !text-white" : ""}`}>
+                  className={`pill !text-[11px] ${entry?.pace === p ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
                   {p}
                 </button>
               ))}

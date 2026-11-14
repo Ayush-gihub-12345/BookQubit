@@ -10,14 +10,14 @@ import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
 const pill = "inline-flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition";
-const pillFilled = `${pill} w-full justify-center border-brand-600 bg-brand-600 text-white shadow-lg shadow-brand-600/25 hover:brightness-110`;
+const pillFilled = `${pill} w-full justify-center border-brand-600 bg-brand-600 text-[var(--on-brand)] shadow-lg shadow-brand-600/25 hover:brightness-110`;
 
 // Grid variant: tighter horizontal padding + centered, wrap-friendly text so
 // longer labels ("Add to My Library") stay readable at half-width on small
 // phones instead of overflowing or forcing the row to scroll.
 const gridPill = "flex w-full items-center justify-center gap-2 rounded-full border-2 px-3 py-2.5 text-center text-sm font-semibold leading-tight transition";
-const gridPillOutline = `${gridPill} border-brand-500 text-brand-600 hover:bg-brand-50 dark:hover:bg-white/5`;
-const gridPillActive = `${gridPill} border-brand-600 bg-brand-600 text-white`;
+const gridPillOutline = `${gridPill} border-brand-500 text-brand-700 hover:bg-brand-50 dark:hover:bg-white/5`;
+const gridPillActive = `${gridPill} border-brand-600 bg-brand-600 text-[var(--on-brand)]`;
 
 // Fast-access action bar (Get Book / Summary / Like / Wishlist / Share, then
 // My Library / Mark Read). ShelfControls elsewhere on the page still owns the
@@ -169,7 +169,7 @@ export default function QuickActions({ book }) {
 
       {status === "reading" && (
         <div className="card mt-1 flex items-center gap-3 rounded-xl px-4 py-3">
-          <Icon name="trendingUp" size={15} className="text-brand-600 shrink-0" />
+          <Icon name="trendingUp" size={15} className="text-brand-700 shrink-0" />
           <input
             type="range" min={0} max={100} value={progress}
             onChange={(e) => saveProgress(Number(e.target.value))}

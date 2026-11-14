@@ -55,7 +55,7 @@ export default function ForYou({ lang, fallbackBooks = [] }) {
         <h2 className="text-xl font-bold sm:text-2xl">{personalized ? tr("pickedForYou") : tr("popularRightNow")}</h2>
         <p className="text-muted mt-1 text-sm">
           {personalized
-            ? (data.basis ? <>{tr("basedOnReadingHistoryIn")} <span className="font-medium text-brand-600">{data.basis}</span> {tr("andMore")}</> : tr("basedOnReadingHistory"))
+            ? (data.basis ? <>{tr("basedOnReadingHistoryIn")} <span className="font-medium text-brand-700">{data.basis}</span> {tr("andMore")}</> : tr("basedOnReadingHistory"))
             : tr("highlyRatedEnjoying")}
         </p>
       </div>

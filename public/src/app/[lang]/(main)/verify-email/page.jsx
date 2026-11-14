@@ -99,7 +99,7 @@ export default function VerifyEmailPage() {
         <button
           onClick={sendCode}
           disabled={cooldown > 0}
-          className="mt-4 w-full text-center text-sm text-brand-600 hover:underline disabled:text-muted disabled:no-underline"
+          className="mt-4 w-full text-center text-sm text-brand-700 hover:underline disabled:text-muted disabled:no-underline"
         >
           {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
         </button>

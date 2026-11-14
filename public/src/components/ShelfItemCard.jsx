@@ -54,7 +54,7 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
 
       <button
         onClick={(e) => { e.preventDefault(); setEditing((v) => !v); }}
-        className="text-muted flex w-full items-center justify-center gap-1 border-t border-line px-2 py-1.5 text-[11px] font-medium hover:text-brand-600"
+        className="text-muted flex w-full items-center justify-center gap-1 border-t border-line px-2 py-1.5 text-[11px] font-medium hover:text-brand-700"
       >
         <Icon name={editing ? "chevronDown" : "chevronDown"} size={11} className={editing ? "rotate-180" : ""} />
         {editing ? tr("closeWord") : tr("edit")}
@@ -69,7 +69,7 @@ export default function ShelfItemCard({ entry, getIdToken, onUpdate }) {
                 disabled={busy}
                 onClick={() => patch({ status: st.id })}
                 className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-semibold transition ${
-                  s.status === st.id ? "bg-brand-600 text-white" : "border-line border hover:border-brand-500"
+                  s.status === st.id ? "bg-brand-600 text-[var(--on-brand)]" : "border-line border hover:border-brand-500"
                 }`}
               >
                 <Icon name={st.icon} size={13} /> {st.label}

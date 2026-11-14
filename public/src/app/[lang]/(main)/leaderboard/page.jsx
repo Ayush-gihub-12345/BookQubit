@@ -43,7 +43,7 @@ export default async function LeaderboardPage({ searchParams }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
       <div className="text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-600">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-600/10 text-brand-700">
           <Icon name="trophy" size={26} />
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{_("navBookwormRanking")}</h1>
@@ -52,11 +52,11 @@ export default async function LeaderboardPage({ searchParams }) {
         </p>
         <div className="mt-5 flex justify-center gap-2">
           <Link href={withParam({ mode: "activity" })}
-            className={`pill !text-sm ${mode === "activity" ? "!bg-brand-600 !text-white" : ""}`}>
+            className={`pill !text-sm ${mode === "activity" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
             <Icon name="trendingUp" size={14} /> {_("topReadersTab")}
           </Link>
           <Link href={withParam({ mode: "popular" })}
-            className={`pill !text-sm ${mode === "popular" ? "!bg-brand-600 !text-white" : ""}`}>
+            className={`pill !text-sm ${mode === "popular" ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
             <Icon name="heart" size={14} /> {_("popularReadersTab")}
           </Link>
         </div>
@@ -78,7 +78,7 @@ export default async function LeaderboardPage({ searchParams }) {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={r.photo_url} alt="" className="h-11 w-11 shrink-0 rounded-full" />
                         ) : (
-                          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-600 font-bold text-white">
+                          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-600 font-bold text-[var(--on-brand)]">
                             {(r.name || "R")[0].toUpperCase()}
                           </span>
                         )}
@@ -91,7 +91,7 @@ export default async function LeaderboardPage({ searchParams }) {
                           {r.badges.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {r.badges.map((b) => (
-                                <span key={b} className="pill !bg-brand-600/10 !px-2 !py-0.5 !text-[10px] !text-brand-600">{b}</span>
+                                <span key={b} className="pill !bg-brand-600/10 !px-2 !py-0.5 !text-[10px] !text-brand-700">{b}</span>
                               ))}
                             </div>
                           )}
@@ -123,7 +123,7 @@ export default async function LeaderboardPage({ searchParams }) {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={r.photo_url} alt="" className="h-11 w-11 shrink-0 rounded-full" />
                       ) : (
-                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-600 font-bold text-white">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-600 font-bold text-[var(--on-brand)]">
                           {(r.name || "R")[0].toUpperCase()}
                         </span>
                       )}
@@ -172,7 +172,7 @@ export default async function LeaderboardPage({ searchParams }) {
               </div>
               <button type="submit" className="btn-primary w-full text-sm">{_("applyFiltersButton")}</button>
               {(year || minBooks || genre) && (
-                <Link href={`/${lang}/leaderboard`} className="text-muted block text-center text-xs hover:text-brand-600">{_("clearFiltersLink")}</Link>
+                <Link href={`/${lang}/leaderboard`} className="text-muted block text-center text-xs hover:text-brand-700">{_("clearFiltersLink")}</Link>
               )}
             </form>
           </aside>

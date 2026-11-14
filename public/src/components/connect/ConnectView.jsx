@@ -28,7 +28,7 @@ function Twins({ lang }) {
         <li key={t.slug}>
           <Link href={`/${lang}/readers/${encodeURIComponent(t.slug)}`} className="border-line hover:border-brand-500 flex items-center gap-3 rounded-xl border p-3 transition">
             {t.photo_url ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={t.photo_url} alt="" className="h-10 w-10 rounded-full" />
-              : <span className="bg-brand-600 grid h-10 w-10 place-items-center rounded-full font-bold text-white">{(t.name || "R")[0].toUpperCase()}</span>}
+              : <span className="bg-brand-600 grid h-10 w-10 place-items-center rounded-full font-bold text-[var(--on-brand)]">{(t.name || "R")[0].toUpperCase()}</span>}
             <span className="min-w-0"><span className="block truncate font-medium">{t.name}</span>
               <span className="text-muted text-xs">{t.sharedBooks > 0 ? `${t.sharedBooks} ${t.sharedBooks === 1 ? "book" : "books"} in common` : "Similar taste"}</span></span>
           </Link>

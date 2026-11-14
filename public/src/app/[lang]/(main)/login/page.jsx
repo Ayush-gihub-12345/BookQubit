@@ -138,7 +138,7 @@ export default function LoginPage() {
 
         <button
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-sm text-brand-600 hover:underline"
+          className="mt-4 w-full text-center text-sm text-brand-700 hover:underline"
         >
           {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>

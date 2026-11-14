@@ -84,7 +84,7 @@ export default async function ComicPage({ params }) {
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               <Rating value={comic.rating} />
               {community.reviews.length > 0 && (
-                <a href="#reviews" className="text-muted hover:text-brand-600">
+                <a href="#reviews" className="text-muted hover:text-brand-700">
                   {community.reviews.length} {community.reviews.length === 1 ? _("reviewWord") : _("reviewsWord")}
                 </a>
               )}

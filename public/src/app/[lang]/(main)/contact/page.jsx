@@ -22,12 +22,12 @@ export default function ContactPage() {
       <div className="mt-6"><ContactForm /></div>
 
       <div className="card mt-4 flex items-center gap-3 p-5 hover:!translate-y-0">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600/10 text-brand-600">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600/10 text-brand-700">
           <Icon name="feather" size={17} />
         </span>
         <div>
           <p className="font-semibold">Email us directly</p>
-          <a href="mailto:contact@bookqubit.com" className="text-sm text-brand-600 hover:underline">contact@bookqubit.com</a>
+          <a href="mailto:contact@bookqubit.com" className="text-sm text-brand-700 hover:underline">contact@bookqubit.com</a>
         </div>
       </div>
     </div>

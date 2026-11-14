@@ -68,6 +68,9 @@ export default function SummaryReader({ book, initial, initialAudioUrl, fullText
   const trackId = `${book.slug}:${book.lang}:${intent}`;
   const active = player?.track?.id === trackId;
   const sentences = useMemo(() => splitSentences(summary.script), [summary.script]);
+  // Summaries built from stored data narrate their own thesis as the first sentence; showing it again as a
+  // large pull-quote right above would just repeat it.
+  const thesisInScript = sentences.includes((summary.thesis || "").trim());
 
   function listen() {
     if (!player) return;
@@ -137,8 +140,8 @@ export default function SummaryReader({ book, initial, initialAudioUrl, fullText
               <span className="bg-brand-600 block w-full rounded transition-[height] duration-300"
                 style={{ height: active && sentences.length ? `${((player.activeIndex + 1) / sentences.length) * 100}%` : "0%" }} />
             </span>
-            <p className="font-editorial text-xl leading-snug sm:text-2xl">{summary.thesis}</p>
-            <p className="font-editorial mt-4 text-base leading-[1.8] sm:text-lg">
+            {!thesisInScript && <p className="font-editorial text-xl leading-snug sm:text-2xl">{summary.thesis}</p>}
+            <p className={`font-editorial text-base leading-[1.8] sm:text-lg ${thesisInScript ? "" : "mt-4"}`}>
               {sentences.map((s, i) => (
                 <span key={i}>
                   <button type="button" onClick={() => active ? player.seekToSentence(i) : listen()}

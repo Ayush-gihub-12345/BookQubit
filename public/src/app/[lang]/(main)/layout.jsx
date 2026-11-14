@@ -35,18 +35,18 @@ export default async function PublicLayout({ children }) {
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
       <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels}
         genres={genres} countries={countries} collections={collections} />
-      {/* Reserves space for MobileTabBar (fixed, lg:hidden) so page content
-          never renders underneath it — matches the bar's own height plus
-          the same safe-area inset it pads itself with on notched phones.
-          lg:pb-0 removes that space on desktop where the bar doesn't render
-          at all. */}
-      <SideRail />
-      <main id="main-content" className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:ps-16 lg:pb-0">{children}</main>
-      <ConditionalFooter>
-        <div className="lg:ps-16">
-          <Footer lang={lang} />
+      {/* The rail (lg+) sits in a flex row beside the page. The footer carries the bottom padding for the
+          mobile tab bar, and the spacer keeps the mini player from covering the end of the page. */}
+      <div className="flex flex-1">
+        <SideRail />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main id="main-content" className="flex-1">{children}</main>
+          <ConditionalFooter>
+            <Footer lang={lang} />
+          </ConditionalFooter>
+          <div aria-hidden className="player-spacer" />
         </div>
-      </ConditionalFooter>
+      </div>
       <MobileTabBar />
       <MiniPlayer />
     </PlayerProvider>

@@ -62,7 +62,9 @@ const nextConfig = {
     // 6 hours, matching the "load once, stay cached while the visitor is
     // still around, then quietly go stale" behavior asked for — a visit
     // past that window (or a genuinely new page) fetches fresh again.
-    staleTimes: { dynamic: 21600, static: 21600 },
+    // Gentle: pages revisited within 30 s (dynamic) or 3 min (static) show instantly; after that they re-fetch.
+    // Was 6 hours, which left readers looking at stale shelves and book pages long after they changed.
+    staleTimes: { dynamic: 30, static: 180 },
   },
 };
 

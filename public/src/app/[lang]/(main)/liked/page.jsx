@@ -44,7 +44,7 @@ export default function LikedBooksPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10">
       <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-        <Icon name="heart" size={26} filled className="text-brand-600" /> {tr("navLikedBooks")}
+        <Icon name="heart" size={26} filled className="text-brand-700" /> {tr("navLikedBooks")}
       </h1>
       <p className="text-muted mt-1 text-sm">{books.length} {books.length === 1 ? "book" : "books"} you've liked</p>
 

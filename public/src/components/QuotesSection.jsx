@@ -68,15 +68,15 @@ export default function QuotesSection({ bookSlug }) {
     <div>
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-bold">
-          <Icon name="feather" size={18} className="text-brand-600" /> {tr("readerQuotes")}
+          <Icon name="feather" size={18} className="text-brand-700" /> {tr("readerQuotes")}
           {quotes.length > 0 && <span className="text-muted text-sm font-normal">({quotes.length})</span>}
         </h2>
         {user ? (
-          <button onClick={() => setAdding((v) => !v)} className="text-sm font-semibold text-brand-600 hover:underline">
+          <button onClick={() => setAdding((v) => !v)} className="text-sm font-semibold text-brand-700 hover:underline">
             {adding ? tr("cancel") : tr("saveAQuote")}
           </button>
         ) : (
-          <Link href={`/${lang}/login`} className="text-sm font-semibold text-brand-600 hover:underline">{tr("signInToSaveQuote")}</Link>
+          <Link href={`/${lang}/login`} className="text-sm font-semibold text-brand-700 hover:underline">{tr("signInToSaveQuote")}</Link>
         )}
       </div>
 
@@ -100,7 +100,7 @@ export default function QuotesSection({ bookSlug }) {
             <div key={q.id} className="card !border-brand-500/20 bg-brand-600/5 p-4 hover:!translate-y-0">
               <p className="whitespace-pre-line text-sm italic leading-relaxed">"{q.text}"</p>
               <div className="text-muted mt-2 flex items-center justify-between text-xs">
-                <Link href={`/${lang}/readers/${q.slug || q.user_id}`} className="hover:text-brand-600">
+                <Link href={`/${lang}/readers/${q.slug || q.user_id}`} className="hover:text-brand-700">
                   — {q.name}{q.page ? `, p. ${q.page}` : ""}
                 </Link>
                 {user?.uid === q.user_id && (

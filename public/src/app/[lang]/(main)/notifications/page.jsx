@@ -58,7 +58,7 @@ export default function NotificationsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <div className="flex items-center gap-2">
-        <Icon name="bell" size={22} className="text-brand-600" />
+        <Icon name="bell" size={22} className="text-brand-700" />
         <h1 className="text-2xl font-bold">{tr("notificationsWord")}</h1>
       </div>
       <p className="text-muted mt-1 text-sm">{tr("notificationsSubtitle")}</p>
@@ -74,7 +74,7 @@ export default function NotificationsPage() {
                     ? tr("discussionStartedAbout", { name: n.starter_name })
                     : tr("discussionStarted", { name: n.starter_name })}
                 {n.book_title ? (
-                  <Link href={`/${lang}/books/${encodeURIComponent(n.book_slug)}`} className="font-medium text-brand-600 hover:underline">
+                  <Link href={`/${lang}/books/${encodeURIComponent(n.book_slug)}`} className="font-medium text-brand-700 hover:underline">
                     <TitleTransliterated text={n.book_title} />
                   </Link>
                 ) : n.author_name ? (

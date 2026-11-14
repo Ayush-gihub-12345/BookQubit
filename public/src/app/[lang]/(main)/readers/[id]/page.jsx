@@ -67,7 +67,7 @@ export default async function ReaderProfilePage({ params }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.photo_url} alt="" className="h-24 w-24 rounded-full ring-4 ring-brand-500/30" />
         ) : (
-          <span className="grid h-24 w-24 place-items-center rounded-full bg-brand-600 text-4xl font-bold text-white">
+          <span className="grid h-24 w-24 place-items-center rounded-full bg-brand-600 text-4xl font-bold text-[var(--on-brand)]">
             {(user.name || "R")[0].toUpperCase()}
           </span>
         )}
@@ -92,7 +92,7 @@ export default async function ReaderProfilePage({ params }) {
 
       {extras.spaces.length > 0 && (
         <div>
-          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold"><Icon name="layers" size={18} className="text-brand-600" /> Public MindSpaces</h2>
+          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold"><Icon name="layers" size={18} className="text-brand-700" /> Public MindSpaces</h2>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {extras.spaces.map((sp) => (
               <li key={sp.slug}><Link href={`/${lang}/mindspace/${encodeURIComponent(sp.slug)}`} className="card block p-4 hover:!translate-y-0"><span className="font-editorial block truncate font-semibold">{sp.title}</span><span className="text-muted text-xs">{sp.node_count} ideas</span></Link></li>
@@ -103,14 +103,14 @@ export default async function ReaderProfilePage({ params }) {
 
       {extras.shelves.length > 0 && (
         <div>
-          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold"><Icon name="bookmark" size={18} className="text-brand-600" /> Shelves</h2>
+          <h2 className="mt-10 flex items-center gap-2 text-xl font-bold"><Icon name="bookmark" size={18} className="text-brand-700" /> Shelves</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {extras.shelves.map((sh) => (
               <div key={sh.id} className="card p-4 hover:!translate-y-0">
                 <p className="font-editorial font-semibold">{sh.name}</p>
                 <ul className="text-muted mt-2 space-y-1 text-sm">
                   {sh.slugs.map((slug) => (
-                    <li key={slug}><Link href={`/${lang}/books/${encodeURIComponent(slug)}`} className="hover:text-brand-600 hover:underline">{shelfBooks.get(slug)?.title || slug}</Link></li>
+                    <li key={slug}><Link href={`/${lang}/books/${encodeURIComponent(slug)}`} className="hover:text-brand-700 hover:underline">{shelfBooks.get(slug)?.title || slug}</Link></li>
                   ))}
                 </ul>
               </div>
@@ -122,11 +122,11 @@ export default async function ReaderProfilePage({ params }) {
       {unlockedAchievements.length > 0 && (
         <div>
           <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-            <Icon name="award" size={18} className="text-brand-600" /> {_("achievementsLabel")} <span className="text-muted text-sm font-normal">({unlockedAchievements.length})</span>
+            <Icon name="award" size={18} className="text-brand-700" /> {_("achievementsLabel")} <span className="text-muted text-sm font-normal">({unlockedAchievements.length})</span>
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {unlockedAchievements.map((a) => (
-              <span key={a.id} className="pill !bg-brand-600/10 !text-brand-600" title={a.desc}>
+              <span key={a.id} className="pill !bg-brand-600/10 !text-brand-700" title={a.desc}>
                 <Icon name={a.icon} size={13} /> {a.name}
               </span>
             ))}
@@ -137,7 +137,7 @@ export default async function ReaderProfilePage({ params }) {
       {reviews.length > 0 && (
         <div>
           <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-            <Icon name="feather" size={18} className="text-brand-600" /> {_("reviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span>
+            <Icon name="feather" size={18} className="text-brand-700" /> {_("reviewsHeading")} <span className="text-muted text-sm font-normal">({reviews.length})</span>
           </h2>
           <div className="mt-4 space-y-4">
             {reviews.map((s) => (
@@ -158,7 +158,7 @@ export default async function ReaderProfilePage({ params }) {
       {quotes.length > 0 && (
         <div>
           <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-            <Icon name="feather" size={18} className="text-brand-600" /> {_("favoriteQuotesLabel")}
+            <Icon name="feather" size={18} className="text-brand-700" /> {_("favoriteQuotesLabel")}
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {quotes.map((q) => (
@@ -176,7 +176,7 @@ export default async function ReaderProfilePage({ params }) {
         items.length ? (
           <div key={title}>
             <h2 className="mt-10 flex items-center gap-2 text-xl font-bold">
-              <Icon name={icon} size={18} className="text-brand-600" /> {title} <span className="text-muted text-sm font-normal">({items.length})</span>
+              <Icon name={icon} size={18} className="text-brand-700" /> {title} <span className="text-muted text-sm font-normal">({items.length})</span>
             </h2>
             <div className="mt-4 grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-6">
               {items.map((s) => (

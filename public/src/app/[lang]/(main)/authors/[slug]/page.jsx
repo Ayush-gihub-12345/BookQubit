@@ -39,7 +39,7 @@ export default async function AuthorPage({ params }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={author.image_url} alt={author.name} className="h-32 w-32 shrink-0 rounded-full object-cover" />
           ) : (
-            <div className="grid h-32 w-32 shrink-0 place-items-center tint-brand rounded-full text-4xl font-bold text-brand-600">
+            <div className="grid h-32 w-32 shrink-0 place-items-center tint-brand rounded-full text-4xl font-bold text-brand-700">
               {author.name[0]}
             </div>
           )}
@@ -47,7 +47,7 @@ export default async function AuthorPage({ params }) {
             <h1 className="flex flex-wrap items-center justify-center gap-2 text-3xl font-bold sm:justify-start sm:text-4xl">
               <TitleTransliterated text={author.name} />
               {author.verified ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 px-2 py-0.5 text-xs font-semibold text-brand-600" title={_("verifiedTitleAttr")}>
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-600/10 px-2 py-0.5 text-xs font-semibold text-brand-700" title={_("verifiedTitleAttr")}>
                   <Icon name="shieldCheck" size={14} /> {_("verifiedBadge")}
                 </span>
               ) : null}
@@ -61,7 +61,7 @@ export default async function AuthorPage({ params }) {
             {author.famous_work && (
               <p className="mt-3 text-sm">
                 <span className="text-muted">{_("featuredLabelStat")}: </span>
-                <Link href={`/${lang}/books?q=${encodeURIComponent(author.famous_work)}`} prefetch={false} className="font-medium text-brand-600 hover:underline">
+                <Link href={`/${lang}/books?q=${encodeURIComponent(author.famous_work)}`} prefetch={false} className="font-medium text-brand-700 hover:underline">
                   {author.famous_work}
                 </Link>
               </p>

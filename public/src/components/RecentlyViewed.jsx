@@ -45,7 +45,7 @@ export default function RecentlyViewed() {
             <div className="cover aspect-[2/3] bg-[color-mix(in_srgb,var(--fg)_8%,var(--surface))]">
               <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
             </div>
-            <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
+            <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug group-hover:text-brand-700"><TitleTransliterated text={b.title} /></p>
           </Link>
         ))}
       </HScrollRow>

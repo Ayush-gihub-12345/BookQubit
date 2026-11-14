@@ -61,7 +61,7 @@ export default function NewDiscussionModal({ user, presetBook, onClose, onCreate
       <div className="card w-full max-w-lg p-6 hover:!translate-y-0" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">{tr("startDiscussionModalTitle")}</h2>
-          <button onClick={onClose} className="text-muted hover:text-brand-600"><Icon name="x" size={18} /></button>
+          <button onClick={onClose} className="text-muted hover:text-brand-700"><Icon name="x" size={18} /></button>
         </div>
 
         {!target ? (
@@ -75,13 +75,13 @@ export default function NewDiscussionModal({ user, presetBook, onClose, onCreate
               {results.books.map((b) => (
                 <button key={b.slug} onClick={() => setTarget({ type: "book", slug: b.slug, label: b.title })}
                   className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm hover:bg-brand-50 dark:hover:bg-white/5">
-                  <Icon name="book" size={14} className="text-brand-600 shrink-0" /> <TitleTransliterated text={b.title} /> <span className="text-muted">— <TitleTransliterated text={b.author} /></span>
+                  <Icon name="book" size={14} className="text-brand-700 shrink-0" /> <TitleTransliterated text={b.title} /> <span className="text-muted">— <TitleTransliterated text={b.author} /></span>
                 </button>
               ))}
               {results.authors.map((a) => (
                 <button key={a.slug} onClick={() => setTarget({ type: "author", slug: a.slug, label: a.name })}
                   className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm hover:bg-brand-50 dark:hover:bg-white/5">
-                  <Icon name="feather" size={14} className="text-brand-600 shrink-0" /> <TitleTransliterated text={a.name} />
+                  <Icon name="feather" size={14} className="text-brand-700 shrink-0" /> <TitleTransliterated text={a.name} />
                 </button>
               ))}
               {q.trim().length >= 2 && !results.books.length && !results.authors.length && (
@@ -92,11 +92,11 @@ export default function NewDiscussionModal({ user, presetBook, onClose, onCreate
         ) : (
           <form onSubmit={submit} className="mt-4 space-y-3">
             <div className="flex items-center justify-between rounded-xl bg-brand-600/10 px-3 py-2 text-sm">
-              <span className="flex items-center gap-2 text-brand-600">
+              <span className="flex items-center gap-2 text-brand-700">
                 <Icon name={target.type === "book" ? "book" : "feather"} size={14} /> <TitleTransliterated text={target.label} />
               </span>
               {!presetBook && (
-                <button type="button" onClick={() => setTarget(null)} className="text-muted hover:text-brand-600 text-xs">{tr("changeLabel")}</button>
+                <button type="button" onClick={() => setTarget(null)} className="text-muted hover:text-brand-700 text-xs">{tr("changeLabel")}</button>
               )}
             </div>
             <input value={title} onChange={(e) => setTitle(e.target.value)} required
