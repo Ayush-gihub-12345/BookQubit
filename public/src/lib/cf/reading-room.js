@@ -63,7 +63,7 @@ export class ReadingRoom extends DurableObject {
 
   // Flush buffered checkpoints to D1 (≤ 1 write per user/book per 30s window).
   async alarm() {
-    const db = this.env.DB;
+    const db = this.env.ENGAGEMENT_DB;
     const all = await this.state.storage.list({ prefix: "cp:" });
     if (db) {
       for (const [key, cp] of all) {

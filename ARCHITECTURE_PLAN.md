@@ -32,6 +32,23 @@ Gaps vs. the master brief: no KV/Vectorize/Queues/R2/Durable Objects bindings, n
 7. **Custom entry.** `public/worker-entry.js` wraps `.open-next/worker.js` and adds the `queue()` consumer and the `ReadingRoom` Durable Object export.
 8. **Local limits.** Workers AI and Vectorize have no full local simulator; they are optional and return empty results offline (or use `remote` bindings when logged in).
 
+## 2b. Data layout and cost model (revised)
+
+Workloads are split so one kind of traffic can never slow another (D1 serialises writes per database):
+
+| Binding | Holds | Profile |
+|---|---|---|
+| `DB` (`database`) | accounts, social graph, discussions, moderation, blocks/privacy | low write, identity-critical |
+| `CATALOG_DB` (`catalog`) | books, authors, publications, comics, `book_summaries`, `books_fts` | read-heavy, grows with imports |
+| `ENGAGEMENT_DB` (`engagement`) | reading log, `daily_activity`, custom shelves, audio checkpoints/bookmarks, import jobs | write-heavy, small rows |
+| `MINDSPACE_DB` (`mindspace`) | spaces, nodes, edges, node FTS | user content, public SEO reads |
+
+Keeping infra use light as the catalog grows:
+- **Reads:** memory → edge cache → KV → D1 with stale-while-revalidate; search results and feed pages are cached; every list is paginated (no unbounded scans); FTS5 replaces `LIKE '%x%'` scans.
+- **Writes:** progress writes are debounced client-side; audio position is buffered in a Durable Object and flushed at most every 30 s; stats read one pre-aggregated row per user per day (`daily_activity`), never the event log; counters/clicks/plays go to Workers Analytics Engine, not D1.
+- **AI:** never on the default request path. Summaries are generated once (import-time or queued), cached in D1+KV; semantic indexing runs as a bounded 30-minute cron (`EMBED_BATCH` books per run, one batched AI call, one Vectorize upsert), so cost is flat regardless of catalog size.
+- **Fail-open:** every optional binding (KV, AI, Vectorize, R2, Queue, DO, Analytics, `ENGAGEMENT_DB`, `MINDSPACE_DB`) may be absent; features report "unavailable" instead of crashing the site.
+
 ## 3. Files per phase
 
 **Phase 1 (this turn)** — infra, migrations, helpers

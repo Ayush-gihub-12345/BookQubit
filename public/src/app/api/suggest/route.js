@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { listBooks, listAuthors, listPublications, facets } from "@/lib/repo";
+import { listBooks, listAuthors, listPublications, facets, getBooksBySlug } from "@/lib/repo";
+import { getCf } from "@/lib/cf/env";
+import { hybridBookSlugs } from "@/lib/search";
 
 // GET /api/suggest?q=...&lang=en — live search suggestions for the Ctrl+K
 // search bar: books, authors, publishers, categories, and tags in one call.
@@ -17,8 +19,21 @@ export async function GET(request) {
   }
 
   const s = q.toLowerCase();
+  // Prefer the indexed hybrid search (FTS5 + semantic). Only when the FTS table doesn't
+  // exist yet do we fall back to the old unindexable LIKE scan.
+  const searchBooks = async () => {
+    try {
+      const { env } = await getCf();
+      const h = await hybridBookSlugs(env, q, lang, 5);
+      if (h.keywordOk) {
+        const rows = await getBooksBySlug(h.slugs, lang, "slug, title, author, cover_url, rating");
+        return h.slugs.map((slug) => rows.get(slug)).filter(Boolean);
+      }
+    } catch { /* fall through to LIKE search */ }
+    return listBooks(lang, { q, limit: 5 });
+  };
   const [books, authors, pubs, f] = await Promise.all([
-    listBooks(lang, { q, limit: 5 }),
+    searchBooks(),
     listAuthors(lang),
     listPublications(lang),
     facets(lang),

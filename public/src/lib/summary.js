@@ -68,6 +68,8 @@ export async function resolveSummary(env, book, lang, intent, { clientId = "anon
     const flag = `enq:${book.id}:${lang}:${intent}`;
     if (!(await kvGetJson(env, flag))) {
       const r = await enqueue(env, JOBS.SUMMARY, { slug: book.slug, lang, intent, withAudio: true });
+      // Also (re)index this book for semantic search — organic backfill as books get viewed.
+      await enqueue(env, JOBS.EMBED_BOOK, { slug: book.slug, lang });
       if (r.queued) await kvPutJson(env, flag, 1, 3600);
     }
     return { summary: baselineSummary(book), source: "baseline", audioUrl: null };

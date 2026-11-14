@@ -18,8 +18,16 @@
       "binding": "CATALOG_DB",
       "database_name": "catalog",
       "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
-    }
+    },
+    // New, optional databases (ids omitted: created on first deploy, or `wrangler d1 create`).
+    // Split by workload so write bursts never contend with accounts or the catalog.
+    { "binding": "ENGAGEMENT_DB", "database_name": "engagement", "migrations_dir": "migrations/engagement" },
+    { "binding": "MINDSPACE_DB", "database_name": "mindspace", "migrations_dir": "migrations/mindspace" }
   ],
+  // Counting plays/clicks/zero-result searches here costs no D1 writes.
+  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "bookqubit_events" }],
+  // Bounded semantic-index backfill (see src/lib/cf/backfill.js).
+  "triggers": { "crons": ["*/30 * * * *"] },
   "services": [
     {
       "binding": "IMPORT_CRON",
@@ -51,6 +59,9 @@
     // re-creating tables and re-adding columns that already exist. After
     // editing a schema in db.js: set to "1", deploy, load one page, set back
     // to "0", deploy again. See shouldBootstrap() in src/lib/db.js.
-    "RUN_SCHEMA": "0"
+    "RUN_SCHEMA": "0",
+    // Books embedded per 30-minute run (one batched AI call + one Vectorize upsert).
+    "EMBED_BATCH": "40",
+    "EMBED_BACKFILL": "1"
   }
 }

@@ -10,8 +10,15 @@ npx wrangler vectorize create bookqubit-vectors --dimensions=768 --metric=cosine
 npx wrangler vectorize create-metadata-index bookqubit-vectors --property-name=type --type=string
 npx wrangler r2 bucket create bookqubit-media          # CACHE_KV auto-provisions on first deploy
 
-# 2. D1 migrations (additive). Test on a copy / --local first.
-npx wrangler d1 execute database --remote --file=migrations/main/0001_mindspace_library_safety.sql
+# 2. D1: two NEW databases (wrangler.jsonc already declares them without ids; create them
+#    explicitly so the ids are pinned, then paste each database_id into wrangler.jsonc)
+npx wrangler d1 create engagement
+npx wrangler d1 create mindspace
+npx wrangler d1 execute engagement --remote --file=migrations/engagement/0001_engagement.sql
+npx wrangler d1 execute mindspace  --remote --file=migrations/mindspace/0001_mindspace.sql
+
+# 2a. D1 migrations on the EXISTING databases (additive only). Test with --local first.
+npx wrangler d1 execute database --remote --file=migrations/main/0001_search_safety.sql
 npx wrangler d1 execute catalog  --remote --file=migrations/catalog/0001_fts_summaries.sql
 npx wrangler d1 execute catalog  --remote --command="INSERT INTO books_fts(books_fts) VALUES('rebuild')"
 

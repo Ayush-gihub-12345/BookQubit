@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getBook, getSiteSettings } from "@/lib/repo";
 import { getCf } from "@/lib/cf/env";
 import { buyLink, audibleLink } from "@/lib/cf/geo-affiliate";
-import { logEvent } from "@/lib/cf/logger";
+import { logEvent, track } from "@/lib/cf/logger";
 
 // GET /api/go?slug=...&lang=en&kind=buy|audible
 // Geo-routed outbound redirect: picks the storefront for the visitor's country
@@ -29,5 +29,6 @@ export async function GET(request) {
 
   if (!link) return NextResponse.redirect(back, 302);
   logEvent("affiliate_click", { country, store: link.store, kind, slug: book.slug, lang });
+  track(env, "affiliate_click", { country, subject: `${kind}:${book.slug}` });
   return NextResponse.redirect(link.url, { status: 302, headers: { "Cache-Control": "no-store" } });
 }
