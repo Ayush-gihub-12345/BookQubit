@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { verifyUser } from "@/lib/auth-server";
+import { requireUser } from "@/lib/auth-request";
 import { getCf } from "@/lib/cf/env";
 import { logError } from "@/lib/cf/logger";
 
 // Cross-device audio resume (stored in the `engagement` database).
-// GET  /api/checkpoint?uid=...&slug=...&kind=summary → { position, speed }
+// GET  /api/checkpoint?slug=...&kind=summary → { position, speed }   (the caller is taken from the Bearer token)
 // POST /api/checkpoint { idToken, slug, kind, position, speed }
 //   → buffered in the book's ReadingRoom Durable Object (flushed to D1 at most every 30 s)
 //     when bound, otherwise written straight to D1. The client already debounces to ~30 s.
 // With no engagement DB bound this quietly returns position 0 (local resume still works).
 export async function GET(request) {
+  const user = await requireUser(request);
+  if (!user) return NextResponse.json({ position: 0 });
+  const uid = user.uid;
   const { searchParams } = new URL(request.url);
-  const uid = searchParams.get("uid");
   const slug = searchParams.get("slug");
   const kind = searchParams.get("kind") || "summary";
   if (!uid || !slug) return NextResponse.json({ position: 0 });

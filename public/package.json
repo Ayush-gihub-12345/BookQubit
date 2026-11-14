@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "sitemap": "node scripts/generate-sitemap.mjs"
+    "preview": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion && opennextjs-cloudflare deploy",
+    "sitemap": "node scripts/generate-sitemap.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "backup": "node scripts/backup-d1.mjs",
+    "dev:local": "node scripts/dev-local.mjs",
+    "seed:local": "node scripts/seed-local-from-prod.mjs",
+    "deploy:dev": "node scripts/deploy-dev.mjs"
   },
   "dependencies": {
     "firebase": "^12.0.0",
@@ -21,6 +27,7 @@
     "@tailwindcss/postcss": "^4.1.11",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
+    "vitest": "^3.2.7",
     "wrangler": "^4.20.0"
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
@@ -33,7 +34,7 @@ export default function WrappedPage() {
 
   useEffect(() => {
     if (!user) return;
-    fetch(`/api/wrapped?uid=${user.uid}&year=${year}`).then((r) => r.json()).then(setData);
+    authFetch(`/api/wrapped?year=${year}`, {}, user).then((r) => r.json()).then(setData);
   }, [user, year]);
 
   const share = async () => {

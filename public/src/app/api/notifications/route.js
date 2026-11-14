@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/api-auth";
 import { getNotifications } from "@/lib/repo";
 
-// GET /api/notifications?uid=...
+// GET /api/notifications — the signed-in reader's own notifications.
+//
+// Requires `Authorization: Bearer <firebase id token>`. The subject comes
+// from that token, never from a `?uid=` parameter: UIDs are visible in
+// public markup (see src/lib/api-auth.js), so a uid-addressed version of
+// this endpoint let anyone read anyone's notifications.
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const uid = searchParams.get("uid");
-  if (!uid) return NextResponse.json({ error: "uid required" }, { status: 400 });
-  return NextResponse.json({ notifications: await getNotifications(uid) });
+  const auth = await requireUser(request);
+  if (auth.response) return auth.response;
+  return NextResponse.json({ notifications: await getNotifications(auth.user.uid) });
 }

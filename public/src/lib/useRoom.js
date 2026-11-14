@@ -15,7 +15,9 @@ export function useRoom(roomId, onSignal) {
   handler.current = onSignal;
 
   useEffect(() => {
-    if (!roomId || typeof WebSocket === "undefined") return;
+    // Live rooms need the custom Worker entry (Durable Object). Until that is deployed the flag stays off
+    // and chat simply keeps polling, instead of retrying a socket that cannot connect.
+    if (process.env.NEXT_PUBLIC_LIVE_ROOMS !== "1" || !roomId || typeof WebSocket === "undefined") return;
     let closed = false, retry = 0, timer;
     const open = () => {
       const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/room/${encodeURIComponent(roomId)}`);

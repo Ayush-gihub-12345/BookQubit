@@ -1,44 +1,55 @@
 import Script from "next/script";
-import { Inter, Sora, Newsreader } from "next/font/google";
+import {
+  Noto_Sans, Noto_Sans_Devanagari, Noto_Sans_Bengali, Noto_Sans_Tamil, Noto_Sans_Telugu,
+  Noto_Sans_Gujarati, Noto_Sans_Kannada, Noto_Sans_Malayalam, Noto_Sans_Gurmukhi,
+  Noto_Sans_Arabic, Noto_Nastaliq_Urdu, Literata,
+} from "next/font/google";
 import "./globals.css";
 
-// Downloaded at build time and served from our own origin, instead of the
-// runtime <link> to fonts.googleapis.com that used to live in <head>.
+// One type family across every script the site ships a UI in.
 //
-// That link was render-blocking AND cross-origin, so a mobile visitor paid
-// DNS + TLS + CSS download to googleapis.com and only THEN discovered the
-// font files on a second origin (gstatic.com) — all before first paint.
-// Lighthouse measured it as the largest single blocker on mobile
-// (render-blocking requests ~1,030 ms, with LCP at 8.3s).
+// The site offers 21 interface languages, ten of them Indian, but it used to
+// load only Inter and Sora with `subsets: ["latin"]`. A Hindi page therefore
+// rendered its Devanagari in whatever the visitor's device happened to have
+// (verified on production: /hi carries ~450 Devanagari characters and loads
+// only Inter's Latin glyphs), so the product's headline promise looked
+// different — and often worse — on every phone.
 //
-// next/font inlines the @font-face rules and serves the files locally, so
-// there is no blocking round-trip and no extra origins. `display: "swap"`
-// keeps text readable in a fallback face while they load.
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-inter",
-  display: "swap",
-});
-const sora = Sora({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-sora",
-  display: "swap",
-});
-// Editorial serif for book titles, quote cards and long-form summaries.
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-newsreader",
-  display: "swap",
-});
+// Noto Sans is one design across Latin, Cyrillic, Devanagari and the other
+// scripts below, so a reader in Tamil gets the same weight and rhythm as one
+// in English. Every face is declared here but costs an English visitor
+// nothing: each @font-face carries a unicode-range for its own script, and
+// characters from that range. `preload` is off for all of them except the
+// Latin face, so no script a visitor doesn't use is ever fetched early.
+// (Options are written out per call because next/font only accepts values it
+// can read statically; a shared spread object is a build error.)
+//
+// CJK (zh/ja/ko) deliberately stays on the system fonts: those are good on
+// every platform and a web CJK face is several MB.
+const noto = Noto_Sans({ display: "swap", subsets: ["latin", "latin-ext", "cyrillic"], variable: "--font-noto" });
+const deva = Noto_Sans_Devanagari({ display: "swap", preload: false, subsets: ["devanagari"], variable: "--font-deva" });
+const beng = Noto_Sans_Bengali({ display: "swap", preload: false, subsets: ["bengali"], variable: "--font-beng" });
+const taml = Noto_Sans_Tamil({ display: "swap", preload: false, subsets: ["tamil"], variable: "--font-taml" });
+const telu = Noto_Sans_Telugu({ display: "swap", preload: false, subsets: ["telugu"], variable: "--font-telu" });
+const gujr = Noto_Sans_Gujarati({ display: "swap", preload: false, subsets: ["gujarati"], variable: "--font-gujr" });
+const knda = Noto_Sans_Kannada({ display: "swap", preload: false, subsets: ["kannada"], variable: "--font-knda" });
+const mlym = Noto_Sans_Malayalam({ display: "swap", preload: false, subsets: ["malayalam"], variable: "--font-mlym" });
+const guru = Noto_Sans_Gurmukhi({ display: "swap", preload: false, subsets: ["gurmukhi"], variable: "--font-guru" });
+const arab = Noto_Sans_Arabic({ display: "swap", preload: false, subsets: ["arabic"], variable: "--font-arab" });
+// Urdu is conventionally set in Nastaliq, not the Naskh-style Arabic face.
+const urdu = Noto_Nastaliq_Urdu({ display: "swap", preload: false, subsets: ["arabic"], variable: "--font-urdu" });
+// Headings only. A variable font, so every weight is one file; `preload` stays
+// on because the page title is usually the largest thing on screen.
+const literata = Literata({ display: "swap", subsets: ["latin", "latin-ext"], variable: "--font-literata" });
+const FONT_VARS = [literata, noto, deva, beng, taml, telu, gujr, knda, mlym, guru, arab, urdu].map((f) => f.variable).join(" ");
 import { getLang, RTL } from "@/lib/lang";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { getTheme, getCustomThemeColors } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
 import { ToastProvider } from "@/components/Toast";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import EnvBanner from "@/components/EnvBanner";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { isDevEnv } from "@/lib/env";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata = {
@@ -51,11 +62,14 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#047857",
+  themeColor: "#1f4d3b",
   viewportFit: "cover", // lets env(safe-area-inset-*) work on notched phones
 };
 
 export default async function RootLayout({ children }) {
+  // The dev deployment must not feed the production Google Analytics property:
+  // its traffic is test traffic and would pollute the real numbers.
+  const devEnv = isDevEnv();
   const [lang, theme] = await Promise.all([getLang(), getTheme()]);
   // Only reads the customTheme cookie when it could possibly matter — every
   // other theme switch is a plain CSS-class-driven [data-theme="X"] block,
@@ -70,9 +84,10 @@ export default async function RootLayout({ children }) {
       data-theme={theme}
       style={customStyle}
       translate="no"
-      className={`${inter.variable} ${sora.variable} ${newsreader.variable} notranslate`}
+      className={`${FONT_VARS} notranslate`}
     >
       <head>
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         {/* The site already ships its own translation/transliteration for
             every language (i18n.js dictionaries, Translated/TitleTransliterated
             components) — Chrome's own "Translate this page?" prompt only
@@ -82,7 +97,6 @@ export default async function RootLayout({ children }) {
             tells Chrome (and other browsers honoring the convention) to never
             offer its own translate UI here. */}
         <meta name="google" content="notranslate" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         {/* No font <link> — next/font inlines @font-face and serves the files
             from this origin, so the googleapis/gstatic preconnects are gone
             too (they warmed connections we no longer make).
@@ -93,6 +107,9 @@ export default async function RootLayout({ children }) {
         <link rel="alternate" type="application/rss+xml" title="BookQubit — New Releases" href="/feed.xml" />
       </head>
       <body className="flex min-h-screen flex-col antialiased">
+        <EnvBanner />
+        {!devEnv && (
+          <>
         <Script async src="https://www.googletagmanager.com/gtag/js?id=G-42XWW9D7JK" strategy="afterInteractive" />
         <Script id="gtag-init" strategy="afterInteractive">
           {`
@@ -107,6 +124,8 @@ export default async function RootLayout({ children }) {
         </Script>
         <GoogleAnalytics />
         <ServiceWorkerRegister />
+          </>
+        )}
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

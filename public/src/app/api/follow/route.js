@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
+import { getRequestUser } from "@/lib/api-auth";
 import { upsertUser } from "@/lib/repo";
 
-// GET /api/follow?type=author&id=yuval-noah-harari[&uid=...]
+// GET /api/follow?type=author&id=yuval-noah-harari
+// The follower count is public. `following` (does *this* reader follow it)
+// is answered only for the caller identified by the optional bearer token —
+// it used to accept `&uid=`, which let anyone probe any reader's follow list
+// one target at a time. Anonymous callers just get `following: false`.
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const id = searchParams.get("id");
-  const uid = searchParams.get("uid");
   if (!type || !id) return NextResponse.json({ error: "type and id required" }, { status: 400 });
+  const uid = (await getRequestUser(request).catch(() => null))?.uid;
 
   const db = await getDb();
   const [count, mine] = await Promise.all([

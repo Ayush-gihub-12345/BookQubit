@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import { useToast } from "@/components/Toast";
 import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
@@ -25,7 +26,7 @@ export default function NotificationsPage() {
     return auth.onAuthStateChanged((u) => {
       setUser(u);
       if (!u) { router.push(`/${lang}/login`); return; }
-      fetch(`/api/notifications?uid=${u.uid}`).then((r) => r.json()).then((d) => setItems(d.notifications || []));
+      authFetch("/api/notifications", {}, u).then((r) => r.json()).then((d) => setItems(d.notifications || []));
     });
   }, [router]);
 

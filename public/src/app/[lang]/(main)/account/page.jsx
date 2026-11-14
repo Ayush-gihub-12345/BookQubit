@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import { readWishlist } from "@/components/WishlistButton";
 import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
@@ -60,11 +61,11 @@ export default function AccountPage() {
       setUser(u);
       if (!u) { router.push(withLang("/login")); return; }
       const [shelfRes, lbRes, goalRes, prefsRes, networkRes] = await Promise.all([
-        fetch(`/api/shelf?uid=${u.uid}`).then((r) => r.json()),
+        authFetch("/api/shelf", {}, u).then((r) => r.json()),
         fetch("/api/leaderboard").then((r) => r.json()).catch(() => ({ readers: [] })),
-        fetch(`/api/goal?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
-        fetch(`/api/preferences?uid=${u.uid}`).then((r) => r.json()).catch(() => ({ genres: [], onboarded: true })),
-        fetch(`/api/network?uid=${u.uid}`).then((r) => r.json()).catch(() => null),
+        authFetch("/api/goal", {}, u).then((r) => r.json()).catch(() => null),
+        authFetch("/api/preferences", {}, u).then((r) => r.json()).catch(() => ({ genres: [], onboarded: true })),
+        authFetch("/api/network", {}, u).then((r) => r.json()).catch(() => null),
       ]);
       setShelf(shelfRes.shelf || []);
       setGoal(goalRes);

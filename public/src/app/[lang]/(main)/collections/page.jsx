@@ -21,7 +21,7 @@ export default async function CollectionsPage() {
   return (
     <NamedListBrowser
       items={f.collections}
-      getHref={(name) => `/${lang}/collections/${encodeURIComponent(name)}`}
+      hrefPrefix={`/${lang}/collections/`}
       title={_("collections")}
       subtitle={_("collectionsSub")}
       searchPlaceholder={_("searchEllipsis")}

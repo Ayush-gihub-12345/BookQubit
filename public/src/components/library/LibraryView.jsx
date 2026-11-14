@@ -168,7 +168,7 @@ export default function LibraryView({ user }) {
 
   useEffect(() => {
     if (loaded.current) return; loaded.current = true;
-    fetch(`/api/shelf?uid=${user.uid}`).then((r) => r.json()).then((d) => setBooks(d.shelf || [])).catch(() => setError(true));
+    authFetch("/api/shelf", {}, user).then((r) => (r.ok ? r.json() : Promise.reject())).then((d) => setBooks(d.shelf || [])).catch(() => setError(true));
   }, [user.uid]);
 
   if (error) return <p role="alert" className="text-muted">Couldn&apos;t load your shelves. Refresh to try again.</p>;

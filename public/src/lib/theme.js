@@ -5,8 +5,8 @@ import { cookies } from "next/headers";
 // object inside Navbar.jsx itself, which meant adding a theme meant
 // remembering to update two places (plus the actual CSS in globals.css).
 export const THEMES = [
-  { id: "light", name: "Light", icon: "☀️", swatch: "#ffffff" },
-  { id: "dark", name: "Dark", icon: "🌙", swatch: "#0b1220" },
+  { id: "light", name: "Light", icon: "☀️", swatch: "#f6f1e6" },
+  { id: "dark", name: "Dark", icon: "🌙", swatch: "#141613" },
   { id: "sepia", name: "Sepia", icon: "📜", swatch: "#b07d2f" },
   { id: "midnight", name: "Midnight", icon: "🌌", swatch: "#7c3aed" },
   { id: "ocean", name: "Ocean", icon: "🌊", swatch: "#0891b2" },

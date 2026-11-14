@@ -17,7 +17,7 @@ export default function OpengraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0e1220 0%, #241f66 60%, #4f46e5 100%)",
+          background: "#0f5b57",
           color: "#ffffff",
           fontFamily: "sans-serif",
         }}
@@ -31,7 +31,7 @@ export default function OpengraphImage() {
               width: "84px",
               height: "84px",
               borderRadius: "20px",
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              background: "#f2c230", color: "#4d3a00",
               fontSize: "46px",
               fontWeight: 800,
             }}
@@ -40,10 +40,10 @@ export default function OpengraphImage() {
           </div>
           <div style={{ display: "flex", fontSize: "68px", fontWeight: 800, letterSpacing: "-1px" }}>
             <span style={{ color: "#ffffff" }}>Book</span>
-            <span style={{ color: "#a5b4fc" }}>Qubit</span>
+            <span style={{ color: "#9fdcd4" }}>Qubit</span>
           </div>
         </div>
-        <div style={{ display: "flex", marginTop: "26px", fontSize: "30px", color: "#c7cbe8" }}>
+        <div style={{ display: "flex", marginTop: "26px", fontSize: "30px", color: "#cde6e2" }}>
           Discover, summarize, and buy great books
         </div>
       </div>

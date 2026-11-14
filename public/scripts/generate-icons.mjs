@@ -9,8 +9,8 @@ const PAGES =
 
 // `scale` shrinks the glyph so maskable icons keep it inside the 80% safe zone.
 const svg = ({ rx, scale }) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="${rx}" fill="#047857"/>
-  <g transform="translate(32 32) scale(${scale}) translate(-32 -32)"><path fill="#fff" d="${BOOK}"/><path fill="#047857" d="${PAGES}"/></g>
+  <rect width="64" height="64" rx="${rx}" fill="#1f4d3b"/>
+  <g transform="translate(32 32) scale(${scale}) translate(-32 -32)"><path fill="#fff" d="${BOOK}"/><path fill="#1f4d3b" d="${PAGES}"/></g>
 </svg>`;
 
 await mkdir("public/icons", { recursive: true });

@@ -11,6 +11,8 @@ const TABS = [
   ["/stats", "Stats"],
   ["/import", "Import"],
 ];
+// MindSpace lives at /mindspace (outside /library); listed here so mobile readers can reach it.
+const EXTRA = [["mindspace", "MindSpace"]];
 
 // Shared frame for /library, /library/stats, /library/import: tab bar + sign-in gate.
 // `children` is a render function receiving the signed-in Firebase user.
@@ -34,6 +36,9 @@ export default function LibraryShell({ children }) {
             </Link>
           );
         })}
+        {EXTRA.map(([path, label]) => (
+          <Link key={label} href={`/${lang}/${path}`} className="text-muted hover:text-fg -mb-px border-b-2 border-transparent pb-2 text-sm font-medium">{label}</Link>
+        ))}
       </nav>
       <div className="mt-6">
         {user === undefined && <div className="skeleton h-40 w-full" aria-hidden />}

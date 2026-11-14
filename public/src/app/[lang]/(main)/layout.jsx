@@ -8,10 +8,19 @@ import MiniPlayer from "@/components/player/MiniPlayer";
 import { getLang, LANGUAGES } from "@/lib/lang";
 import { getTheme, THEMES } from "@/lib/theme";
 import { t } from "@/lib/i18n";
+import { facets } from "@/lib/repo";
+import { resolveGenres } from "@/lib/genres";
 
 export default async function PublicLayout({ children }) {
   const [lang, theme] = await Promise.all([getLang(), getTheme()]);
   const _ = t(lang);
+  // Navigation is generated from the catalog so it can't link to empty pages.
+  // facets() is cached (3h, three tiers) and the homepage reads it too; the
+  // catch keeps a database hiccup from taking the whole layout down with it.
+  const f = await facets(lang).catch(() => ({ categories: [], countries: [], collections: [] }));
+  const genres = resolveGenres(f.categories, { limit: 7 });
+  const countries = f.countries.filter((c) => c.count >= 3).slice(0, 7);
+  const collections = f.collections.filter((c) => c.count >= 3).slice(0, 4);
   const labels = {
     books: _("books"), collections: _("collections"), categories: _("categories"),
     authors: _("authors"), publishers: _("publishers"), comics: _("comics"), tags: _("tags"),
@@ -24,7 +33,8 @@ export default async function PublicLayout({ children }) {
   return (
     <PlayerProvider>
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
-      <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels} />
+      <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels}
+        genres={genres} countries={countries} collections={collections} />
       {/* Reserves space for MobileTabBar (fixed, lg:hidden) so page content
           never renders underneath it — matches the bar's own height plus
           the same safe-area inset it pads itself with on notched phones.

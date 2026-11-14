@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import Icon from "@/components/Icon";
 import ChatPanel from "@/components/community/ChatPanel";
 import NewDiscussionModal from "@/components/community/NewDiscussionModal";
@@ -51,7 +52,7 @@ function CommunityInner() {
 
   const loadMine = async () => {
     if (!user) return;
-    const r = await fetch(`/api/discussions/mine?uid=${user.uid}`);
+    const r = await authFetch("/api/discussions/mine", {}, user);
     const d = await r.json();
     setMine(d.discussions || []);
   };
@@ -73,7 +74,7 @@ function CommunityInner() {
   useEffect(() => {
     if (tab !== "discover") return;
     const t = setTimeout(async () => {
-      const r = await fetch(`/api/discussions/search?q=${encodeURIComponent(q)}&uid=${user?.uid || ""}`);
+      const r = await authFetch(`/api/discussions/search?q=${encodeURIComponent(q)}`, {}, user);
       const d = await r.json();
       setDiscover(d.discussions || []);
     }, 250);

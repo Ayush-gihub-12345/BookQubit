@@ -141,7 +141,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
           onFocus={() => { setRecent(readRecent()); setOpen(true); }}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className={`input !rounded-full !pl-11 ${q || big ? "!pr-14" : "!pr-4"} ${big ? "py-3 text-[15px] shadow-lg shadow-black/5" : "w-64 py-2 text-sm"}`}
+          className={`input !rounded-full !pl-11 ${q || big ? "!pr-14" : "!pr-4"} ${big ? "!py-2 text-[15px]" : "w-64 py-2 text-sm"}`}
           role="combobox"
           aria-expanded={open}
         />
@@ -160,7 +160,7 @@ export default function SearchBar({ lang, placeholder, big = false, onNavigate }
       </form>
 
       {open && (loading || res || showRecent) && (
-        <div className={`bg-surface border-line absolute z-50 mt-2 max-h-[70vh] overflow-auto rounded-2xl border shadow-2xl ${big ? "left-0 right-0" : "right-0 w-[min(24rem,calc(100vw-2rem))]"}`}>
+        <div className={`popover absolute z-50 mt-2 max-h-[70vh] overflow-auto ${big ? "left-0 right-0 max-sm:fixed max-sm:left-2 max-sm:right-2 max-sm:top-14 max-sm:mt-1" : "right-0 w-[min(24rem,calc(100vw-2rem))]"}`}>
           {showRecent && (
             <div className="p-2">
               <p className="text-muted px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide">Recent searches</p>

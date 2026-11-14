@@ -9,6 +9,7 @@ import Translated from "./Translated";
 import Rating from "./Rating";
 import Icon from "./Icon";
 import EmptyState from "./EmptyState";
+import Breadcrumbs from "./Breadcrumbs";
 import { readLocalCache, writeLocalCache } from "@/lib/localCache";
 import { t } from "@/lib/i18n";
 
@@ -58,6 +59,8 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
   const [page, setPage] = useState(initialData.page || 1);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Phones and tablets: the filter column is collapsed behind one button.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(initialFilters.q || "");
   const debounceRef = useRef(null);
   const firstRun = useRef(true);
@@ -142,12 +145,8 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
-      <nav className="text-muted text-xs">
-        <Link href={withLang("/")} className="hover:text-brand-600">{tr("homeWord")}</Link>
-        <span className="mx-1.5">/</span>
-        <span>{tr("books")}</span>
-        {category && (<><span className="mx-1.5">/</span><span className="text-brand-600">{category}</span></>)}
-      </nav>
+      <Breadcrumbs lang={lang} homeLabel={tr("homeWord")} label={tr("navBreadcrumb")}
+        items={category ? [{ label: tr("books"), href: "/books" }, { label: category }] : [{ label: tr("books") }]} />
 
       <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -162,8 +161,8 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative w-52">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="relative min-w-0 flex-1 sm:w-52 sm:flex-none">
             <Icon name="search" size={14} className="text-muted pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
             <input value={searchInput} onChange={(e) => onSearchChange(e.target.value)}
               placeholder={tr("searchThisList")} className="input !py-2 !pl-9 text-sm" />
@@ -171,18 +170,18 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           <div className="border-line bg-surface hidden rounded-xl border p-1 text-xs font-semibold sm:flex">
             {SORTS.map(([v, label]) => (
               <button key={label} onClick={() => apply({ sort: v || undefined })}
-                className={`rounded-lg px-3 py-1.5 transition ${(sort || "") === v ? "bg-brand-600 text-white shadow" : "hover:text-brand-600"}`}>
+                className={`rounded-lg px-3 py-1.5 transition ${(sort || "") === v ? "bg-brand-600 text-[var(--on-brand)]" : "hover:text-brand-600"}`}>
                 {label}
               </button>
             ))}
           </div>
           <div className="border-line bg-surface flex rounded-xl border p-1">
-            <button onClick={() => apply({ view: undefined })} aria-label={tr("gridView")}
-              className={`rounded-lg px-2.5 py-1.5 ${!isList ? "bg-brand-600 text-white" : "text-muted hover:text-brand-600"}`}>
+            <button onClick={() => apply({ view: undefined })} aria-label={tr("gridView")} aria-pressed={!isList}
+              className={`rounded-lg px-2.5 py-1.5 ${!isList ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:text-brand-600"}`}>
               <Icon name="grid" size={14} />
             </button>
-            <button onClick={() => apply({ view: "list" })} aria-label={tr("listView")}
-              className={`rounded-lg px-2.5 py-1.5 ${isList ? "bg-brand-600 text-white" : "text-muted hover:text-brand-600"}`}>
+            <button onClick={() => apply({ view: "list" })} aria-label={tr("listView")} aria-pressed={isList}
+              className={`rounded-lg px-2.5 py-1.5 ${isList ? "bg-brand-600 text-[var(--on-brand)]" : "text-muted hover:text-brand-600"}`}>
               <Icon name="menu" size={14} />
             </button>
           </div>
@@ -193,7 +192,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
       <div className="border-line bg-surface mt-3 flex rounded-xl border p-1 text-xs font-semibold sm:hidden">
         {SORTS.map(([v, label]) => (
           <button key={label} onClick={() => apply({ sort: v || undefined })}
-            className={`flex-1 rounded-lg px-2 py-1.5 transition ${(sort || "") === v ? "bg-brand-600 text-white shadow" : ""}`}>
+            className={`flex-1 rounded-lg px-2 py-1.5 transition ${(sort || "") === v ? "bg-brand-600 text-[var(--on-brand)]" : ""}`}>
             {label}
           </button>
         ))}
@@ -212,19 +211,28 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
         </div>
       )}
 
-      <div className="hscroll mt-4 lg:hidden">
+      {/* Rating, format, mood and collection filters used to exist on desktop
+          only; on a phone there was no way to reach them. */}
+      <button type="button" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} aria-controls="book-filters"
+        className="btn-ghost mt-4 !min-h-10 !py-2 text-sm lg:!hidden">
+        <Icon name="menu" size={14} /> {tr("filtersWord")}
+        {activeFilters.length > 0 && <span className="tab-count">{activeFilters.length}</span>}
+        <Icon name="chevronDown" size={13} className={`transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      <div className={`hscroll mt-4 lg:!hidden ${filtersOpen ? "!hidden" : ""}`}>
         {facets.categories.map((c) => (
           <button key={c.name} onClick={() => apply({ category: category === c.name ? undefined : c.name })}
-            className={`pill whitespace-nowrap ${category === c.name ? "!bg-brand-600 !text-white" : ""}`}>
+            className={`pill whitespace-nowrap ${category === c.name ? "!bg-brand-600 !text-[var(--on-brand)]" : ""}`}>
             {c.name} <span className="ml-1 opacity-60">{c.count}</span>
           </button>
         ))}
       </div>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[240px_1fr]">
-        <aside className="hidden space-y-7 lg:block">
+        <aside id="book-filters" aria-label={tr("filtersWord")} className={`${filtersOpen ? "block" : "hidden"} space-y-6 lg:block`}>
           <div>
-            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("categories")}</p>
+            <p className="text-muted mb-2 px-2.5 text-xs font-semibold">{tr("categories")}</p>
             <ul className="space-y-1">
               {facets.categories.map((c) => (
                 <li key={c.name}>
@@ -238,7 +246,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </div>
 
           <div>
-            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("ratingLabel")}</p>
+            <p className="text-muted mb-2 px-2.5 text-xs font-semibold">{tr("ratingLabel")}</p>
             <ul className="space-y-1">
               {RATINGS.map(([v, label]) => (
                 <li key={v}>
@@ -252,7 +260,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
           </div>
 
           <div>
-            <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("formatLabel")}</p>
+            <p className="text-muted mb-2 px-2.5 text-xs font-semibold">{tr("formatLabel")}</p>
             <ul className="space-y-1">
               {FORMATS.map((fmt) => (
                 <li key={fmt}>
@@ -266,7 +274,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
           {facets.moods?.length > 0 && (
             <div>
-              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("moodLabel")}</p>
+              <p className="text-muted mb-2 px-2.5 text-xs font-semibold">{tr("moodLabel")}</p>
               <ul className="space-y-1">
                 {facets.moods.slice(0, 8).map((m) => (
                   <li key={m.name}>
@@ -282,7 +290,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
 
           {facets.collections.length > 0 && (
             <div>
-              <p className="text-muted mb-3 text-[11px] font-bold uppercase tracking-wider">{tr("collections")}</p>
+              <p className="text-muted mb-2 px-2.5 text-xs font-semibold">{tr("collections")}</p>
               <ul className="space-y-1">
                 {facets.collections.slice(0, 8).map((c) => (
                   <li key={c.name}>
@@ -317,7 +325,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
                     <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
                       <Rating value={b.rating} />
                       {b.category && <span className="pill !text-[10px]">{b.category}</span>}
-                      {b.page_count && <span className="text-muted">{b.page_count} pages</span>}
+                      {b.page_count && <span className="text-muted">{tr("pagesSuffix", { count: b.page_count })}</span>}
                       {b.published && <span className="text-muted">{b.published}</span>}
                     </div>
                     <Translated as="p" className="text-muted mt-2 line-clamp-2 text-sm leading-relaxed" text={b.description} />
@@ -326,7 +334,7 @@ export default function BooksBrowser({ lang, initialParams, initialData, facets 
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
               {books.map((b) => <BookCard key={b.id} book={b} />)}
             </div>
           )}

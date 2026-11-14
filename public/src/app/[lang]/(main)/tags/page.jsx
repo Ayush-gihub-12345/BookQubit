@@ -22,7 +22,7 @@ export default async function TagsPage() {
   return (
     <NamedListBrowser
       items={f.tags}
-      getHref={(name) => `/${lang}/books?tag=${encodeURIComponent(name)}`}
+      hrefPrefix={`/${lang}/books?tag=`}
       title={_("tags")}
       subtitle={_("tagsSub")}
       searchPlaceholder={_("searchEllipsis")}

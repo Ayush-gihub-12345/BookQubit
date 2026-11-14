@@ -1,3 +1,4 @@
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserProfile, levelFor, getAchievements, getQuotesByUser, getBooksBySlug } from "@/lib/repo";
@@ -55,7 +56,12 @@ export default async function ReaderProfilePage({ params }) {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+      <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
+        { label: _("navCommunity"), href: "/community" },
+        { label: _("readersStat"), href: "/readers" },
+        { label: user.name },
+      ]} />
       <div className="card flex flex-col items-center gap-6 p-8 hover:!translate-y-0 sm:flex-row">
         {user.photo_url ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -108,7 +108,7 @@ export function AffiliateCard({ a }) {
         {a.cover_url && <img src={a.cover_url} alt="" loading="lazy" className="h-full w-full object-cover" />}
       </span>
       <div className="min-w-0">
-        <span className="bg-[var(--gold)]/20 inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">Sponsored · Affiliate link</span>
+        <span className="border-line text-muted inline-block rounded border px-1.5 py-0.5 text-[11px] font-semibold">Sponsored · Affiliate link</span>
         <p className="font-editorial mt-1 truncate text-lg font-semibold">{a.title}</p>
         <a href={a.href} target="_blank" rel="noopener noreferrer sponsored" className="text-brand-700 mt-1 inline-flex items-center gap-1.5 text-sm font-medium hover:underline">
           <Icon name="cart" size={14} /> Get the book

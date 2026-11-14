@@ -3,7 +3,7 @@
   "name": "bookqubitdev",
   "compatibility_date": "2025-05-01",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "worker-entry.js",
+  "main": ".open-next/worker.js",
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -18,40 +18,22 @@
       "binding": "CATALOG_DB",
       "database_name": "catalog",
       "database_id": "a1795b64-95f5-49c3-9700-3a2c4401a5ba"
-    },
-    // New, optional databases (ids omitted: created on first deploy, or `wrangler d1 create`).
-    // Split by workload so write bursts never contend with accounts or the catalog.
-    { "binding": "ENGAGEMENT_DB", "database_name": "engagement", "migrations_dir": "migrations/engagement" },
-    { "binding": "MINDSPACE_DB", "database_name": "mindspace", "migrations_dir": "migrations/mindspace" }
+    }
   ],
-  // Counting plays/clicks/zero-result searches here costs no D1 writes.
-  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "bookqubit_events" }],
-  // Bounded semantic-index backfill (see src/lib/cf/backfill.js).
-  "triggers": { "crons": ["*/30 * * * *"] },
   "services": [
     {
       "binding": "IMPORT_CRON",
       "service": "bookqubit-import-cron"
     }
   ],
-  // ── Added for the BookQubit overhaul (see ../ARCHITECTURE_PLAN.md). Every one of
-  // these is OPTIONAL at runtime — src/lib/cf/* degrades gracefully if absent.
-  // Before deploying: run the commands in ../DEPLOYMENT_CHECKLIST.md
-  // (Queue + Vectorize index must exist; KV/R2 auto-provision on deploy).
-  "kv_namespaces": [{ "binding": "CACHE_KV" }],
-  "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "bookqubit-media" }],
-  "ai": { "binding": "AI" },
-  "vectorize": [{ "binding": "BOOK_VECTORS", "index_name": "bookqubit-vectors" }],
-  "queues": {
-    "producers": [{ "binding": "JOBS_QUEUE", "queue": "bookqubit-jobs" }],
-    "consumers": [{ "queue": "bookqubit-jobs", "max_batch_size": 10, "max_batch_timeout": 5 }]
-  },
-  "durable_objects": {
-    "bindings": [{ "name": "READING_ROOM_DO", "class_name": "ReadingRoom" }]
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReadingRoom"] }],
-  // Structured JSON logs from src/lib/cf/logger.js land in Workers Logs; traces need their own flag.
-  "observability": { "enabled": true, "traces": { "enabled": true } },
+  // Workers Logs. It was OFF in production (confirmed from the account's
+  // Worker settings: no `observability` block), so failures were invisible:
+  // between 1% and 9% of requests end in `exceededResources` every day and
+  // there was no record of which route did it. 100% sampling is fine at the
+  // current volume (~35k requests/day, about 1M events/month, against 20M
+  // included); lower head_sampling_rate if traffic grows tenfold. Log OBJECTS,
+  // not strings, so the fields are searchable.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
   "vars": {
     // "1" re-applies SCHEMA/CATALOG_SCHEMA + migrations on database access.
     // Keep at "0" in normal operation: applying them on every isolate cold
@@ -59,9 +41,37 @@
     // re-creating tables and re-adding columns that already exist. After
     // editing a schema in db.js: set to "1", deploy, load one page, set back
     // to "0", deploy again. See shouldBootstrap() in src/lib/db.js.
-    "RUN_SCHEMA": "0",
-    // Books embedded per 30-minute run (one batched AI call + one Vectorize upsert).
-    "EMBED_BATCH": "40",
-    "EMBED_BACKFILL": "1"
+    "RUN_SCHEMA": "0"
+  },
+
+  // ---------------------------------------------------------------------------
+  // DEV environment: Worker "bookqubit-dev-site", deployed from the `dev` branch.
+  // Deploy with `npm run deploy:dev` (Workers Builds runs it on pushes to `dev`).
+  //
+  // Bindings are NOT inherited from the production config above, so everything
+  // dev may touch is listed here, and it is deliberately limited:
+  //  - its own two D1 databases (never the production ids; tests/dev-environment
+  //    .test.js fails if these ever match),
+  //  - no IMPORT_CRON service binding (the importer writes to the production
+  //    catalog), so admin import routes report "not configured" in dev,
+  //  - no secrets: ADMIN_*, RESEND_*, IMPORT_* are unset, so admin login fails
+  //    closed and email sending degrades instead of sending real mail.
+  // Set a dev-only admin login with `wrangler secret put ADMIN_USERNAME --env dev`.
+  // ---------------------------------------------------------------------------
+  "env": {
+    "dev": {
+      "name": "bookqubit-dev-site",
+      "main": ".open-next/worker.js",
+      "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+      "compatibility_date": "2025-05-01",
+      "compatibility_flags": ["nodejs_compat"],
+      "observability": { "enabled": true, "head_sampling_rate": 1 },
+      "d1_databases": [
+        { "binding": "DB", "database_name": "bookqubit-dev-database", "database_id": "48a757c3-22d8-4f03-9180-7075f04f2825" },
+        { "binding": "CATALOG_DB", "database_name": "bookqubit-dev-catalog", "database_id": "a95e1940-7268-4f0d-bf47-a3b86f27f9de" }
+      ],
+      "services": [],
+      "vars": { "RUN_SCHEMA": "0" }
+    }
   }
 }

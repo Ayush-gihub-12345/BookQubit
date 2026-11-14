@@ -56,7 +56,7 @@ const ENDPOINT = "https://inputtools.google.com/request";
 // shape/quality of output, so it must not be read back as if it were a v2
 // word-level cache hit. Same reasoning as CACHE_VERSION in db.js: a stored
 // value's meaning changed under what would otherwise be the same key.
-const CACHE_PREFIX = "bq_tl2:";
+const CACHE_PREFIX = "bq_tl3:"; // v3: accent-folding fix; v2 entries for accented names are malformed
 
 function cacheKey(text, lang) {
   let h = 0;
@@ -92,6 +92,21 @@ async function transliterateWord(word, itc) {
 // keeps its colon and spacing, only the words themselves get transliterated).
 const WORD_SPLIT = /(\s+)/;
 
+// The phonetic-input engine has no concept of accented Latin letters. Given
+// "García" it returns a malformed Devanagari sequence (a vowel sign with no
+// consonant to attach to, which renders as a dotted circle), so any author or
+// title with an accent came out visibly broken. Folding to the base letters
+// first ("Garcia") gives the engine something it can spell.
+//
+// Only words that are entirely Latin script get folded. A word in another
+// script is passed through untouched: stripping combining marks from Hindi,
+// Arabic, Korean etc. would destroy it, since those marks are part of the
+// letters. (The caller already skips parts with no ASCII letter at all.)
+const LATIN_WORD = /^[\p{Script=Latin}\p{M}'’.\-]+$/u;
+function foldAccents(word) {
+  return LATIN_WORD.test(word) ? word.normalize("NFD").replace(/\p{M}/gu, "") : word;
+}
+
 export async function transliterateTitle(text, lang) {
   if (!text || !lang || lang === "en") return text;
   const itc = ITC_BY_LANG[lang];
@@ -108,7 +123,7 @@ export async function transliterateTitle(text, lang) {
         // Odd indices are the whitespace separators captured by the split
         // regex's group — pass through unchanged, no API call needed.
         if (i % 2 === 1 || !/[a-zA-Z]/.test(part)) return part;
-        return transliterateWord(part, itc).then((c) => c ?? part);
+        return transliterateWord(foldAccents(part), itc).then((c) => c ?? part);
       })
     );
     const out = results.join("");

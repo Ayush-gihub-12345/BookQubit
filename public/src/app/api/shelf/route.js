@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifyUser } from "@/lib/auth-server";
+import { requireUser } from "@/lib/api-auth";
 import { upsertUser, getBooksBySlug } from "@/lib/repo";
 
-// GET /api/shelf?uid=...[&slug=...] — a user's shelf (joined with book info)
+// GET /api/shelf[?slug=...] — the signed-in reader's own shelf, joined with
+// book info. With `slug`, just that one entry.
+//
+// Subject comes from the bearer token, never a `?uid=` parameter. This was
+// the most sensitive of the uid-addressed endpoints: a shelf row carries the
+// reader's rating, their review text (including drafts never meant to be
+// public), reading progress, mood/pace tags and the spoiler flag.
+// src/lib/db.js already refuses to put `shelf:` cache keys in the public
+// edge tier for this reason; the route now matches that stance.
+//
+// Public reader profiles do not use this route — readers/[id]/page.jsx reads
+// what it displays through repo.js on the server.
 export async function GET(request) {
+  const auth = await requireUser(request);
+  if (auth.response) return auth.response;
+  const uid = auth.user.uid;
   const { searchParams } = new URL(request.url);
-  const uid = searchParams.get("uid");
   const slug = searchParams.get("slug");
-  if (!uid) return NextResponse.json({ error: "uid required" }, { status: 400 });
 
   const db = await getDb();
   if (slug) {

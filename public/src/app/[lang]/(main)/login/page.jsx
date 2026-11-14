@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import Logo from "@/components/Logo";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
@@ -57,9 +58,13 @@ export default function LoginPage() {
 
   // New accounts (and anyone who never finished it) land on the guided
   // profile setup; everyone else goes straight to their dashboard.
-  const routeAfterAuth = async (uid) => {
+  const routeAfterAuth = async (user) => {
     try {
-      const r = await fetch(`/api/preferences?uid=${uid}`);
+      const r = await authFetch("/api/preferences", {}, user);
+      // A non-OK answer must not be read as "not onboarded": an error body
+      // has no `onboarded` field, which would send an existing reader back
+      // through onboarding. Fall through to the dashboard instead.
+      if (!r.ok) throw new Error(`preferences ${r.status}`);
       const { onboarded } = await r.json();
       router.push(onboarded ? `/${lang}/account` : `/${lang}/onboarding`);
     } catch {
@@ -79,7 +84,7 @@ export default function LoginPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken: token }),
       }).catch(() => {}); // best-effort — never block sign-in on this
-      await routeAfterAuth(cred.user.uid);
+      await routeAfterAuth(cred.user);
     } catch (e) { setError(friendlyAuthError(e)); } finally { setBusy(false); }
   };
 
@@ -90,7 +95,7 @@ export default function LoginPage() {
       const auth = getFirebaseAuth();
       if (mode === "signin") {
         const cred = await signInWithEmailAndPassword(auth, email, password);
-        await routeAfterAuth(cred.user.uid);
+        await routeAfterAuth(cred.user);
       } else {
         // New email/password accounts go through /verify-email before
         // onboarding — that page sends the code itself on mount.

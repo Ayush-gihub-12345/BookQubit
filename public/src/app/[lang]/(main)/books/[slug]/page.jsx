@@ -1,3 +1,4 @@
+import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
@@ -23,6 +24,7 @@ import { availability } from "@/lib/cf/geo-affiliate";
 import { baselineSummary, resolveSummary } from "@/lib/summary";
 import { t } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
+import { safeJsonLd } from "@/lib/jsonLd";
 
 export const dynamic = "force-dynamic";
 
@@ -163,27 +165,16 @@ export default async function BookPage({ params }) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
       <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
 
-      {/* Extra bottom padding clears BOTH the sitewide mobile tab bar (handled
-          by the layout's own pb-[calc(4rem+...)]) AND the sticky "Get Book"
-          bar rendered below, which floats just above the tab bar on mobile.
-          Only needed when that sticky bar actually renders (book.buyUrl). */}
       <div className="mx-auto max-w-7xl px-4 pt-6 pb-6 sm:pt-10 sm:pb-10">
-        <nav className="text-muted mb-6 text-sm">
-          <Link href={withLang("/books")} className="hover:text-brand-600">{_("books")}</Link>
-          {book.category && (
-            <>
-              {" / "}
-              <Link href={withLang(`/books?category=${encodeURIComponent(book.category)}`)} className="hover:text-brand-600">
-                {book.category}
-              </Link>
-            </>
-          )}
-          {" / "}<span className="text-[var(--fg)]"><TitleTransliterated text={book.title} /></span>
-        </nav>
+        <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
+          { label: _("books"), href: "/books" },
+          ...(book.category ? [{ label: book.category, href: `/books?category=${encodeURIComponent(book.category)}` }] : []),
+          { label: <TitleTransliterated text={book.title} /> },
+        ]} />
 
         {/* min-w-0 on both grid children: without it, a grid item's implicit
             min-width is "auto", which factors in a replaced element's (img)
@@ -192,12 +183,12 @@ export default async function BookPage({ params }) {
             the viewport, squeezing the rest of the page into a narrow strip
             beside empty space. w-full/object-cover on the <img> itself don't
             prevent this; the fix has to be on the grid item. */}
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_1fr] lg:gap-10">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[272px_1fr] lg:gap-12">
           <div className="min-w-0">
             {/* Capped + centered on mobile (stacked layout would otherwise
                 stretch the cover to full viewport width, looking oversized) —
                 reverts to filling its 300px grid column at lg. */}
-            <div className="card mx-auto aspect-[2/3] max-w-[240px] overflow-hidden !shadow-xl hover:!translate-y-0 lg:mx-0 lg:max-w-none">
+            <div className="cover mx-auto aspect-[2/3] max-w-[240px] lg:mx-0 lg:max-w-none">
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
 
@@ -212,7 +203,7 @@ export default async function BookPage({ params }) {
             )}
 
             <div className="mt-2 border-t border-line pt-4">
-              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">{_("readWithOthers")}</p>
+              <p className="text-muted mb-2 text-xs font-semibold">{_("readWithOthers")}</p>
               {bookDiscussions.map((d) => (
                 <Link key={d.id} href={withLang(`/community?open=${d.id}`)}
                   className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-600">
@@ -230,7 +221,7 @@ export default async function BookPage({ params }) {
             </div>
 
             <div className="mt-2 border-t border-line pt-4">
-              <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">{_("bookInformation")}</p>
+              <p className="text-muted mb-2 text-xs font-semibold">{_("bookInformation")}</p>
               <ReportIssueButton bookSlug={book.slug} />
             </div>
           </div>
@@ -270,7 +261,7 @@ export default async function BookPage({ params }) {
               {book.tags.slice(0, 4).map((tg) => (
                 <Link key={tg} href={withLang(`/books?tag=${encodeURIComponent(tg)}`)} className="pill !text-[11px]">{tg}</Link>
               ))}
-              {community.pace[0] && <span className="pill !bg-emerald-500/15 !text-[11px] !text-emerald-600">{community.pace[0].name}</span>}
+              {community.pace[0] && <span className="pill !text-[11px]">{community.pace[0].name}</span>}
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -309,7 +300,7 @@ export default async function BookPage({ params }) {
 
             {moreInCollectionFiltered.length > 0 && (
               <div className="mt-5">
-                <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">
+                <p className="text-muted mb-2 text-xs font-semibold">
                   {_("moreFromCollection", { collection: book.collection })}
                 </p>
                 <HScrollRow>
@@ -328,11 +319,23 @@ export default async function BookPage({ params }) {
               </div>
             )}
 
-            {book.description && <Translated as="p" className="mt-6 text-lg leading-relaxed" text={book.description} />}
+            <nav aria-label={_("onThisPage")} className="tabs sticky top-14 z-20 mt-6 bg-[var(--bg)] sm:top-16">
+              {[
+                book.keyPoints.length > 0 && ["#takeaways", _("keyTakeaways")],
+                book.summary && ["#summary", _("summary")],
+                meta.length > 0 && ["#details", _("details")],
+                ["#reviews", _("communityTitle")],
+                related.length > 0 && ["#related", _("related")],
+              ].filter(Boolean).map(([href, label]) => (
+                <a key={href} href={href} className="tab">{label}</a>
+              ))}
+            </nav>
+
+            {book.description && <Translated as="p" className="mt-6 max-w-[70ch] text-lg leading-relaxed" text={book.description} />}
 
             {(book.category || book.subjects?.length > 0) && (
               <div className="tint-brand mt-6 rounded-xl p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-600">{_("whosItFor")}</p>
+                <p className="text-sm font-semibold text-brand-600">{_("whosItFor")}</p>
                 <p className="mt-2 text-sm leading-relaxed">
                   {_("whosItForBody", {
                     category: book.category ? book.category.toLowerCase() : _("thisGenre"),
@@ -345,12 +348,12 @@ export default async function BookPage({ params }) {
             )}
 
             {book.keyPoints.length > 0 && (
-              <div className="mt-8">
+              <div id="takeaways" className="mt-8 scroll-mt-32">
                 <h2 className="text-lg font-bold sm:text-xl">{_("keyTakeaways")}</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {book.keyPoints.map((k) => (
                     <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
-                      <span className="text-brand-600">✓</span> <Translated text={k} />
+                      <Icon name="check" size={15} className="mt-0.5 text-brand-600" /> <Translated text={k} />
                     </li>
                   ))}
                 </ul>
@@ -358,21 +361,21 @@ export default async function BookPage({ params }) {
             )}
 
             {book.summary && (
-              <div id="summary" className="mt-8 scroll-mt-24">
+              <div id="summary" className="mt-8 scroll-mt-32">
                 <h2 className="text-lg font-bold sm:text-xl">{_("summary")}</h2>
-                <Translated as="p" className="mt-3 whitespace-pre-line leading-relaxed opacity-90" text={book.summary} />
+                <Translated as="p" className="mt-3 max-w-[70ch] whitespace-pre-line leading-relaxed" text={book.summary} />
               </div>
             )}
 
             {meta.length > 0 && (
-              <div className="mt-8">
+              <div id="details" className="mt-8 scroll-mt-32">
                 <h2 className="text-lg font-bold sm:text-xl">{_("details")}</h2>
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
                   {meta.map(([k, v]) => (
                     <div key={k}>
-                      <dt className="text-muted text-xs uppercase tracking-wide">{k}</dt>
+                      <dt className="text-muted text-xs">{k}</dt>
                       <dd className="text-sm font-medium">
-                        {k === "Publisher" && publisherProfile ? (
+                        {k === _("metaPublisher") && publisherProfile ? (
                           <Link href={withLang(`/publications/${publisherProfile.slug}`)} className="text-brand-600 hover:underline">{v}</Link>
                         ) : v}
                       </dd>
@@ -400,18 +403,18 @@ export default async function BookPage({ params }) {
             )}
 
             {/* Community section */}
-            <div id="reviews" className="mt-10 scroll-mt-24">
+            <div id="reviews" className="mt-10 scroll-mt-32">
               <h2 className="text-lg font-bold sm:text-xl">{_("communityTitle")}</h2>
               <div className="mt-4 grid gap-6 sm:grid-cols-[220px_1fr]">
                 <div className="card p-5 text-center hover:!translate-y-0">
-                  <p className="text-4xl font-extrabold">{community.avg_rating ?? "—"}</p>
+                  <p className="font-display text-4xl font-semibold">{community.avg_rating ?? "—"}</p>
                   <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
                   <p className="text-muted mt-1 text-xs">{community.rating_count} {_("ratingsFromReaders")}</p>
                 </div>
                 <div>
                   {community.moods.length > 0 && (
                     <div className="mb-5">
-                      <p className="text-muted mb-2 text-[11px] font-bold uppercase tracking-wider">{_("moodsLabel")}</p>
+                      <p className="text-muted mb-2 text-xs font-semibold">{_("moodsLabel")}</p>
                       <div className="space-y-1">
                         {community.moods.slice(0, 5).map((m) => {
                           const moodTotal = community.moods.reduce((n, x) => n + x.n, 0);
@@ -420,7 +423,7 @@ export default async function BookPage({ params }) {
                             <div key={m.name} className="flex items-center gap-2 text-xs">
                               <span className="w-24 shrink-0 truncate">{m.name}</span>
                               <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-                                <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-600" style={{ width: `${pct}%` }} />
+                                <div className="h-full rounded-full bg-brand-600" style={{ width: `${pct}%` }} />
                               </div>
                               <span className="text-muted w-9 text-right">{pct}%</span>
                             </div>
@@ -432,7 +435,7 @@ export default async function BookPage({ params }) {
                   {community.pace.length > 0 && (
                     <div className="mb-5 flex items-center gap-2 text-xs">
                       <span className="text-muted w-24 shrink-0">{_("paceLabel")}</span>
-                      <span className="pill !bg-emerald-500/15 !text-emerald-600">{community.pace[0].name}</span>
+                      <span className="pill">{community.pace[0].name}</span>
                     </div>
                   )}
                   <div className="space-y-1.5">
@@ -442,7 +445,7 @@ export default async function BookPage({ params }) {
                       <div key={d.star} className="flex items-center gap-3 text-xs">
                         <span className="w-8">{d.star} ★</span>
                         <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-                          <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500" style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full bg-amber-500" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-muted w-10 text-right">{pct}%</span>
                       </div>

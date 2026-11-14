@@ -1,20 +1,17 @@
 import Link from "next/link";
 import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
-import HeroSlider from "@/components/HeroSlider";
-import Rating from "@/components/Rating";
-import BookCover from "@/components/BookCover";
+import FeaturedPick from "@/components/FeaturedPick";
 import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
 import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import HScrollRow from "@/components/HScrollRow";
-import Logo from "@/components/Logo";
 import {
-  listBooks, facets, listAuthors, listPublications, listComics, getRecentlyAdded, getMoodCounts,
-  getFeaturedBooks, getBestsellerBooks, getRandomBook, getPlatformStats,
+  listBooks, facets, getFeaturedAuthors, getMoodCounts, getFeaturedBooks, getBestsellerBooks,
 } from "@/lib/repo";
+import { resolveGenres } from "@/lib/genres";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -25,313 +22,171 @@ export async function generateMetadata() {
   return { alternates: { canonical: `/${lang}` } };
 }
 
+// The homepage is for orientation, not for showing everything the catalog
+// has: one featured book, the reader's own shelf (when signed in), a way into
+// the catalog by genre, what's new, some authors, and links to the rest of
+// the site. It used to be seventeen blocks and thirteen queries, including
+// three whole-table reads (every author, publisher and comic) to render a
+// handful of cards each.
 export default async function Home() {
   const lang = await getLang();
   const _ = t(lang);
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
-  const [featuredBooks, bestsellers, topRated, newReleases, exploreBooks, f, authors, pubs, comics, recentlyAdded, moods, stats, surprise] = await Promise.all([
+
+  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods] = await Promise.all([
     getFeaturedBooks(lang, 5),
     getBestsellerBooks(lang, 12),
-    listBooks(lang, { sort: "rating", limit: 10 }),
+    listBooks(lang, { sort: "rating", limit: 12 }),
     listBooks(lang, { sort: "new", limit: 6 }),
-    listBooks(lang, { limit: 12 }),
     facets(lang),
-    listAuthors(lang),
-    listPublications(lang),
-    listComics(lang),
-    getRecentlyAdded(lang, 8),
+    getFeaturedAuthors(lang, 10),
     getMoodCounts(),
-    getPlatformStats(),
-    getRandomBook(lang),
   ]);
-  const heroBooks = featuredBooks.length ? featuredBooks : topRated.slice(0, 5);
-  // Chained fallback rather than trusting `bestseller` alone — that flag is
-  // admin-set and, as of this change, unset on every book in the catalog, so
-  // querying it in isolation would render an empty section for every
-  // signed-out visitor. `topRated` is already fetched above and guaranteed
-  // non-empty once the catalog has any rated books at all.
+
+  // Today's pick rotates daily through the curated featured books (or the
+  // best-rated ones when none are curated), so it is stable within a day and
+  // needs no client-side timer. In English, prefer a book whose title is
+  // written in Latin letters: the English catalog holds some titles in their
+  // original script (a Korean title above a cover that reads "HUMAN ACTS"),
+  // which looks like a mistake to someone deciding whether to buy.
+  const candidates = featuredBooks.length ? featuredBooks : topRated.slice(0, 5);
+  const readable = lang === "en" ? candidates.filter((b) => /[A-Za-z]/.test(b.title || "")) : candidates;
+  const pool = readable.length ? readable : candidates;
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const pick = pool.length ? pool[dayOfYear % pool.length] : null;
+
+  // Chained fallback rather than trusting `bestseller` alone: that flag is
+  // admin-set and unset on every book in the catalog at the time of writing,
+  // so querying it alone would leave signed-out visitors an empty section.
   const popularBooks = bestsellers.length ? bestsellers : featuredBooks.length ? featuredBooks : topRated.slice(0, 12);
 
-  const QUOTES = [
-    { text: "A reader lives a thousand lives before he dies. The man who never reads lives only one.", by: "George R.R. Martin" },
-    { text: "The more that you read, the more things you will know. The more that you learn, the more places you'll go.", by: "Dr. Seuss" },
-    { text: "Books are a uniquely portable magic.", by: "Stephen King" },
-    { text: "Until I feared I would lose it, I never loved to read. One does not love breathing.", by: "Harper Lee" },
-    { text: "I have always imagined that Paradise will be a kind of library.", by: "Jorge Luis Borges" },
-    { text: "Reading is essential for those who seek to rise above the ordinary.", by: "Jim Rohn" },
-    { text: "A book is a dream that you hold in your hand.", by: "Neil Gaiman" },
-    { text: "There is no friend as loyal as a book.", by: "Ernest Hemingway" },
-    { text: "Once you learn to read, you will be forever free.", by: "Frederick Douglass" },
-    { text: "We read to know we are not alone.", by: "C.S. Lewis" },
-  ];
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-  const quote = QUOTES[dayOfYear % QUOTES.length];
-  const topCollections = f.collections.slice(0, 3);
-  const collectionsWithBooks = await Promise.all(
-    topCollections.map(async (c) => ({ ...c, books: await listBooks(lang, { collection: c.name, limit: 2 }) }))
-  );
+  // Genres are validated against what the catalog really contains, so none of
+  // these tiles can lead to an empty page (see lib/genres.js).
+  const genres = resolveGenres(f.categories, { limit: 12 });
+  const collections = f.collections.filter((c) => c.count >= 3).slice(0, 8);
 
-  const HUB = [
-    { icon: "compass", title: _("exploreLibraryTitle"), desc: _("exploreLibraryDesc"), href: withLang("/books"), color: "from-sky-500 to-blue-600" },
-    { icon: "headphones", title: _("audiobooksTitle"), desc: _("audiobooksDesc"), href: withLang("/books"), color: "from-fuchsia-500 to-purple-600" },
-    { icon: "zap", title: _("comics"), desc: _("comicsHubDesc"), href: withLang("/comics"), color: "from-amber-500 to-orange-600" },
-    { icon: "users", title: _("navCommunity"), desc: _("communityHubDesc"), href: withLang("/community"), color: "from-emerald-500 to-teal-600" },
+  const MORE = [
+    { icon: "building", title: _("publishers"), href: withLang("/publications") },
+    { icon: "zap", title: _("comics"), href: withLang("/comics") },
+    { icon: "users", title: _("navCommunity"), href: withLang("/community") },
+    { icon: "trophy", title: _("navBookwormRanking"), href: withLang("/leaderboard") },
   ];
 
   return (
     <>
-      {/* Hero slider */}
-      <section className="mx-auto max-w-7xl px-4 pt-8">
-        <HeroSlider books={heroBooks.length ? heroBooks : topRated.slice(0, 5)}
-          labels={{
-            summary: _("summary"), getBook: _("getBook"), keyFeatures: _("keyFeatures"),
-            byWord: _("byWord"), pages: _("pagesLabel"), published: _("publishedLabel"),
-            previous: _("previousLabel"), next: _("nextLabel"),
-            slideLabel: _("slideLabel"),
-          }} />
+      <section className="mx-auto max-w-7xl px-4 pt-6 sm:pt-10">
+        <h1 className="max-w-3xl text-3xl font-bold sm:text-4xl lg:text-5xl">
+          {_("heroHeadlinePrefix")} {_("heroHeadlineHighlight")}
+        </h1>
+        <p className="text-muted mt-3 max-w-2xl text-base sm:text-lg">{_("heroSub")}</p>
+        {pick && (
+          <div className="mt-6 sm:mt-8">
+            <FeaturedPick
+              lang={lang}
+              book={pick}
+              labels={{
+                pick: _("todaysPick"), by: _("byWord"), rating: _("ratingLabel"), pages: _("pagesLabel"),
+                published: _("publishedLabel"), keyPoints: _("keyFeatures"), summary: _("summary"), getBook: _("getBook"),
+              }}
+            />
+          </div>
+        )}
       </section>
 
-      {/* Continue Reading (signed-in users) */}
+      {/* Signed-in only: each renders nothing otherwise. ForYou doubles as the
+          "popular right now" shelf for signed-out visitors. */}
       <ContinueReading />
-
-      {/* Personalized picks for signed-in readers with history; a "Popular
-          right now" fallback for anonymous visitors so this section is never
-          just a blank gap for the majority of traffic. */}
       <ForYou lang={lang} fallbackBooks={popularBooks} />
-
-      {/* Recently viewed (any visitor with history) */}
       <RecentlyViewed />
 
-      {/* Trending Now */}
-      <Section title={_("trending")} subtitle={_("trendingSub")} viewAllLabel={_("viewAll")} href={withLang("/books?sort=rating")}>
-        <HScrollRow>
-          {topRated.map((b, i) => (
-            <Link key={b.id} href={withLang(`/books/${encodeURIComponent(b.slug)}`)} className="card group w-40 overflow-hidden sm:w-44">
-              <div className="relative aspect-[2/3] overflow-hidden bg-black/5">
-                <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
-                  imgClassName="transition duration-500 group-hover:scale-105" />
-                <span className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
-                  #{i + 1}
-                </span>
-              </div>
-              <div className="p-3">
-                <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600"><TitleTransliterated text={b.title} /></p>
-                <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={b.author} /></p>
-                <p className="mt-1 text-xs text-emerald-500">📈 {_("trendingWord")} · ★ {b.rating}</p>
-              </div>
-            </Link>
-          ))}
-        </HScrollRow>
-      </Section>
+      {genres.length > 0 && (
+        <Section title={_("genresAndCategories")} viewAllLabel={_("viewAll")} href={withLang("/categories")}>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {genres.map((g) => (
+              <li key={g.category}>
+                <Link
+                  href={withLang(`/books?category=${encodeURIComponent(g.category)}`)}
+                  className="card flex min-h-16 flex-col justify-center px-4 py-3"
+                >
+                  <span className="font-semibold">{g.label}</span>
+                  <span className="text-muted text-sm">{g.count} {_("booksWord")}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
-      {/* CTA band */}
-      <section className="band py-16">
-        <div className="mx-auto max-w-3xl px-4 text-center">
-          <h2 className="text-3xl font-extrabold sm:text-4xl">
-            {_("ctaHeading")} <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">{_("ctaHighlight")}</span>
-          </h2>
-          <p className="mt-3 text-white/70">
-            {_("ctaSub", { count: stats.books, genres: f.categories.length })}
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href={withLang("/books")} className="btn-primary">{_("browse")}</Link>
-            {surprise && (
-              <Link href={withLang(`/books/${encodeURIComponent(surprise.slug)}`)} className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
-                <Icon name="zap" size={15} /> {_("navSurpriseMe")}
-              </Link>
-            )}
-            <Link href={withLang("/leaderboard")} className="btn-ghost border-white/30 text-white hover:border-white hover:text-white">
-              <Icon name="trophy" size={15} /> {_("navBookwormRanking")}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Daily quote */}
-      <section className="mx-auto max-w-3xl px-4 py-12 text-center">
-        <p className="text-muted text-xs font-bold uppercase tracking-[0.2em]">{_("quoteOfDay")}</p>
-        <blockquote className="mt-3 text-xl font-medium leading-relaxed sm:text-2xl">
-          “{quote.text}”
-        </blockquote>
-        <p className="text-muted mt-3 text-sm">— {quote.by}</p>
-      </section>
-
-      {/* Quick Hub */}
-      <Section title={_("quickHub")} subtitle={_("quickHubSub")}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {HUB.map((h) => (
-            <Link key={h.title} href={h.href} className="card group p-6">
-              <span className={`grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${h.color} text-white shadow-lg`}>
-                <Icon name={h.icon} size={20} />
-              </span>
-              <h3 className="mt-4 font-bold group-hover:text-brand-600">{h.title}</h3>
-              <p className="text-muted mt-1 text-sm">{h.desc}</p>
-              <p className="mt-3 text-xs font-semibold text-brand-600">{_("openSection")}</p>
-            </Link>
-          ))}
-        </div>
-      </Section>
-
-      {/* Browse by Mood — how readers actually felt, not just genre */}
+      {/* Self-hides until readers have tagged enough books with a mood. */}
       {moods.length >= 3 && (
         <Section title={_("moodQuestionTitle")} subtitle={_("moodQuestionSub")}>
           <div className="flex flex-wrap gap-2.5">
             {moods.slice(0, 10).map((m) => (
               <Link key={m.name} href={withLang(`/books?mood=${encodeURIComponent(m.name)}`)}
-                className="pill !px-4 !py-2 !text-sm hover:!bg-brand-600 hover:!text-white">
-                {m.name} <span className="ml-1 opacity-60">{m.count}</span>
+                className="pill !min-h-11 !px-4 !text-sm hover:!bg-brand-600 hover:!text-[var(--on-brand)]">
+                {m.name} <span className="ms-1.5 opacity-70">{m.count}</span>
               </Link>
             ))}
           </div>
         </Section>
       )}
 
-      {/* Explore Books */}
-      <Section title={_("featured")} subtitle={_("exploreBooksSub")} viewAllLabel={_("viewAll")} href={withLang("/books")}>
-        <HScrollRow>
-          {exploreBooks.map((b) => (
-            <div key={b.id} className="w-40 sm:w-44"><BookCard book={b} /></div>
-          ))}
-        </HScrollRow>
-      </Section>
-
-      {/* Featured Collections */}
-      {collectionsWithBooks.length > 0 && (
-        <Section title={_("featuredCollectionsTitle")} subtitle={_("featuredCollectionsSub")} viewAllLabel={_("viewAll")} href={withLang("/collections")}>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {collectionsWithBooks.map((c) => (
-              <div key={c.name} className="card p-5 hover:!translate-y-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-brand-600">{c.name}</h3>
-                  <span className="pill">{c.count} {_("booksWord")}</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {c.books.map((b) => (
-                    <Link key={b.id} href={withLang(`/books/${encodeURIComponent(b.slug)}`)} className="group flex items-center gap-3">
-                      {b.cover_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={b.cover_url} alt="" className="h-14 w-10 rounded object-cover shadow" loading="lazy" />
-                      )}
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium group-hover:text-brand-600"><TitleTransliterated text={b.title} /></span>
-                        <span className="text-muted block text-xs"><TitleTransliterated text={b.author} /> · ★ {b.rating}</span>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-                <Link href={withLang(`/collections/${encodeURIComponent(c.name)}`)} className="mt-4 block text-xs font-semibold text-brand-600 hover:underline">
-                  {_("viewAllInCollection")}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* New Releases */}
       <Section title={_("newReleases")} subtitle={_("newReleasesSub")} viewAllLabel={_("viewAll")} href={withLang("/books?sort=new")}>
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-6 max-sm:[&>*:nth-child(n+5)]:hidden">
           {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       </Section>
 
-      {/* Featured Authors */}
       {authors.length > 0 && (
         <Section title={_("featuredAuthorsTitle")} subtitle={_("featuredAuthorsSub")} viewAllLabel={_("viewAll")} href={withLang("/authors")}>
           <HScrollRow>
-            {authors.slice(0, 12).map((a) => (
-              <Link key={a.id} href={withLang(`/authors/${a.slug}`)} prefetch={false} className="card w-44 p-5 text-center">
+            {authors.map((a) => (
+              <Link key={a.id} href={withLang(`/authors/${a.slug}`)} prefetch={false} className="group block w-28 text-center sm:w-32">
                 {a.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.image_url} alt={a.name} className="mx-auto h-20 w-20 rounded-full object-cover" loading="lazy" />
+                  <img src={a.image_url} alt="" width={96} height={96} loading="lazy"
+                    className="mx-auto h-24 w-24 rounded-full border border-line object-cover" />
                 ) : (
-                  <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-brand-600/15 text-2xl font-bold text-brand-600">{a.name[0]}</span>
+                  <span aria-hidden className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-brand-50 text-3xl font-bold text-brand-600">
+                    {a.name[0]}
+                  </span>
                 )}
-                <p className="mt-3 line-clamp-1 font-semibold"><TitleTransliterated text={a.name} /></p>
-                <p className="text-muted line-clamp-1 text-xs">{a.country}</p>
-                <p className="mt-2 text-xs font-semibold text-brand-600">{_("knowMore")}</p>
+                <span className="mt-2 line-clamp-2 block text-sm font-semibold group-hover:text-brand-600">
+                  <TitleTransliterated text={a.name} />
+                </span>
+                {a.country && <span className="text-muted line-clamp-1 block text-xs">{a.country}</span>}
               </Link>
             ))}
           </HScrollRow>
         </Section>
       )}
 
-      {/* Publishers */}
-      {pubs.length > 0 && (
-        <Section title={_("explorePublishersTitle")} subtitle={_("explorePublishersSub")} viewAllLabel={_("viewAll")} href={withLang("/publications")}>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {pubs.slice(0, 4).map((p) => (
-              <Link key={p.id} href={withLang(`/publications/${p.slug}`)} prefetch={false} className="card p-5 text-center">
-                {p.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.logo_url} alt={p.name} className="mx-auto h-14 w-14 rounded-xl object-cover" loading="lazy" />
-                ) : (
-                  <span className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-brand-600/15 text-xl font-bold text-brand-600">{p.name[0]}</span>
-                )}
-                <p className="mt-3 line-clamp-1 text-sm font-semibold"><TitleTransliterated text={p.name} /></p>
-                <p className="text-muted line-clamp-1 text-xs">{p.headquarters}</p>
+      {collections.length > 0 && (
+        <Section title={_("featuredCollectionsTitle")} viewAllLabel={_("viewAll")} href={withLang("/collections")}>
+          <ul className="flex flex-wrap gap-2.5">
+            {collections.map((c) => (
+              <li key={c.name}>
+                <Link href={withLang(`/collections/${encodeURIComponent(c.name)}`)} className="pill !min-h-11 !px-4 !text-sm">
+                  {c.name} <span className="ms-1.5 opacity-70">{c.count}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      <Section title={_("moreToExplore")}>
+        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {MORE.map((m) => (
+            <li key={m.href}>
+              <Link href={m.href} className="card flex min-h-14 items-center gap-3 px-4 py-3 font-semibold">
+                <Icon name={m.icon} size={20} className="shrink-0 text-brand-600" />
+                {m.title}
               </Link>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* Comics */}
-      {comics.length > 0 && (
-        <Section title={_("exploreComicsTitle")} subtitle={_("comicsHubDesc")} viewAllLabel={_("viewAll")} href={withLang("/comics")}>
-          <HScrollRow>
-            {comics.slice(0, 12).map((c) => (
-              <Link key={c.id} href={withLang(`/comics/${c.slug}`)} prefetch={false} className="card group w-40 overflow-hidden sm:w-44">
-                <div className="aspect-[2/3] overflow-hidden bg-black/5">
-                  <BookCover title={c.title} author={c.publisher} cover_url={c.cover_url}
-                    imgClassName="transition duration-500 group-hover:scale-105" />
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-1 text-sm font-semibold group-hover:text-brand-600"><TitleTransliterated text={c.title} /></p>
-                  <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={c.publisher} /></p>
-                  <Rating value={c.rating} />
-                </div>
-              </Link>
-            ))}
-          </HScrollRow>
-        </Section>
-      )}
-
-      {/* Recently added — trust signal: the catalog is actively growing */}
-      {recentlyAdded.length > 0 && (
-        <Section title={_("recentlyAddedTitle")} subtitle={_("recentlyAddedSub")} viewAllLabel={_("viewAll")} href={withLang("/books")}>
-          <HScrollRow>
-            {recentlyAdded.map((b) => (
-              <div key={b.id} className="relative w-40 sm:w-44">
-                <span className="absolute left-2 top-2 z-10 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">{_("newBadge")}</span>
-                <BookCard book={b} />
-              </div>
-            ))}
-          </HScrollRow>
-        </Section>
-      )}
-
-      {/* Popular tags */}
-      {f.tags.length > 0 && (
-        <Section title={_("popularTags")} viewAllLabel={_("viewAll")} href={withLang("/tags")}>
-          <div className="flex flex-wrap gap-2">
-            {f.tags.slice(0, 24).map((tg) => (
-              <Link key={tg.name} href={withLang(`/books?tag=${encodeURIComponent(tg.name)}`)} className="pill">
-                #{tg.name} <span className="ml-1.5 opacity-60">{tg.count}</span>
-              </Link>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* Brand strip */}
-      <section className="border-line border-t py-14 text-center">
-        <p className="pill !px-4 !py-1.5">{_("futureOfReadingPill")}</p>
-        <div className="mt-4 flex justify-center"><Logo size={40} /></div>
-        <p className="text-muted mx-auto mt-2 max-w-xl px-4 text-sm">
-          {_("brandStripParagraph")}
-        </p>
-      </section>
+            </li>
+          ))}
+        </ul>
+      </Section>
     </>
   );
 }

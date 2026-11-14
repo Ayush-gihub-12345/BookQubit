@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { splitSentences, speechTag } from "@/lib/text";
 import { getFirebaseAuth } from "@/lib/firebase";
+import { authFetch } from "@/lib/authFetch";
 import { logClient } from "./log";
 
 // One global player for the whole app (mounted in the (main) layout, so it survives
@@ -175,8 +176,8 @@ export default function PlayerProvider({ children }) {
       try {
         const u = getFirebaseAuth()?.currentUser;
         if (u) {
-          const r = await fetch(`/api/checkpoint?uid=${u.uid}&slug=${encodeURIComponent(next.slug)}&kind=summary`).then((x) => x.json());
-          start = r.position || 0;
+          const res = await authFetch(`/api/checkpoint?slug=${encodeURIComponent(next.slug)}&kind=summary`, {}, u);
+          start = res && res.ok ? (await res.json()).position || 0 : 0;
         }
       } catch { /* offline */ }
     }
