@@ -48,6 +48,9 @@ CREATE TABLE IF NOT EXISTS content_reports (
 CREATE INDEX IF NOT EXISTS idx_content_reports_open ON content_reports(resolved, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_content_reports_target ON content_reports(target_type, target_id);
 
+-- "Reading twins" joins shelf rows by book; without this index every join step scans the table.
+CREATE INDEX IF NOT EXISTS idx_shelf_book ON shelf(book_slug);
+
 -- Bookkeeping for the reader taste vector (the vector itself lives in Vectorize as `user:{id}`).
 CREATE TABLE IF NOT EXISTS user_taste (
   user_id TEXT PRIMARY KEY,

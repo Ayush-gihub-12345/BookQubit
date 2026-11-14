@@ -4,11 +4,13 @@
 import openNext from "./.open-next/worker.js";
 import { handleQueue } from "./src/lib/cf/consumer.js";
 import { runEmbedBackfill } from "./src/lib/cf/backfill.js";
+import { routeRoom } from "./src/lib/cf/rooms.js";
 
 export { ReadingRoom } from "./src/lib/cf/reading-room.js";
 
 export default {
-  fetch: (request, env, ctx) => openNext.fetch(request, env, ctx),
+  // Live-room WebSockets go straight to the Durable Object; everything else is the Next app.
+  fetch: (request, env, ctx) => routeRoom(request, env) || openNext.fetch(request, env, ctx),
   queue: (batch, env) => handleQueue(batch, env),
   // Every 30 minutes: embed the next small batch of books for semantic search.
   scheduled: (event, env, ctx) => {

@@ -25,7 +25,7 @@ export async function GET(request) {
     if (id) {
       const shelf = await c.db.prepare("SELECT id, name, visibility FROM custom_shelves WHERE id=?1 AND user_id=?2").bind(id, c.user.uid).first();
       if (!shelf) return NextResponse.json({ error: "not found" }, { status: 404 });
-      const { results } = await c.db.prepare("SELECT book_slug, added_at FROM custom_shelf_items WHERE shelf_id=?1 ORDER BY added_at DESC LIMIT 200").bind(id).all();
+      const { results } = await c.db.prepare("SELECT book_slug, added_at FROM custom_shelf_items WHERE shelf_id=?1 ORDER BY added_at DESC, rowid DESC LIMIT 200").bind(id).all();
       const info = results.length ? await getBooksBySlug(results.map((r) => r.book_slug), "en", "slug, title, author, cover_url") : new Map();
       const items = results.map((r) => ({ ...r, title: info.get(r.book_slug)?.title || r.book_slug, author: info.get(r.book_slug)?.author || "", cover_url: info.get(r.book_slug)?.cover_url || null }));
       return NextResponse.json({ shelf, items });

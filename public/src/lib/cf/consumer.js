@@ -1,6 +1,6 @@
 import { JOBS } from "./queue.js";
 import { embedText, generateSummary, synthesizeSpeech } from "./ai.js";
-import { upsertVector } from "./vectorize.js";
+import { upsertVector, averageVectors } from "./vectorize.js";
 import { kvPutJson, summaryKey } from "./cache.js";
 import { logEvent, logError } from "./logger.js";
 
@@ -41,12 +41,31 @@ async function summarize(env, { slug, lang = "en", intent = "general", withAudio
   await kvPutJson(env, summaryKey(book.id, lang, intent), payload);
 }
 
+// Reader taste = mean of the vectors of books they finished and liked (rating >= 4 or unrated).
+// Opted-out / hidden readers get their vector REMOVED, so they can never be matched.
+async function recomputeTaste(env, { uid }) {
+  if (!uid || !env.DB || !env.BOOK_VECTORS) return;
+  const priv = await env.DB.prepare("SELECT hide_activity, discoverable FROM user_privacy WHERE user_id = ?").bind(uid).first().catch(() => null);
+  if (priv && (priv.hide_activity || !priv.discoverable)) { await env.BOOK_VECTORS.deleteByIds([`user:${uid}`]); return; }
+  const { results } = await env.DB.prepare(
+    "SELECT book_slug FROM shelf WHERE user_id = ? AND status = 'read' AND (rating IS NULL OR rating >= 4) ORDER BY updated_at DESC LIMIT 30"
+  ).bind(uid).all();
+  if (!results.length) return;
+  const found = await env.BOOK_VECTORS.getByIds(results.map((r) => `book:${r.book_slug}:en`));
+  const taste = averageVectors((found || []).map((v) => v.values));
+  if (!taste) return;
+  await upsertVector(env, `user:${uid}`, taste, { type: "user", uid });
+  await env.DB.prepare(
+    "INSERT INTO user_taste (user_id, books_count) VALUES (?1, ?2) ON CONFLICT(user_id) DO UPDATE SET books_count = ?2, updated_at = CURRENT_TIMESTAMP"
+  ).bind(uid, results.length).run().catch(() => {});
+}
+
 const HANDLERS = {
   [JOBS.EMBED_BOOK]: embedBook,
   [JOBS.SUMMARY]: summarize,
   // Implemented with their API/UI in Phases 5 and 7; acked (not retried) until then.
   [JOBS.IMPORT_GOODREADS]: async () => logEvent("job", { type: JOBS.IMPORT_GOODREADS, status: "not_implemented" }),
-  [JOBS.RECOMPUTE_TASTE]: async () => logEvent("job", { type: JOBS.RECOMPUTE_TASTE, status: "not_implemented" }),
+  [JOBS.RECOMPUTE_TASTE]: recomputeTaste,
 };
 
 /** Queue consumer entry — wired as `queue()` in worker-entry.js. */

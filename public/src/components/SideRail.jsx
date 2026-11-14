@@ -16,6 +16,7 @@ export const RAIL_ITEMS = [
   { href: "/mindspace", icon: "layers", label: "MindSpace", match: (p) => p.startsWith("/mindspace") },
   { href: "/library", icon: "bookmark", key: "shelfWord", match: (p) => p.startsWith("/library") || p.startsWith("/account") || p.startsWith("/liked") },
   { href: "/community", icon: "users", key: "navCommunity", match: (p) => p.startsWith("/community") },
+  { href: "/connect", icon: "award", label: "Connect", match: (p) => p.startsWith("/connect") },
 ];
 
 export default function SideRail() {

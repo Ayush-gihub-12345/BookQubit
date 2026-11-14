@@ -3,6 +3,7 @@ import { requireUser, unauthorized } from "@/lib/auth-request";
 import { getCf } from "@/lib/cf/env";
 import { rateLimit } from "@/lib/cf/cache";
 import { logError } from "@/lib/cf/logger";
+import { enqueue, JOBS } from "@/lib/cf/queue";
 import { recordProgress } from "@/lib/library-server";
 import { upsertUser } from "@/lib/repo";
 
@@ -20,7 +21,10 @@ export async function POST(request) {
 
   try {
     await upsertUser(user.uid, user.name, user.photo);
-    return NextResponse.json(await recordProgress(env, user.uid, body));
+    const result = await recordProgress(env, user.uid, body);
+    // Finishing a book changes the reader's taste: refresh their vector in the background.
+    if (result.kind === "finish") await enqueue(env, JOBS.RECOMPUTE_TASTE, { uid: user.uid });
+    return NextResponse.json(result);
   } catch (e) {
     logError("library.progress", e);
     return NextResponse.json({ error: "failed" }, { status: 500 });

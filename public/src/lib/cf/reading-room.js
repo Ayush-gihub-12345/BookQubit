@@ -52,8 +52,16 @@ export class ReadingRoom extends DurableObject {
   async webSocketMessage(ws, data) {
     let m;
     try { m = JSON.parse(data); } catch { return; }
-    if (m.type === "chat" && typeof m.text === "string") {
-      this.broadcast({ type: "chat", text: m.text.slice(0, 500), name: String(m.name || "Reader").slice(0, 40), at: Date.now() });
+    // Per-socket throttle (<= 2 messages/second) survives hibernation via the socket attachment.
+    const now = Date.now();
+    const last = ws.deserializeAttachment?.()?.last || 0;
+    if (now - last < 500) return;
+    ws.serializeAttachment?.({ last: now });
+    if (m.type === "new") {
+      // "Someone posted" nudge: other readers refetch from the API (messages themselves stay in D1).
+      this.broadcast({ type: "new" }, ws);
+    } else if (m.type === "chat" && typeof m.text === "string") {
+      this.broadcast({ type: "chat", text: m.text.slice(0, 500), name: String(m.name || "Reader").slice(0, 40), at: now });
     }
   }
 

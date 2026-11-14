@@ -6,8 +6,13 @@ import Icon from "@/components/Icon";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
+import { useRoom } from "@/lib/useRoom";
+import { useSafety } from "@/lib/safety-client";
+import MessageBody from "./MessageBody";
+import MessageMenu from "./MessageMenu";
 
-const POLL_MS = 4000;
+const POLL_MS = 4000; // fallback only: with a live room connection the panel refetches on a push instead
+const LIVE_POLL_MS = 30000; // safety net while connected
 
 // One open discussion's chat thread — polls for new messages (no
 // websockets/Durable Objects in this build), and understands three states:
@@ -23,6 +28,11 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
   const [error, setError] = useState("");
   const scrollRef = useRef(null);
   const lastIdRef = useRef(0);
+  const safety = useSafety();
+  const connectedRef = useRef(false);
+  const fetchNewRef = useRef(() => {});
+  const room = useRoom(`discussion:${discussionId}`, () => fetchNewRef.current());
+  connectedRef.current = room.connected;
 
   const load = async () => {
     const r = await fetch(`/api/discussions/${discussionId}?uid=${user?.uid || ""}`);
@@ -36,7 +46,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
   useEffect(() => {
     setThread(null); setMessages([]); setError("");
     load();
-    const poll = setInterval(async () => {
+    const fetchNew = async () => {
       const r = await fetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`);
       if (!r.ok) return;
       const d = await r.json();
@@ -44,8 +54,16 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
         setMessages((prev) => [...prev, ...d.messages]);
         lastIdRef.current = d.messages[d.messages.length - 1].id;
       }
-    }, POLL_MS);
-    return () => clearInterval(poll);
+    };
+    fetchNewRef.current = fetchNew;
+    // Slow loop while the live connection is up, normal polling when it isn't.
+    let stopped = false, timer;
+    const tick = async () => {
+      try { await fetchNew(); } catch { /* offline: try again next tick */ }
+      if (!stopped) timer = setTimeout(tick, connectedRef.current ? LIVE_POLL_MS : POLL_MS);
+    };
+    timer = setTimeout(tick, POLL_MS);
+    return () => { stopped = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [discussionId]);
 
@@ -105,6 +123,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
       body: JSON.stringify({ idToken, body }),
     });
     if (r.ok) {
+      room.notify();
       const r2 = await fetch(`/api/discussions/${discussionId}/messages?since=${lastIdRef.current}`);
       const d2 = await r2.json();
       if (d2.messages?.length) {
@@ -128,6 +147,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
             )}
             {thread.author_name && <span><Icon name="feather" size={11} className="inline" /> <TitleTransliterated text={thread.author_name} /></span>}
             <span>{tr("startedByLabel")} <Link href={`/${lang}/readers/${thread.slug || thread.user_id}`} className="hover:text-brand-600 hover:underline">{thread.name}</Link></span>
+            {room.connected && room.readers > 0 && <span className="text-brand-700 inline-flex items-center gap-1" role="status"><span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden />{room.readers} {room.readers === 1 ? "reader" : "readers"} here now</span>}
           </p>
         </div>
         {isMember && (
@@ -157,7 +177,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
             <p className="whitespace-pre-line leading-relaxed">{thread.body}</p>
           </div>
         )}
-        {messages.map((m) => {
+        {messages.filter((m) => !safety.hides(m.user_id)).map((m) => {
           const mine = m.user_id === user?.uid;
           return (
             <div key={m.id} className={`flex gap-2 ${mine ? "flex-row-reverse" : ""}`}>
@@ -176,7 +196,8 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
                   className={`mb-0.5 block text-[11px] font-semibold hover:underline ${mine ? "text-white/80" : "opacity-70"}`}>
                   {mine ? tr("youLabel") : m.name}
                 </Link>
-                <p className="whitespace-pre-line leading-relaxed">{m.body}</p>
+                {!mine && user && <span className="float-end"><MessageMenu messageId={m.id} userId={m.user_id} name={m.name} onChanged={safety.refresh} /></span>}
+                <MessageBody body={m.body} />
                 <p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-muted"}`}>
                   {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
@@ -196,6 +217,7 @@ export default function ChatPanel({ discussionId, user, onLeft, onArchiveChange 
             value={text} onChange={(e) => setText(e.target.value)}
             placeholder={tr("messagePlaceholder")} className="input flex-1"
           />
+          <button type="button" onClick={() => setText((v) => (v.trim() ? `||${v.trim()}||` : "||spoiler||"))} className="btn-ghost !px-3 text-xs" title="Hide this message behind a spoiler" aria-label="Wrap message in a spoiler">Spoiler</button>
           <button type="submit" disabled={!text.trim()} className="btn-primary !px-4 disabled:cursor-not-allowed disabled:opacity-40">
             <Icon name="arrowRight" size={16} />
           </button>
