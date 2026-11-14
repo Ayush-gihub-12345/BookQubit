@@ -11,6 +11,7 @@ import { t } from "@/lib/i18n";
 // are listed — new sections (MindSpace, Library) are added here as they ship.
 export const RAIL_ITEMS = [
   { href: "/", icon: "home", key: "homeWord", match: (p) => p === "/" },
+  { href: "/feed", icon: "flame", label: "Feed", match: (p) => p.startsWith("/feed") },
   { href: "/books", icon: "compass", key: "navDiscover", match: (p) => p.startsWith("/books") || p.startsWith("/categories") || p.startsWith("/authors") },
   { href: "/mindspace", icon: "layers", label: "MindSpace", match: (p) => p.startsWith("/mindspace") },
   { href: "/library", icon: "bookmark", key: "shelfWord", match: (p) => p.startsWith("/library") || p.startsWith("/account") || p.startsWith("/liked") },
