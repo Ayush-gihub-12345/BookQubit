@@ -37,7 +37,6 @@
   //   CACHE_KV        shared cache tier: hot lists, search, feed, cache-group versions (lib/db.js, cache-versions.js)
   //   ENGAGEMENT_DB   write-heavy reader data: shelves, reading log, streaks, audio checkpoints (lib/library-server.js)
   //   MINDSPACE_DB    users' own notes, quotes and idea graphs (lib/mindspace-*.js)
-  //   MEDIA_BUCKET    generated audio and covers served by key (lib/cf/consumer.js)
   //   AI              Workers AI: summaries, embeddings, import enrichment (lib/summary.js, lib/cf/ai.js)
   //
   // After the first deploy apply the SQL once (all of it is idempotent), see DEPLOYMENT_CHECKLIST.md:
@@ -47,6 +46,8 @@
   //   wrangler d1 execute catalog    --remote --command="INSERT INTO books_fts(books_fts) VALUES('rebuild'); INSERT INTO authors_fts(authors_fts) VALUES('rebuild');"
   //
   // PHASE 2 (needs resources created by hand first, so it is NOT enabled here; see DEPLOYMENT_CHECKLIST.md):
+  //   "r2_buckets": [{ "binding": "MEDIA_BUCKET", "bucket_name": "bookqubit-media" }]   (R2 must be enabled on the account;
+  //     generated audio files. Without it the player reads summaries aloud with the device voice)
   //   "queues": { "producers": [{ "binding": "JOBS", "queue": "bookqubit-jobs" }], "consumers": [{ "queue": "bookqubit-jobs" }] }
   //   "vectorize": [{ "binding": "BOOK_VECTORS", "index_name": "bookqubit-vectors" }]
   //   "durable_objects": { "bindings": [{ "name": "READING_ROOM_DO", "class_name": "ReadingRoom" }] },
@@ -54,7 +55,6 @@
   //   "triggers": { "crons": ["*/30 * * * *"] }   and   "main": "worker-entry.js"   (adds queue, cron and Durable Object handlers)
   // ---------------------------------------------------------------------------
   "kv_namespaces": [{ "binding": "CACHE_KV" }],
-  "r2_buckets": [{ "binding": "MEDIA_BUCKET" }],
   "ai": { "binding": "AI" },
 
   // Workers Logs. It was OFF in production (confirmed from the account's
@@ -105,7 +105,6 @@
         { "binding": "ENGAGEMENT_DB", "database_name": "bookqubit-dev-engagement" },
         { "binding": "MINDSPACE_DB", "database_name": "bookqubit-dev-mindspace" }
       ],
-      "r2_buckets": [{ "binding": "MEDIA_BUCKET" }],
       "ai": { "binding": "AI" },
       "services": [],
       // Workers KV for the shared cache tier (see src/lib/db.js). No id on purpose: wrangler creates a namespace

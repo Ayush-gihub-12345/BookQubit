@@ -31,9 +31,9 @@ describe("wrangler.jsonc: the dev environment can never touch production data", 
     }
   });
 
-  it("has its own KV namespace and bucket (no id, so wrangler creates them for this Worker only)", () => {
+  it("has its own KV namespace (no id, so wrangler creates it for this Worker only) and Workers AI", () => {
     expect(dev.kv_namespaces).toEqual([{ binding: "CACHE_KV" }]);
-    expect(dev.r2_buckets).toEqual([{ binding: "MEDIA_BUCKET" }]);
+    expect(dev.r2_buckets).toBeUndefined(); // R2 needs enabling on the account first (phase 2)
     expect(dev.ai).toEqual({ binding: "AI" });
   });
 
@@ -55,10 +55,10 @@ describe("wrangler.jsonc: the dev environment can never touch production data", 
     expect(cfg.services.map((s) => s.binding)).toEqual(["IMPORT_CRON"]);
   });
 
-  it("production declares the shared cache, engagement and mindspace databases, media bucket and AI", () => {
+  it("production declares the shared cache, engagement and mindspace databases and AI", () => {
     expect(cfg.d1_databases.map((d) => d.binding).sort()).toEqual(["CATALOG_DB", "DB", "ENGAGEMENT_DB", "MINDSPACE_DB"]);
     expect(cfg.kv_namespaces).toEqual([{ binding: "CACHE_KV" }]);
-    expect(cfg.r2_buckets).toEqual([{ binding: "MEDIA_BUCKET" }]);
+    expect(cfg.r2_buckets).toBeUndefined();
     expect(cfg.ai).toEqual({ binding: "AI" });
     // Resources that must be created by hand are not enabled here (they would fail the deploy if missing).
     expect(cfg.queues).toBeUndefined();
