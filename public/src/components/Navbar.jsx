@@ -169,7 +169,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
         { label: "Classics", href: "/books?shelf=classics", icon: "feather" },
         { label: labels.comics, href: "/comics", icon: "layers" },
         { label: "Listen", href: "/listen", icon: "headphones", badge: "NEW" },
-        { label: "Feed", href: "/feed", icon: "newspaper" },
+        { label: "Feed", href: "/feed", icon: "flame" },
       ],
     },
     {
@@ -203,7 +203,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
     {
       title: "Read together",
       links: [
-        { label: "Feed", href: "/feed", icon: "newspaper", desc: "Books, quotes and summaries" },
+        { label: "Feed", href: "/feed", icon: "flame", desc: "Books, quotes and summaries" },
         { label: tr("communityTitle"), href: "/community", icon: "users", desc: "Threads and book clubs" },
         { label: "Connect", href: "/connect", icon: "heart", desc: "Find readers like you" },
       ],

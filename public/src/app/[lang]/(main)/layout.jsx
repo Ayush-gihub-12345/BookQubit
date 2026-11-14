@@ -9,6 +9,7 @@ import { SurpriseProvider } from "@/components/surprise/SurpriseMe";
 import { getLang, LANGUAGES } from "@/lib/lang";
 import { getTheme, THEMES } from "@/lib/theme";
 import { t } from "@/lib/i18n";
+import { cookies } from "next/headers";
 import { facets } from "@/lib/repo";
 import { resolveGenres } from "@/lib/genres";
 
@@ -40,7 +41,7 @@ export default async function PublicLayout({ children }) {
       {/* The rail (lg+) sits in a flex row beside the page. The footer carries the bottom padding for the
           mobile tab bar, and the spacer keeps the mini player from covering the end of the page. */}
       <div className="flex flex-1">
-        <SideRail />
+        <SideRail defaultOpen={(await cookies()).get("bq_rail")?.value !== "0"} />
         <div className="flex min-w-0 flex-1 flex-col">
           <main id="main-content" className="flex-1">{children}</main>
           <ConditionalFooter>

@@ -41,7 +41,7 @@ export default async function ListenPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2 sm:mt-6">
             <Link href={`/${lang}/books`} className="btn-ghost max-sm:!min-h-10 max-sm:!px-4 max-sm:!text-sm"><Icon name="book" size={16} />{_("allBooksMenu")}</Link>
-            <Link href={`/${lang}/feed`} prefetch={false} className="btn-ghost max-sm:!min-h-10 max-sm:!px-4 max-sm:!text-sm"><Icon name="newspaper" size={16} />Feed</Link>
+            <Link href={`/${lang}/feed`} prefetch={false} className="btn-ghost max-sm:!min-h-10 max-sm:!px-4 max-sm:!text-sm"><Icon name="flame" size={16} />Feed</Link>
           </div>
         </div>
       </section>
