@@ -44,3 +44,6 @@ CREATE TABLE IF NOT EXISTS read_model_meta (
 -- Supporting indexes for the shelves and browse sorts (each stops at LIMIT instead of sorting a language).
 CREATE INDEX IF NOT EXISTS idx_books_lang_bestseller ON books(lang, bestseller, rating DESC);
 CREATE INDEX IF NOT EXISTS idx_books_lang_published ON books(lang, published);
+
+-- Author-by-name lookup on every book page (getAuthorLineProfiles); the query uses this exact expression.
+CREATE INDEX IF NOT EXISTS idx_authors_lang_lname ON authors(lang, lower(trim(name)));

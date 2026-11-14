@@ -1,3 +1,4 @@
+import { useId } from "react";
 import Icon from "@/components/Icon";
 
 // "Where to get it" (UI v2.1 store card). Every outbound link is honest about what it is:
@@ -5,6 +6,7 @@ import Icon from "@/components/Icon";
 //  - Open Library is a free borrowing link when the book has an ISBN.
 // Prices are not shown: we don't hold live prices, and an invented number would be worse than none.
 export default function WhereToGet({ book, goBuy, goAudible }) {
+  const hid = useId();
   const stores = [
     { name: "Amazon", href: goBuy, icon: "cart", note: "Affiliate link", rel: "noopener noreferrer sponsored" },
     { name: "Audible", href: goAudible, icon: "headphones", note: "External provider", rel: "noopener noreferrer sponsored" },
@@ -12,8 +14,8 @@ export default function WhereToGet({ book, goBuy, goAudible }) {
   ].filter(Boolean);
 
   return (
-    <section aria-labelledby="where-h" className="card mt-5 p-4">
-      <h2 id="where-h" className="text-base font-bold">Where to get it</h2>
+    <section aria-labelledby={hid} className="card mt-5 p-4">
+      <h2 id={hid} className="text-base font-bold">Where to get it</h2>
       <ul className="mt-2">
         {stores.map((s) => (
           <li key={s.name}>

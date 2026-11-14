@@ -132,7 +132,7 @@ export default function QuickActions({ book }) {
   if (!firebaseEnabled) return null;
 
   return (
-    <div className="mt-8 flex flex-col gap-2.5">
+    <div className="mt-4 flex flex-col gap-2 max-lg:[&_a]:!min-h-10 max-lg:[&_a]:!text-sm max-lg:[&_button]:!min-h-10 max-lg:[&_button]:!text-sm lg:mt-8 lg:gap-2.5">
       {book.buyUrl && (
         <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className={pillFilled}>
           <Icon name="cart" size={15} /> {tr("getBookAction")}

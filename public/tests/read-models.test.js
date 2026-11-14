@@ -109,6 +109,14 @@ describe("read models: rebuild", () => {
     expect(model("tag")).toEqual(live("SELECT value name, COUNT(*) count FROM books, json_each(CASE WHEN tags IS NOT NULL AND json_valid(tags) THEN tags ELSE '[]' END) WHERE lang='en' AND type='text' AND value!='' GROUP BY value ORDER BY count DESC, name"));
   });
 
+  it("author profile lookup by name is indexed (it runs on every book page)", () => {
+    sqlite.exec("INSERT INTO authors(slug,lang,name) VALUES ('ken-follett','en',' Ken Follett ')");
+    const sql = "SELECT id, slug FROM authors WHERE lang = ?1 AND lower(trim(name)) IN (?2,?3)";
+    expect(sqlite.prepare(sql).all("en", "ken follett", "nobody").map((r) => r.slug)).toEqual(["ken-follett"]);
+    const plan = sqlite.prepare("EXPLAIN QUERY PLAN " + sql).all("en", "a", "b").map((r) => r.detail).join(" ");
+    expect(plan).toMatch(/idx_authors_lang_lname/);
+  });
+
   it("the top-N facet read is served by the covering index, not a table scan", () => {
     const plan = sqlite.prepare("EXPLAIN QUERY PLAN SELECT name, count FROM catalog_facets WHERE lang='en' AND kind='category' ORDER BY count DESC LIMIT 60").all().map((r) => r.detail).join(" ");
     expect(plan).toMatch(/idx_catalog_facets_top|PRIMARY KEY/);

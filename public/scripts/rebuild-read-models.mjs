@@ -23,5 +23,5 @@ writeFileSync(file, REBUILD_STATEMENTS.map((s) => s.trim().replace(/;?$/, ";")).
 const db = env === "dev" ? "bookqubit-dev-catalog" : "catalog";
 const args = ["wrangler", "d1", "execute", db, "--remote", ...(env === "dev" ? ["--env=dev"] : []), `--file=${file}`];
 console.log("> npx " + args.join(" "));
-const r = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", args, { stdio: "inherit", shell: process.platform === "win32" });
+const r = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", args, { stdio: ["ignore", "inherit", "inherit"], timeout: 120_000, killSignal: "SIGKILL", shell: process.platform === "win32" });
 process.exit(r.status ?? 1);

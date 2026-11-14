@@ -1105,13 +1105,31 @@ export async function booksByAuthor(name, lang) {
 // Resolves each individual name in a book's ", "-joined author line to its
 // profile (or null if that person has no author row yet), so a book page
 // can link every co-author separately instead of treating the whole string
-// as one person. Reuses listAuthors()' cached list — no extra query.
+// as one person.
+//
+// Runs on EVERY book page. It used to call listAuthors(), which on a cold cache reads the whole authors table
+// (~3,900 rows) plus every distinct book author (~5,000 rows) just to find one or two names. Now it is an indexed lookup
+// of exactly those names (idx_authors_lang_lname, migrations/catalog/0002), cached per author line. The "has at least
+// one book" filter listAuthors applies is moot here: the book on this page is one.
 export async function getAuthorLineProfiles(authorLine, lang) {
   if (!authorLine) return [];
   const names = authorLine.split(",").map((s) => s.trim()).filter(Boolean);
   if (!names.length) return [];
-  const all = await listAuthors(lang);
-  const byName = new Map(all.map((a) => [a.name.trim().toLowerCase(), a]));
+  const keys = [...new Set(names.map((n) => n.toLowerCase()))].slice(0, 20);
+  const found = await cached(`author-profiles:${lang}:${keys.join("|")}`, async () => {
+    const db = await getCatalogDb();
+    const run = async (l) => (await db
+      .prepare(`SELECT id, slug, name, country, image_url FROM authors WHERE lang = ?1 AND lower(trim(name)) IN (${keys.map((_, i) => `?${i + 2}`).join(",")})`)
+      .bind(l, ...keys).all()).results;
+    let rows = await run(lang);
+    // Same per-name fallback as everywhere else: an author with no profile in this language still links to the English one.
+    if (lang !== "en") {
+      const have = new Set(rows.map((r) => r.name.trim().toLowerCase()));
+      if (keys.some((k) => !have.has(k))) rows = [...rows, ...(await run("en")).filter((r) => !have.has(r.name.trim().toLowerCase()))];
+    }
+    return rows;
+  }, TTL.static);
+  const byName = new Map(found.map((a) => [a.name.trim().toLowerCase(), a]));
   return names.map((name) => ({ name, profile: byName.get(name.toLowerCase()) || null }));
 }
 

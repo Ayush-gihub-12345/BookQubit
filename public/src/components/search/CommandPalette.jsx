@@ -60,7 +60,7 @@ export default function CommandPalette({ lang, open, onClose }) {
 
   const PAGES = useMemo(() => [
     { key: "home", label: tr("homeWord"), href: "/", icon: "home" },
-    { key: "feed", label: "Feed", href: "/feed", icon: "newspaper", desc: "Books, quotes and summaries" },
+    { key: "feed", label: "Feed", href: "/feed", icon: "flame", desc: "Books, quotes and summaries" },
     { key: "books", label: tr("allBooksMenu"), href: "/books", icon: "book" },
     { key: "listen", label: "Listen", href: "/listen", icon: "headphones", desc: "Audio summaries and queues" },
     { key: "bestsellers", label: "Bestsellers", href: "/books?shelf=bestsellers", icon: "trophy" },
