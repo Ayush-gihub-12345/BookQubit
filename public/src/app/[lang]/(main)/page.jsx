@@ -6,6 +6,7 @@ import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
 import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
+import ListenShelf from "@/components/listen/ListenShelf";
 import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, PublisherCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
 import { getFeaturedPublishers, getCollectionCovers } from "@/lib/home-data";
 import { cached } from "@/lib/db";
@@ -194,6 +195,13 @@ export default async function Home() {
           {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       </Section>
+
+      {/* Audio summaries: press play on a cover, or queue the whole row. Reuses the global player. */}
+      <ListenShelf
+        title="Listen now" subtitle="Short audio summaries you can start with one tap"
+        books={topRated.slice(0, 10).map((b) => ({ slug: b.slug, title: b.title, author: b.author, cover_url: b.cover_url, lang: b.lang, rating: b.rating }))}
+        lang={lang} href={withLang("/listen")} viewAll={_("viewAll")}
+      />
 
       {authors.length > 0 && (
         <Section title={_("featuredAuthorsTitle")} subtitle={_("featuredAuthorsSub")} viewAllLabel={_("viewAll")} href={withLang("/authors")}>

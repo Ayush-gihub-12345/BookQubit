@@ -71,7 +71,12 @@ export default function MiniPlayer() {
 
       {expanded && (
         <div className="bg-surface fixed inset-0 z-[90] flex flex-col overflow-y-auto pb-safe" role="dialog" aria-modal="true" aria-label="Player">
-          <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-4 pb-8">
+          {track.cover && (
+            <div aria-hidden className="pointer-events-none fixed inset-0 opacity-50 blur-3xl saturate-150"
+              style={{ backgroundImage: `url(${track.cover})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+          )}
+          <div aria-hidden className="pointer-events-none fixed inset-0 bg-gradient-to-b from-transparent via-[var(--surface)]/60 to-[var(--surface)]" />
+          <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-4 pb-8">
             <button type="button" onClick={() => p.setExpanded(false)} className="text-muted hover:text-fg -ms-2 self-start p-2" aria-label="Minimise player">
               <Icon name="chevronDown" size={22} />
             </button>

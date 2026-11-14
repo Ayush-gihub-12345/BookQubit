@@ -17,6 +17,7 @@ import QuotesSection from "@/components/QuotesSection";
 import BookTabs from "@/components/book/BookTabs";
 import WhereToGet from "@/components/book/WhereToGet";
 import BookStats from "@/components/book/BookStats";
+import MobileBookBar from "@/components/book/MobileBookBar";
 import KeyIdeasList from "@/components/book/KeyIdeasList";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
@@ -173,11 +174,49 @@ export default async function BookPage({ params }) {
     [_("metaGenres"), book.genres?.length > 0 && book.genres.join(", ")],
   ].filter(([, v]) => v);
 
+  const secondary = (
+    <>
+    <WhereToGet book={book} goBuy={goBuy} goAudible={goAudible} />
+
+    {related.length > 0 && (
+      <div className="mt-5 border-t border-line pt-4">
+        <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
+          <Icon name="layers" size={14} /> {_("browseSimilarBooks")}
+        </a>
+      </div>
+    )}
+
+    <div className="mt-2 border-t border-line pt-4">
+      <p className="text-muted mb-2 text-xs font-semibold">{_("readWithOthers")}</p>
+      {bookDiscussions.map((d) => (
+        <Link key={d.id} href={withLang(`/community?open=${d.id}`)}
+          className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
+          <Icon name="users" size={13} className="shrink-0" />
+          <span className="truncate">{d.title}</span>
+          <span className="shrink-0 text-xs opacity-70">· {d.members}</span>
+        </Link>
+      ))}
+      <Link
+        href={withLang(`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`)}
+        className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700"
+      >
+        <Icon name="feather" size={14} /> {_("startDiscussion")}
+      </Link>
+    </div>
+
+    <div className="mt-2 border-t border-line pt-4">
+      <p className="text-muted mb-2 text-xs font-semibold">{_("bookInformation")}</p>
+      <ReportIssueButton bookSlug={book.slug} />
+    </div>
+    </>
+  );
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
       <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
+      <MobileBookBar book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }} buyHref={goBuy} />
 
       <div className="mx-auto max-w-7xl px-4 pt-6 pb-6 sm:pt-10 sm:pb-10">
         <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
@@ -198,44 +237,16 @@ export default async function BookPage({ params }) {
             {/* Capped + centered on mobile (stacked layout would otherwise
                 stretch the cover to full viewport width, looking oversized) —
                 reverts to filling its 300px grid column at lg. */}
-            <div className="cover mx-auto aspect-[2/3] max-w-[240px] lg:mx-0 lg:max-w-none">
+            <div className="cover mx-auto aspect-[2/3] max-w-[150px] sm:max-w-[200px] lg:mx-0 lg:max-w-none">
               <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
             </div>
 
             <QuickActions book={bookForActions} />
 
-            <WhereToGet book={book} goBuy={goBuy} goAudible={goAudible} />
 
-            {related.length > 0 && (
-              <div className="mt-5 border-t border-line pt-4">
-                <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
-                  <Icon name="layers" size={14} /> {_("browseSimilarBooks")}
-                </a>
-              </div>
-            )}
-
-            <div className="mt-2 border-t border-line pt-4">
-              <p className="text-muted mb-2 text-xs font-semibold">{_("readWithOthers")}</p>
-              {bookDiscussions.map((d) => (
-                <Link key={d.id} href={withLang(`/community?open=${d.id}`)}
-                  className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
-                  <Icon name="users" size={13} className="shrink-0" />
-                  <span className="truncate">{d.title}</span>
-                  <span className="shrink-0 text-xs opacity-70">· {d.members}</span>
-                </Link>
-              ))}
-              <Link
-                href={withLang(`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`)}
-                className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700"
-              >
-                <Icon name="feather" size={14} /> {_("startDiscussion")}
-              </Link>
-            </div>
-
-            <div className="mt-2 border-t border-line pt-4">
-              <p className="text-muted mb-2 text-xs font-semibold">{_("bookInformation")}</p>
-              <ReportIssueButton bookSlug={book.slug} />
-            </div>
+            {/* Store card, discussions and the report link sit under the actions from lg up; on a phone they move below the
+                content (see the lg:hidden copy after this column) so the title is the first thing under the cover. */}
+            <div className="hidden lg:block">{secondary}</div>
           </div>
 
           <div className="min-w-0">
@@ -489,6 +500,8 @@ export default async function BookPage({ params }) {
               </div>
             </BookTabs>
           </div>
+
+          <div className="min-w-0 lg:hidden">{secondary}</div>
         </div>
       </div>
 
