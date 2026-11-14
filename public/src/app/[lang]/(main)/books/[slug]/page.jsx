@@ -1,32 +1,31 @@
-import Breadcrumbs from "@/components/Breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import BookCard from "@/components/BookCard";
-import Rating from "@/components/Rating";
-import Section from "@/components/Section";
 import ShelfControls from "@/components/ShelfControls";
-import ReviewCard from "@/components/ReviewCard";
 import HScrollRow from "@/components/HScrollRow";
-import BookCover from "@/components/BookCover";
 import Icon from "@/components/Icon";
 import ReportIssueButton from "@/components/ReportIssueButton";
-import QuickActions from "@/components/QuickActions";
 import Translated from "@/components/Translated";
-import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
-import BookTabs from "@/components/book/BookTabs";
 import WhereToGet from "@/components/book/WhereToGet";
-import BookStats from "@/components/book/BookStats";
 import MobileBookBar from "@/components/book/MobileBookBar";
-import KeyIdeasList from "@/components/book/KeyIdeasList";
+import BookActionsProvider from "@/components/book/v3/BookActionsProvider";
+import BookHero from "@/components/book/v3/BookHero";
+import StickyBookBar from "@/components/book/v3/StickyBookBar";
+import ClampText from "@/components/book/v3/ClampText";
+import ReviewList from "@/components/book/v3/ReviewList";
+import { SectionHead, TakeawayCards, ReadersFelt, EditionsList, RatingCard, ReadersCard, AuthorCard } from "@/components/book/v3/Sections";
 import { TrackView } from "@/components/RecentlyViewed";
-import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
+import {
+  getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles,
+  getPublicationByName, listBooks, booksByAuthor,
+} from "@/lib/repo";
 import SummaryReader from "@/components/player/SummaryReader";
 import AddToShelf from "@/components/library/AddToShelf";
 import SaveToMindSpace from "@/components/mindspace/SaveToMindSpace";
 import { getCf } from "@/lib/cf/env";
-import { availability } from "@/lib/cf/geo-affiliate";
 import { baselineSummary, resolveSummary } from "@/lib/summary";
+import { LANGUAGES } from "@/lib/languages";
 import { t } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 import { safeJsonLd } from "@/lib/jsonLd";
@@ -59,33 +58,38 @@ export async function generateMetadata({ params }) {
   };
 }
 
+// A real ISBN-13 only (978/979 prefix). Some catalog rows carry an internal id in this column; showing or emitting that as an
+// ISBN would be wrong, so anything that is not a valid-looking ISBN-13 is dropped.
+const realIsbn = (v) => {
+  const d = String(v || "").replace(/[-\s]/g, "");
+  return /^97[89]\d{10}$/.test(d) ? d : null;
+};
+const languageName = (code) => LANGUAGES.find((l) => l.code === code)?.name || code;
+
 export default async function BookPage({ params }) {
   const { slug, lang } = await params;
   const book = await getBook(slug, lang);
   if (!book) notFound();
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
-  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection] = await Promise.all([
+  const firstAuthor = (book.author || "").split(",")[0].trim();
+  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection, alternates, byAuthor] = await Promise.all([
     relatedBooks(book, lang),
     getBookCommunity(book.slug),
     getDiscussionsForBook(book.slug, 3),
     getPublicationByName(book.publisher, lang),
-    // Every co-author resolved individually — `book.author` is a ", "-joined
-    // list, so linking it as one string sent "Ken Follett, John Lee" to a
-    // single profile and left the second author unlinked entirely. This
-    // replaces the old single getAuthorByName() lookup, which only ever
-    // resolved the first name in the list.
+    // Every co-author resolved individually, so each links to their own profile (indexed lookup, see repo.js).
     getAuthorLineProfiles(book.author, lang),
-    // `book.collection` is a flat editorial label (e.g. "Harari Collection"),
-    // not a true series with an order/sequence — there's no such column
-    // anywhere in the schema. This is an honestly-labeled "more from this
-    // collection" strip, not a fake "Book 2 of 7" series feature.
+    // `book.collection` is a flat editorial label, not a numbered series: shown as "more from this collection", never as "Book 2 of 7".
     book.collection ? listBooks(lang, { collection: book.collection, limit: 5 }) : [],
+    getBookAlternates(book).catch(() => []),
+    firstAuthor ? booksByAuthor(firstAuthor, lang).catch(() => []) : [],
   ]);
   const moreInCollectionFiltered = moreInCollection.filter((b) => b.slug !== book.slug).slice(0, 4);
+  const moreByAuthor = byAuthor.filter((b) => b.slug !== book.slug).slice(0, 12);
   const _ = t(lang);
 
-  // 60-second summary. The baseline is built from stored data (no AI), so this can never
-  // leave the page without one; KV/D1/AI only improve it. Any failure falls back silently.
+  // 60-second summary. The baseline is built from stored data (no AI), so this can never leave the page without one;
+  // KV/D1/AI only improve it. Any failure falls back silently.
   let initialSummary = baselineSummary(book);
   let initialAudioUrl = null;
   try {
@@ -97,55 +101,41 @@ export default async function BookPage({ params }) {
     /* keep the baseline */
   }
   const slugQ = encodeURIComponent(book.slug);
-  // Geo-routed, click-logged outbound links (see /api/go). Replaces the old fixed amazon.com URL.
+  // Geo-routed, click-logged outbound links (see /api/go).
   const goBuy = `/api/go?slug=${slugQ}&lang=${lang}&kind=buy`;
   const goAudible = `/api/go?slug=${slugQ}&lang=${lang}&kind=audible`;
-  const bookForActions = { ...book, buyUrl: goBuy };
-  // Key ideas + summary length for the at-a-glance strip, from the summary actually being shown.
+
   const keyIdeas = (initialSummary?.takeaways?.length ? initialSummary.takeaways : book.keyPoints || [])
     .map((x) => (typeof x === "string" ? x : x?.text || x?.title || ""))
     .filter(Boolean);
   const summaryWords = String(initialSummary?.script || "").split(/\s+/).filter(Boolean).length;
   const summaryMinutes = summaryWords ? Math.max(1, Math.round(summaryWords / 170)) : null;
-  const availabilityBadge = availability({
-    hasFullAudio: false, // we never claim unlicensed full audiobooks
-    hasSummaryAudio: true, // narrated file or the reader's own device voice
-    hasSummaryText: true,
-    hasExternalAudio: true,
-  });
 
+  const isbn = realIsbn(book.isbn);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Book",
     name: book.title,
     author: book.author ? { "@type": "Person", name: book.author } : undefined,
     publisher: book.publisher ? { "@type": "Organization", name: book.publisher } : undefined,
-    isbn: book.isbn || undefined,
+    isbn: isbn || undefined,
     numberOfPages: book.page_count || undefined,
     bookFormat: book.format || undefined,
     image: book.cover_url || undefined,
     description: book.description?.slice(0, 300),
-    // Google requires ratingCount/reviewCount to reflect a real number of
-    // reviews — book.rating is Open Library's imported average, which has
-    // no review count we actually store, so it can't honestly back a
-    // ratingCount. Only our own community reviews have a real count behind
-    // them, so aggregateRating uses those, and is omitted entirely (not
-    // faked with a placeholder like ratingCount: 1) when there are none yet.
+    // Only our own readers' ratings can back a ratingCount (Open Library's average has no count we store).
     aggregateRating: community.rating_count > 0
       ? { "@type": "AggregateRating", ratingValue: community.avg_rating, bestRating: "5", ratingCount: community.rating_count }
       : undefined,
     inLanguage: book.language || undefined,
   };
-
   const baseUrl = SITE_URL;
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Books", item: `${baseUrl}/books` },
-      ...(book.category
-        ? [{ "@type": "ListItem", position: 2, name: book.category, item: `${baseUrl}/books?category=${encodeURIComponent(book.category)}` }]
-        : []),
+      ...(book.category ? [{ "@type": "ListItem", position: 2, name: book.category, item: `${baseUrl}/books?category=${encodeURIComponent(book.category)}` }] : []),
       { "@type": "ListItem", position: book.category ? 3 : 2, name: book.title, item: `${baseUrl}/books/${encodeURIComponent(book.slug)}` },
     ],
   };
@@ -156,7 +146,6 @@ export default async function BookPage({ params }) {
       ? `${Math.floor(readingMinutes / 60)} ${_("hourAbbrev")} ${readingMinutes % 60 ? `${readingMinutes % 60} ${_("minuteAbbrev")}` : ""}`.trim()
       : `${readingMinutes} ${_("minuteAbbrev")}`
     : null;
-
   const difficulty = book.page_count
     ? book.page_count < 180 ? _("easyRead") : book.page_count < 400 ? _("moderateRead") : _("deepRead")
     : null;
@@ -169,352 +158,215 @@ export default async function BookPage({ params }) {
     [_("metaReadingTime"), readingTime && `~${readingTime}`],
     [_("metaDifficulty"), difficulty],
     [_("metaFormat"), book.format],
-    [_("metaISBN"), book.isbn],
+    [_("metaISBN"), isbn],
     [_("metaCountry"), book.country],
     [_("metaGenres"), book.genres?.length > 0 && book.genres.join(", ")],
   ].filter(([, v]) => v);
 
-  const secondary = (
-    <>
-    <WhereToGet book={book} goBuy={goBuy} goAudible={goAudible} />
+  // ----- hero props -----
+  const reviewCount = community.reviews.length;
+  const communityRated = community.rating_count > 0;
+  const rating = communityRated
+    ? { value: community.avg_rating, label: `${community.rating_count} ${community.rating_count === 1 ? "rating" : "ratings"}${reviewCount ? ` · ${reviewCount} ${reviewCount === 1 ? _("reviewWord") : _("reviewsWord")}` : ""}` }
+    : book.rating ? { value: book.rating, label: "Average rating" } : {};
+  const authors = (authorLine.length ? authorLine : [{ name: book.author, profile: null }])
+    .filter((a) => a.name)
+    .map((a) => ({ name: a.name, href: withLang(a.profile ? `/authors/${a.profile.slug}` : `/books?q=${encodeURIComponent(a.name)}`) }));
+  const facts = [
+    { icon: "bookOpen", label: "Pages", value: book.page_count ? String(book.page_count) : null },
+    { icon: "clock", label: "Read in", value: readingTime },
+    { icon: "gauge", label: "Difficulty", value: difficulty },
+    { icon: "zap", label: "Pace", value: community.pace[0]?.name },
+    { icon: "calendar", label: "Published", value: book.published ? String(book.published) : null },
+    { icon: "headphones", label: "Summary", value: summaryMinutes ? `${summaryMinutes} min` : null },
+  ];
+  const moodChips = [
+    ...(book.category ? [{ name: book.category, href: withLang(`/books?category=${encodeURIComponent(book.category)}`) }] : []),
+    ...community.moods.slice(0, 3).map((m) => ({ name: m.name, href: withLang(`/books?mood=${encodeURIComponent(m.name)}`) })),
+  ];
+  const crumbs = [
+    { label: _("homeWord"), href: withLang("/") },
+    { label: _("books"), href: withLang("/books") },
+    ...(book.category ? [{ label: book.category, href: withLang(`/books?category=${encodeURIComponent(book.category)}`) }] : []),
+    { label: book.title },
+  ];
+  const heroBook = {
+    slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url, rating: book.rating,
+    buyUrl: goBuy, pages: book.page_count, publisherName: book.publisher || null,
+    publisherHref: publisherProfile ? withLang(`/publications/${publisherProfile.slug}`) : null,
+  };
 
-    {related.length > 0 && (
-      <div className="mt-5 border-t border-line pt-4">
-        <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
-          <Icon name="layers" size={14} /> {_("browseSimilarBooks")}
-        </a>
-      </div>
-    )}
-
-    <div className="mt-2 border-t border-line pt-4">
-      <p className="text-muted mb-2 text-xs font-semibold">{_("readWithOthers")}</p>
-      {bookDiscussions.map((d) => (
-        <Link key={d.id} href={withLang(`/community?open=${d.id}`)}
-          className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
-          <Icon name="users" size={13} className="shrink-0" />
-          <span className="truncate">{d.title}</span>
-          <span className="shrink-0 text-xs opacity-70">· {d.members}</span>
-        </Link>
-      ))}
-      <Link
-        href={withLang(`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`)}
-        className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700"
-      >
-        <Icon name="feather" size={14} /> {_("startDiscussion")}
-      </Link>
-    </div>
-
-    <div className="mt-2 border-t border-line pt-4">
-      <p className="text-muted mb-2 text-xs font-semibold">{_("bookInformation")}</p>
-      <ReportIssueButton bookSlug={book.slug} />
-    </div>
-    </>
-  );
+  const editions = [...new Map(alternates.map((e) => [e.lang, e])).values()];
+  const moods = community.moods;
+  const hasReaders = moods.length > 0 || community.pace.length > 0;
+  const sections = [
+    ["overview", "Overview"], ["summary", "Summary"],
+    ...(hasReaders ? [["readers", "Readers"]] : []),
+    ["reviews", "Reviews"], ["quotes", "Quotes"],
+    ...(related.length || moreByAuthor.length ? [["similar", "Similar"]] : []),
+    ["details", "Details"],
+  ];
+  const reasonFor = (b) => (b.author && b.author === book.author ? "Same author" : b.category && b.category === book.category ? `More ${b.category}` : undefined);
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbLd) }} />
       <TrackView book={{ slug: book.slug, title: book.title, author: book.author, cover_url: book.cover_url }} />
-      <MobileBookBar book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }} buyHref={goBuy} />
 
-      <div className="mx-auto max-w-7xl px-4 pt-6 pb-6 sm:pt-10 sm:pb-10">
-        <Breadcrumbs lang={lang} homeLabel={_("homeWord")} label={_("navBreadcrumb")} className="mb-5" items={[
-          { label: _("books"), href: "/books" },
-          ...(book.category ? [{ label: book.category, href: `/books?category=${encodeURIComponent(book.category)}` }] : []),
-          { label: <TitleTransliterated text={book.title} /> },
-        ]} />
+      <BookActionsProvider book={heroBook}>
+        <article>
+          <StickyBookBar book={heroBook} rating={rating.value} sections={sections} buyHref={goBuy} />
+          <BookHero
+            book={heroBook} crumbs={crumbs} authors={authors} rating={rating} reading={Number(community.reading) || 0}
+            facts={facts} moods={moodChips} summaryMinutes={summaryMinutes} editions={editions.length}
+          />
 
-        {/* min-w-0 on both grid children: without it, a grid item's implicit
-            min-width is "auto", which factors in a replaced element's (img)
-            intrinsic size — so a cover whose real dimensions are unusually
-            large/wide can force this column, and the whole grid, wider than
-            the viewport, squeezing the rest of the page into a narrow strip
-            beside empty space. w-full/object-cover on the <img> itself don't
-            prevent this; the fix has to be on the grid item. */}
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[272px_1fr] lg:gap-12">
-          <div className="min-w-0">
-            {/* Capped + centered on mobile (stacked layout would otherwise
-                stretch the cover to full viewport width, looking oversized) —
-                reverts to filling its 300px grid column at lg. */}
-            <div className="cover mx-auto aspect-[2/3] max-w-[150px] sm:max-w-[200px] lg:mx-0 lg:max-w-none">
-              <BookCover title={book.title} author={book.author} cover_url={book.cover_url} />
-            </div>
-
-            <QuickActions book={bookForActions} />
-
-
-            {/* Store card, discussions and the report link sit under the actions from lg up; on a phone they move below the
-                content (see the lg:hidden copy after this column) so the title is the first thing under the cover. */}
-            <div className="hidden lg:block">{secondary}</div>
-          </div>
-
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl"><TitleTransliterated text={book.title} /></h1>
-            <p className="text-muted mt-2 text-lg">
-              {_("byWord")}{" "}
-              {/* One link per co-author. Anyone with a real profile goes to
-                  their author page; anyone without one falls back to a search
-                  so the name is still clickable rather than dead text. */}
-              {(authorLine.length ? authorLine : [{ name: book.author, profile: null }])
-                .filter((a) => a.name)
-                .map((a, i) => (
-                  <span key={a.name}>
-                    {i > 0 && <span className="opacity-60">, </span>}
-                    <Link
-                      href={withLang(a.profile ? `/authors/${a.profile.slug}` : `/books?q=${encodeURIComponent(a.name)}`)}
-                      prefetch={false}
-                      className="font-medium text-brand-700 hover:underline"
-                    >
-                      <TitleTransliterated text={a.name} />
-                    </Link>
-                  </span>
-                ))}
-            </p>
-            {/* Compact meta line — StoryGraph-style at-a-glance facts */}
-            <p className="text-muted mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-              {[book.page_count && _("pagesSuffix", { count: book.page_count }), book.format, book.published && _("firstPub", { year: book.published })]
-                .filter(Boolean)
-                .map((part, i) => <span key={i}>{i > 0 && <span className="mx-1 opacity-50">·</span>}{part}</span>)}
-            </p>
-
-            {/* Top facet pills — category + top moods/pace at a glance */}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {book.category && <Link href={withLang(`/books?category=${encodeURIComponent(book.category)}`)} className="pill !text-[11px]">{book.category}</Link>}
-              {book.tags.slice(0, 4).map((tg) => (
-                <Link key={tg} href={withLang(`/books?tag=${encodeURIComponent(tg)}`)} className="pill !text-[11px]">{tg}</Link>
-              ))}
-              {community.pace[0] && <span className="pill !text-[11px]">{community.pace[0].name}</span>}
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <Rating value={book.rating} />
-              {community.reviews.length > 0 && (
-                <a href="#reviews" className="text-muted hover:text-brand-700">
-                  {community.reviews.length} {community.reviews.length === 1 ? _("reviewWord") : _("reviewsWord")}
-                </a>
-              )}
-              {readingTime && <span className="text-muted">~{readingTime} {_("readWord")}</span>}
-              {book.collection && (
-                <Link href={withLang(`/collections/${encodeURIComponent(book.collection)}`)} className="pill">
-                  {book.collection}
-                </Link>
-              )}
-            </div>
-
-            <BookStats rating={book.rating} minutes={summaryMinutes} ideas={keyIdeas.length} />
-
-            <SummaryReader
-              book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }}
-              initial={initialSummary}
-              initialAudioUrl={initialAudioUrl}
-              fullText={book.summary}
-            />
-
-            <div className="text-muted mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <span className="pill !text-[11px]">{availabilityBadge}</span>
-              <AddToShelf slug={book.slug} />
-              <SaveToMindSpace node={{ kind: "book", bookSlug: book.slug, title: book.title }} />
-            </div>
-
-            {moreInCollectionFiltered.length > 0 && (
-              <div className="mt-5">
-                <p className="text-muted mb-2 text-xs font-semibold">
-                  {_("moreFromCollection", { collection: book.collection })}
-                </p>
-                <HScrollRow>
-                  {moreInCollectionFiltered.map((b) => (
-                    <Link key={b.id} href={withLang(`/books/${encodeURIComponent(b.slug)}`)} className="card group w-28 shrink-0 overflow-hidden">
-                      <div className="aspect-[2/3] overflow-hidden bg-black/5">
-                        <BookCover title={b.title} author={b.author} cover_url={b.cover_url}
-                          imgClassName="transition duration-500 group-hover:scale-105" />
-                      </div>
-                      <div className="p-2">
-                        <p className="line-clamp-2 text-xs font-semibold group-hover:text-brand-700"><TitleTransliterated text={b.title} /></p>
-                      </div>
-                    </Link>
-                  ))}
-                </HScrollRow>
-              </div>
-            )}
-
-            <KeyIdeasList ideas={keyIdeas} title={`Summary of ${keyIdeas.length} key ${keyIdeas.length === 1 ? "idea" : "ideas"}`} />
-
-            <BookTabs
-              label={_("onThisPage")}
-              tabs={[
-                { id: "summary", label: _("summary") },
-                { id: "details", label: _("details") },
-                { id: "quotes", label: "Quotes" },
-                { id: "reviews", label: _("communityTitle"), count: community.reviews.length },
-              ]}
-            >
-              <div>
-            {book.description && <Translated as="p" className="mt-6 max-w-[70ch] text-lg leading-relaxed" text={book.description} />}
-
-            {(book.category || book.subjects?.length > 0) && (
-              <div className="tint-brand mt-6 rounded-xl p-5">
-                <p className="text-sm font-semibold text-brand-700">{_("whosItFor")}</p>
-                <p className="mt-2 text-sm leading-relaxed">
-                  {_("whosItForBody", {
-                    category: book.category ? book.category.toLowerCase() : _("thisGenre"),
-                    subjects: book.subjects?.length > 0 ? book.subjects.slice(0, 2).join(" & ") : _("thisGenre"),
-                    time: readingTime || "",
-                    level: difficulty ? difficulty.toLowerCase() : "",
-                  })}
-                </p>
-              </div>
-            )}
-
-            {keyIdeas.length === 0 && book.keyPoints.length > 0 && (
-              <div id="takeaways" className="mt-8 scroll-mt-32">
-                <h2 className="text-lg font-bold sm:text-xl">{_("keyTakeaways")}</h2>
-                <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {book.keyPoints.map((k) => (
-                    <li key={k} className="tint-brand flex items-start gap-2 rounded-xl px-4 py-3 text-sm">
-                      <Icon name="check" size={15} className="mt-0.5 text-brand-700" /> <Translated text={k} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {book.summary && (
-              <div id="summary" className="mt-8 scroll-mt-32">
-                <h2 className="text-lg font-bold sm:text-xl">{_("summary")}</h2>
-                <Translated as="p" className="mt-3 max-w-[70ch] whitespace-pre-line leading-relaxed" text={book.summary} />
-              </div>
-            )}
-
-              </div>
-              <div>
-            {meta.length > 0 && (
-              <div id="details" className="mt-8 scroll-mt-32">
-                <h2 className="text-lg font-bold sm:text-xl">{_("details")}</h2>
-                <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-                  {meta.map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="text-muted text-xs">{k}</dt>
-                      <dd className="text-sm font-medium">
-                        {k === _("metaPublisher") && publisherProfile ? (
-                          <Link href={withLang(`/publications/${publisherProfile.slug}`)} className="text-brand-700 hover:underline">{v}</Link>
-                        ) : v}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            )}
-
-            {book.tags.length > 0 && (
-              <div className="mt-8 flex flex-wrap gap-2">
-                {book.tags.map((t) => (
-                  <Link key={t} href={withLang(`/books?tag=${encodeURIComponent(t)}`)} className="pill">#{t}</Link>
-                ))}
-              </div>
-            )}
-
-              </div>
-              <div>
-            {/* Reader quotes */}
-            <div className="mt-8">
-              <QuotesSection bookSlug={book.slug} />
-            </div>
-
-              </div>
-              <div>
-            <div className="mt-10 scroll-mt-24" id="write-review">
-              <ShelfControls slug={book.slug} />
-            </div>
-
-            {/* Community section */}
-            <div id="reviews" className="mt-10 scroll-mt-32">
-              <h2 className="text-lg font-bold sm:text-xl">{_("communityTitle")}</h2>
-              <div className="mt-4 grid gap-6 sm:grid-cols-[220px_1fr]">
-                <div className="card p-5 text-center hover:!translate-y-0">
-                  <p className="font-display text-4xl font-semibold">{community.avg_rating ?? "—"}</p>
-                  <p className="text-amber-400">{"★".repeat(Math.round(community.avg_rating || 0)) || "☆☆☆☆☆"}</p>
-                  <p className="text-muted mt-1 text-xs">{community.rating_count} {_("ratingsFromReaders")}</p>
-                </div>
-                <div>
-                  {community.moods.length > 0 && (
-                    <div className="mb-5">
-                      <p className="text-muted mb-2 text-xs font-semibold">{_("moodsLabel")}</p>
-                      <div className="space-y-1">
-                        {community.moods.slice(0, 5).map((m) => {
-                          const moodTotal = community.moods.reduce((n, x) => n + x.n, 0);
-                          const pct = moodTotal ? Math.round((m.n / moodTotal) * 100) : 0;
-                          return (
-                            <div key={m.name} className="flex items-center gap-2 text-xs">
-                              <span className="w-24 shrink-0 truncate">{m.name}</span>
-                              <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-                                <div className="h-full rounded-full bg-brand-600" style={{ width: `${pct}%` }} />
-                              </div>
-                              <span className="text-muted w-9 text-right">{pct}%</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {community.pace.length > 0 && (
-                    <div className="mb-5 flex items-center gap-2 text-xs">
-                      <span className="text-muted w-24 shrink-0">{_("paceLabel")}</span>
-                      <span className="pill">{community.pace[0].name}</span>
-                    </div>
-                  )}
-                  <div className="space-y-1.5">
-                  {community.distribution.map((d) => {
-                    const pct = community.rating_count ? Math.round((d.n / community.rating_count) * 100) : 0;
-                    return (
-                      <div key={d.star} className="flex items-center gap-3 text-xs">
-                        <span className="w-8">{d.star} ★</span>
-                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-                          <div className="h-full rounded-full bg-amber-500" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-muted w-10 text-right">{pct}%</span>
-                      </div>
-                    );
-                  })}
+          <div className="container-bq grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14 lg:py-10">
+            <div className="min-w-0 space-y-12 lg:space-y-16">
+              {/* ---- About ---- */}
+              <section id="overview" aria-labelledby="overview-h" className="scroll-mt-36">
+                <SectionHead id="overview">About the book</SectionHead>
+                {book.description && (
+                  <ClampText long={book.description.length > 520}>
+                    <Translated as="p" className="whitespace-pre-line text-[17px] leading-[1.75]" text={book.description} />
+                  </ClampText>
+                )}
+                {(book.category || book.subjects?.length > 0) && (
+                  <div className="mt-6 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-qubit-500,#6C83D9)_30%,var(--line))] bg-[color-mix(in_srgb,var(--color-qubit-500,#6C83D9)_7%,var(--surface))] p-5">
+                    <b className="flex items-center gap-2 text-[var(--color-qubit-500,#6C83D9)]"><Icon name="sparkles" size={18} />{_("whosItFor")}</b>
+                    <p className="mt-2 text-[15px] leading-relaxed">
+                      {_("whosItForBody", {
+                        category: book.category ? book.category.toLowerCase() : _("thisGenre"),
+                        subjects: book.subjects?.length > 0 ? book.subjects.slice(0, 2).join(" & ") : _("thisGenre"),
+                        time: readingTime || "",
+                        level: difficulty ? difficulty.toLowerCase() : "",
+                      })}
+                    </p>
                   </div>
-                </div>
-              </div>
+                )}
+                {(book.genres?.length > 0 || book.tags.length > 0) && (
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {book.genres.map((g) => <Link key={`g-${g}`} href={withLang(`/books?category=${encodeURIComponent(g)}`)} prefetch={false} className="pill !h-8 !text-[13px]">{g}</Link>)}
+                    {book.tags.map((tg) => <Link key={`t-${tg}`} href={withLang(`/books?tag=${encodeURIComponent(tg)}`)} prefetch={false} className="pill !h-8 !text-[13px]">#{tg}</Link>)}
+                  </div>
+                )}
+              </section>
 
-              {community.reviews.length > 0 && (
-                <div className="mt-6 space-y-4">
-                  <h3 className="font-bold">{_("readerReviews")} ({community.reviews.length})</h3>
-                  {community.reviews.map((r) => (
-                    <ReviewCard
-                      key={`${r.user_id}-${r.updated_at}`}
-                      rating={r.rating}
-                      review={r.review}
-                      spoiler={r.spoiler}
-                      updatedAt={r.updated_at}
-                      spoilerLabel={_("spoilerClickToReveal")}
-                      reviewer={{ name: r.name, photo_url: r.photo_url, slug: r.slug, user_id: r.user_id }}
-                    />
-                  ))}
+              {/* ---- Summary: listen or read, then the key ideas as cards ---- */}
+              <section id="summary" aria-labelledby="summary-h" className="scroll-mt-36">
+                <SectionHead id="summary" eyebrow={summaryMinutes ? `${summaryMinutes}-minute summary` : "Summary"}>Key ideas, fast</SectionHead>
+                <SummaryReader
+                  book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }}
+                  initial={initialSummary}
+                  initialAudioUrl={initialAudioUrl}
+                  fullText={book.summary}
+                />
+                {keyIdeas.length > 0 && (
+                  <div id="takeaways" className="mt-8 scroll-mt-36">
+                    <h3 className="mb-3 flex items-center gap-2 font-bold"><Icon name="lightbulb" size={18} />{keyIdeas.length} key {keyIdeas.length === 1 ? "idea" : "ideas"}</h3>
+                    <TakeawayCards ideas={keyIdeas} />
+                  </div>
+                )}
+                {book.summary && (
+                  <details className="card mt-6 p-5 hover:!translate-y-0">
+                    <summary className="cursor-pointer font-semibold">{_("summary")}: read the full text</summary>
+                    <Translated as="p" className="mt-3 max-w-[70ch] whitespace-pre-line leading-relaxed" text={book.summary} />
+                  </details>
+                )}
+                <p className="mt-4 flex items-center gap-1.5 text-xs text-[var(--muted)]"><Icon name="info" size={13} />Summaries help you decide and remember. They don&apos;t replace the book.</p>
+              </section>
+
+              <ReadersFelt moods={moods} pace={community.pace} />
+
+              {/* ---- Reviews ---- */}
+              <section id="reviews" aria-labelledby="reviews-h" className="scroll-mt-36">
+                <SectionHead id="reviews" eyebrow={reviewCount ? `${reviewCount} ${reviewCount === 1 ? _("reviewWord") : _("reviewsWord")}` : undefined}>{_("readerReviews")}</SectionHead>
+                <div id="write-review" className="scroll-mt-24"><ShelfControls slug={book.slug} /></div>
+                <ReviewList reviews={community.reviews} />
+              </section>
+
+              {/* ---- Quotes ---- */}
+              <section id="quotes" aria-label="Quotes" className="scroll-mt-36"><QuotesSection bookSlug={book.slug} /></section>
+
+              <EditionsList editions={editions} lang={lang} languageName={languageName} />
+
+              {/* ---- Similar ---- */}
+              {(related.length > 0 || moreByAuthor.length > 0 || moreInCollectionFiltered.length > 0) && (
+                <div id="similar" className="scroll-mt-36 space-y-10">
+                  {related.length > 0 && (
+                    <section aria-labelledby="similar-h">
+                      <SectionHead id="similar" eyebrow="Matched on genre and author">Readers also loved</SectionHead>
+                      <HScrollRow>
+                        {related.map((b) => <div key={b.id} className="w-[142px] shrink-0 sm:w-[158px]"><BookCard book={b} hrefBase={withLang("/books")} note={reasonFor(b)} /></div>)}
+                      </HScrollRow>
+                    </section>
+                  )}
+                  {moreByAuthor.length > 0 && (
+                    <section aria-label={`More by ${firstAuthor}`}>
+                      <SectionHead>More by {firstAuthor}</SectionHead>
+                      <HScrollRow>
+                        {moreByAuthor.map((b) => <div key={b.id} className="w-[142px] shrink-0 sm:w-[158px]"><BookCard book={b} hrefBase={withLang("/books")} /></div>)}
+                      </HScrollRow>
+                    </section>
+                  )}
+                  {moreInCollectionFiltered.length > 0 && (
+                    <section aria-label={_("moreFromCollection", { collection: book.collection })}>
+                      <SectionHead>{_("moreFromCollection", { collection: book.collection })}</SectionHead>
+                      <HScrollRow>
+                        {moreInCollectionFiltered.map((b) => <div key={b.id} className="w-[142px] shrink-0 sm:w-[158px]"><BookCard book={b} hrefBase={withLang("/books")} /></div>)}
+                      </HScrollRow>
+                    </section>
+                  )}
                 </div>
               )}
+
+              {/* ---- Details ---- */}
+              <section id="details" aria-labelledby="details-h" className="scroll-mt-36">
+                <SectionHead id="details">{_("details")}</SectionHead>
+                {meta.length > 0 && (
+                  <dl className="card grid divide-y divide-[var(--line)] overflow-hidden hover:!translate-y-0 sm:grid-cols-2 sm:divide-y-0">
+                    {meta.map(([k, v], i) => (
+                      <div key={k} className={`grid grid-cols-[130px_minmax(0,1fr)] gap-3 border-[var(--line)] px-5 py-3 text-sm ${i % 2 === 0 ? "sm:border-e" : ""} sm:[&:nth-child(n+3)]:border-t`}>
+                        <dt className="text-[var(--muted)]">{k}</dt>
+                        <dd className="font-medium">
+                          {k === _("metaPublisher") && publisherProfile ? <Link href={withLang(`/publications/${publisherProfile.slug}`)} prefetch={false} className="text-brand-700 hover:underline">{v}</Link> : v}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                <div className="mt-4"><p className="text-muted mb-2 text-xs font-semibold">{_("bookInformation")}</p><ReportIssueButton bookSlug={book.slug} /></div>
+              </section>
             </div>
+
+            {/* ---- Sidebar (sticky on desktop) ---- */}
+            <aside className="space-y-5 lg:sticky lg:top-[8.5rem] lg:max-h-[calc(100dvh-9.5rem)] lg:self-start lg:overflow-y-auto lg:pb-2 lg:[scrollbar-width:none]">
+              <WhereToGet book={book} goBuy={goBuy} goAudible={goAudible} />
+              <RatingCard avg={community.avg_rating} count={community.rating_count} distribution={community.distribution} />
+              <ReadersCard reading={Number(community.reading) || 0} finished={Number(community.read) || 0} want={Number(community.want) || 0} />
+              <AuthorCard profile={authorLine[0]?.profile} name={firstAuthor} lang={lang} moreHref={withLang(`/books?author=${encodeURIComponent(firstAuthor)}`)} />
+              <section className="card p-5 hover:!translate-y-0" aria-label={_("readWithOthers")}>
+                <p className="mb-2 text-sm font-bold">{_("readWithOthers")}</p>
+                {bookDiscussions.map((d) => (
+                  <Link key={d.id} href={withLang(`/community?open=${d.id}`)} prefetch={false} className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
+                    <Icon name="users" size={13} className="shrink-0" /><span className="truncate">{d.title}</span><span className="shrink-0 text-xs opacity-70">· {d.members}</span>
+                  </Link>
+                ))}
+                <Link href={withLang(`/community?book=${encodeURIComponent(book.slug)}&title=${encodeURIComponent(book.title)}`)} prefetch={false} className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
+                  <Icon name="feather" size={14} /> {_("startDiscussion")}
+                </Link>
+                {related.length > 0 && <a href="#similar" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700"><Icon name="layers" size={14} /> {_("browseSimilarBooks")}</a>}
+              </section>
+              <div className="text-muted flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-sm">
+                <AddToShelf slug={book.slug} />
+                <SaveToMindSpace node={{ kind: "book", bookSlug: book.slug, title: book.title }} />
               </div>
-            </BookTabs>
+            </aside>
           </div>
-
-          <div className="min-w-0 lg:hidden">{secondary}</div>
-        </div>
-      </div>
-
-      {/* The old fixed "Get Book" bar is gone on purpose: the mini player is the only fixed bar
-          above the tab bar; buy lives in the quiet row under the summary and in QuickActions. */}
-
-      {related.length > 0 && (
-        <Section id="related" title={_("related")}>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
-            {related.map((b) => <BookCard key={b.id} book={b} hrefBase={withLang("/books")} />)}
-          </div>
-        </Section>
-      )}
+        </article>
+        <MobileBookBar book={heroBook} buyHref={goBuy} />
+      </BookActionsProvider>
     </>
   );
 }

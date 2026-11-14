@@ -10,6 +10,8 @@ import { t } from "@/lib/i18n";
 
 // A lightweight "commonplace book" — readers save favorite passages from a
 // book, visible to everyone here and on the saver's public profile.
+const COLORS = ["#8B6CFF", "#4FA3C7", "#6FBF73", "#E8792E", "#D9577A", "#C89B6D", "#6C83D9"];
+
 export default function QuotesSection({ bookSlug }) {
   const lang = useLang();
   const tr = t(lang);
@@ -20,6 +22,10 @@ export default function QuotesSection({ bookSlug }) {
   const [text, setText] = useState("");
   const [page, setPage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(null);
+  const copy = async (q) => {
+    try { await navigator.clipboard.writeText(`“${q.text}”`); setCopied(q.id); setTimeout(() => setCopied(null), 1500); } catch { /* no clipboard */ }
+  };
 
   const load = () => fetch(`/api/quotes?bookSlug=${encodeURIComponent(bookSlug)}`)
     .then((r) => r.json()).then((d) => setQuotes(d.quotes || []));
@@ -95,20 +101,30 @@ export default function QuotesSection({ bookSlug }) {
       )}
 
       {quotes.length > 0 ? (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {quotes.map((q) => (
-            <div key={q.id} className="card !border-brand-500/20 bg-brand-600/5 p-4 hover:!translate-y-0">
-              <p className="whitespace-pre-line text-sm italic leading-relaxed">"{q.text}"</p>
-              <div className="text-muted mt-2 flex items-center justify-between text-xs">
-                <Link href={`/${lang}/readers/${q.slug || q.user_id}`} className="hover:text-brand-700">
-                  — {q.name}{q.page ? `, p. ${q.page}` : ""}
-                </Link>
-                {user?.uid === q.user_id && (
-                  <button onClick={() => remove(q.id)} className="hover:text-red-500"><Icon name="x" size={12} /></button>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="hscroll mt-4 !gap-4">
+          {quotes.map((q, i) => {
+            const color = COLORS[i % COLORS.length];
+            return (
+              <figure key={q.id} className="relative flex w-[min(320px,82vw)] shrink-0 flex-col justify-between overflow-hidden rounded-[var(--radius-lg)] p-6 text-white sm:w-[340px]"
+                style={{ background: `linear-gradient(150deg, ${color}, color-mix(in srgb, ${color} 35%, #000))` }}>
+                <Icon name="quote" size={56} className="absolute -end-2 -top-2 opacity-15" />
+                <blockquote className="font-display relative whitespace-pre-line text-lg italic leading-snug">“{q.text}”</blockquote>
+                <figcaption className="relative mt-5 flex items-center justify-between gap-2 text-sm opacity-95">
+                  <Link href={`/${lang}/readers/${q.slug || q.user_id}`} prefetch={false} className="min-w-0 truncate hover:underline">
+                    {q.page ? `p. ${q.page} · ` : ""}{q.name}
+                  </Link>
+                  <span className="flex shrink-0 gap-1">
+                    <button type="button" aria-label="Copy quote" onClick={() => copy(q)} className="rounded-full bg-white/15 p-1.5 hover:bg-white/25">
+                      <Icon name={copied === q.id ? "check" : "copy"} size={15} />
+                    </button>
+                    {user?.uid === q.user_id && (
+                      <button type="button" aria-label="Remove quote" onClick={() => remove(q.id)} className="rounded-full bg-white/15 p-1.5 hover:bg-white/25"><Icon name="x" size={15} /></button>
+                    )}
+                  </span>
+                </figcaption>
+              </figure>
+            );
+          })}
         </div>
       ) : (
         !adding && <p className="text-muted mt-2 text-sm">{tr("noQuotesSavedYet")}</p>
