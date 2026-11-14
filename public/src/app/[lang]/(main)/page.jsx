@@ -6,7 +6,8 @@ import ContinueReading from "@/components/ContinueReading";
 import Icon from "@/components/Icon";
 import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
-import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
+import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, PublisherCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
+import { getFeaturedPublishers, getCollectionCovers } from "@/lib/home-data";
 import { cached } from "@/lib/db";
 import { TTL } from "@/lib/cache-policy";
 import { getCf } from "@/lib/cf/env";
@@ -57,7 +58,7 @@ export default async function Home() {
   const _ = t(lang);
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
 
-  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods, quote] = await Promise.all([
+  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods, quote, publishers] = await Promise.all([
     getFeaturedBooks(lang, 5),
     getBestsellerBooks(lang, 12),
     listBooks(lang, { sort: "rating", limit: 12 }),
@@ -66,6 +67,7 @@ export default async function Home() {
     getFeaturedAuthors(lang, 10),
     getMoodCounts(),
     quoteOfTheDay(),
+    getFeaturedPublishers(lang, 8).catch(() => []),
   ]);
 
   // Today's pick rotates daily through the curated featured books (or the
@@ -96,6 +98,7 @@ export default async function Home() {
   // these tiles can lead to an empty page (see lib/genres.js).
   const genres = resolveGenres(f.categories, { limit: 12 });
   const collections = f.collections.filter((c) => c.count >= 3).slice(0, 8);
+  const covers = await getCollectionCovers(lang, collections.map((c) => c.name)).catch(() => ({}));
 
   return (
     <>
@@ -219,8 +222,16 @@ export default async function Home() {
       {collections.length > 0 && (
         <Section title={_("featuredCollectionsTitle")} viewAllLabel={_("viewAll")} href={withLang("/collections")}>
           <HScrollRow>
-            {collections.map((c) => <CollectionCard key={c.name} lang={lang} c={c} booksLabel={_("booksWord")} />)}
+            {collections.map((c) => <CollectionCard key={c.name} lang={lang} c={c} covers={covers[c.name]} booksLabel={_("booksWord")} />)}
           </HScrollRow>
+        </Section>
+      )}
+
+      {publishers.length > 0 && (
+        <Section title={_("publishers")} viewAllLabel={_("viewAll")} href={withLang("/publications")}>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {publishers.map((p) => <li key={p.slug}><PublisherCard lang={lang} p={p} /></li>)}
+          </ul>
         </Section>
       )}
 

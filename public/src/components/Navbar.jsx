@@ -12,6 +12,7 @@ import { authFetch } from "@/lib/authFetch";
 import CustomThemeModal from "./CustomThemeModal";
 import { t } from "@/lib/i18n";
 import { SurpriseLink } from "./surprise/SurpriseMe";
+import { countryFlag } from "@/lib/countryFlag";
 
 // BookQubit UI v2 header: a 64px glass bar with a Discover menu (built from real catalog counts, so no link
 // can lead to an empty page), a Community menu, search, Surprise me, Library, notifications, one
@@ -179,7 +180,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
     },
     {
       title: tr("booksByCountry"),
-      links: countries.map((c) => ({ label: c.name, href: `/books?country=${encodeURIComponent(c.name)}` })),
+      links: countries.map((c) => ({ label: c.name, href: `/books?country=${encodeURIComponent(c.name)}`, flag: countryFlag(c.name) })),
     },
     {
       title: tr("navMoreWays"),
@@ -385,7 +386,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
                       <li key={l.label}>
                         {l.icon
                           ? <MenuLink href={withLang(l.href)} label={l.label} icon={l.icon} badge={l.badge} />
-                          : <Link href={withLang(l.href)} prefetch={false} className="menu-item"><span className="truncate">{l.label}</span></Link>}
+                          : <Link href={withLang(l.href)} prefetch={false} className="menu-item">{l.flag && <span aria-hidden className="w-5 shrink-0 text-center">{l.flag}</span>}<span className="truncate">{l.label}</span></Link>}
                       </li>
                     ))}
                     {g.all && (
@@ -444,7 +445,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
                   </summary>
                   <ul className="pb-2 pl-3">
                     {g.links.map((l) => (
-                      <li key={l.label}><Link href={withLang(l.href)} prefetch={false} className="menu-item !min-h-11">{l.label}</Link></li>
+                      <li key={l.label}><Link href={withLang(l.href)} prefetch={false} className="menu-item !min-h-11">{l.flag && <span aria-hidden>{l.flag}</span>}{l.label}</Link></li>
                     ))}
                     {g.all && (
                       <li><Link href={withLang(g.all.href)} prefetch={false} className="menu-item !min-h-11 font-semibold text-brand-700">{g.all.label}</Link></li>

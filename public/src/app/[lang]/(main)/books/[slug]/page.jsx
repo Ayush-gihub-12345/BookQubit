@@ -15,6 +15,7 @@ import Translated from "@/components/Translated";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import QuotesSection from "@/components/QuotesSection";
 import BookTabs from "@/components/book/BookTabs";
+import WhereToGet from "@/components/book/WhereToGet";
 import { TrackView } from "@/components/RecentlyViewed";
 import { getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles, getPublicationByName, listBooks } from "@/lib/repo";
 import SummaryReader from "@/components/player/SummaryReader";
@@ -195,6 +196,8 @@ export default async function BookPage({ params }) {
 
             <QuickActions book={bookForActions} />
 
+            <WhereToGet book={book} goBuy={goBuy} goAudible={goAudible} />
+
             {related.length > 0 && (
               <div className="mt-5 border-t border-line pt-4">
                 <a href="#related" className="text-muted flex items-center gap-2 py-1 text-sm hover:text-brand-700">
@@ -291,12 +294,6 @@ export default async function BookPage({ params }) {
               <span className="pill !text-[11px]">{availabilityBadge}</span>
               <AddToShelf slug={book.slug} />
               <SaveToMindSpace node={{ kind: "book", bookSlug: book.slug, title: book.title }} />
-              <a href={goBuy} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-700 inline-flex items-center gap-1.5">
-                <Icon name="cart" size={14} /> Buy the book <span className="text-xs opacity-70">(Affiliate link)</span>
-              </a>
-              <a href={goAudible} target="_blank" rel="noopener noreferrer sponsored" className="hover:text-brand-700 inline-flex items-center gap-1.5">
-                <Icon name="external" size={14} /> Listen on Audible <span className="text-xs opacity-70">(External provider)</span>
-              </a>
             </div>
 
             {moreInCollectionFiltered.length > 0 && (

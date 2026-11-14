@@ -66,13 +66,22 @@ export function QuoteOfTheDay({ lang, quote, label }) {
 const PALETTE = ["#6C83D9", "#D9577A", "#2F8F5B", "#B8823A", "#8B6CFF", "#0AA2C0", "#C9521B"];
 const colorFor = (name) => PALETTE[[...name].reduce((n, ch) => n + ch.charCodeAt(0), 0) % PALETTE.length];
 
-export function CollectionCard({ lang, c, booksLabel }) {
+export function CollectionCard({ lang, c, booksLabel, covers = [] }) {
   const color = colorFor(c.name);
   return (
     <Link href={L(lang, `/collections/${encodeURIComponent(c.name)}`)} prefetch={false}
       className="card-hover group relative flex h-44 w-[240px] flex-col justify-end overflow-hidden rounded-[var(--radius-lg)] p-5 text-white"
       style={{ background: `linear-gradient(150deg, ${color}, color-mix(in srgb, ${color} 35%, #000))` }}>
-      <Icon name="layers" size={64} className="absolute end-3 top-3 opacity-20 transition-transform duration-300 group-hover:scale-110" />
+      {covers.length > 0 ? (
+        <span aria-hidden className="absolute end-4 top-4 flex">
+          {covers.slice(0, 3).map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <span key={i} className="cover -ms-6 block w-[64px] transition-transform duration-300 group-hover:-translate-y-1" style={{ rotate: `${(i - 1) * 7}deg` }}><img src={src} alt="" loading="lazy" /></span>
+          ))}
+        </span>
+      ) : (
+        <Icon name="layers" size={64} className="absolute end-3 top-3 opacity-20 transition-transform duration-300 group-hover:scale-110" />
+      )}
       <span className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
       <span className="relative">
         <b className="font-display block text-xl leading-tight">{c.name}</b>
@@ -111,5 +120,17 @@ export function NewsletterBanner({ lang, labels }) {
         <NewsletterForm lang={lang} labels={{ placeholder: labels.placeholder, button: labels.button, success: labels.success }} />
       </div>
     </div>
+  );
+}
+
+export function PublisherCard({ lang, p }) {
+  return (
+    <Link href={L(lang, `/publications/${encodeURIComponent(p.slug)}`)} prefetch={false} className="card card-hover flex items-center gap-3 p-4">
+      {p.logo_url
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={p.logo_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-1" />
+        : <span aria-hidden className="font-display grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[var(--surface-2)] text-xl font-bold text-brand-700">{p.name[0]}</span>}
+      <b className="min-w-0 truncate">{p.name}</b>
+    </Link>
   );
 }

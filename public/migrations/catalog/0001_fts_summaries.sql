@@ -37,5 +37,21 @@ CREATE TRIGGER IF NOT EXISTS books_fts_au AFTER UPDATE ON books BEGIN
   VALUES (new.id, new.title, new.author, new.description, new.summary, new.tags);
 END;
 
+-- Author names for search-as-you-type (the command palette), indexed instead of scanned.
+CREATE VIRTUAL TABLE IF NOT EXISTS authors_fts USING fts5(
+  name, content='authors', content_rowid='id'
+);
+CREATE TRIGGER IF NOT EXISTS authors_fts_ai AFTER INSERT ON authors BEGIN
+  INSERT INTO authors_fts(rowid, name) VALUES (new.id, new.name);
+END;
+CREATE TRIGGER IF NOT EXISTS authors_fts_ad AFTER DELETE ON authors BEGIN
+  INSERT INTO authors_fts(authors_fts, rowid, name) VALUES ('delete', old.id, old.name);
+END;
+CREATE TRIGGER IF NOT EXISTS authors_fts_au AFTER UPDATE ON authors BEGIN
+  INSERT INTO authors_fts(authors_fts, rowid, name) VALUES ('delete', old.id, old.name);
+  INSERT INTO authors_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
 -- One-time backfill of existing rows (run ONCE after this file; safe to repeat, just slow):
 --   INSERT INTO books_fts(books_fts) VALUES('rebuild');
+--   INSERT INTO authors_fts(authors_fts) VALUES('rebuild');

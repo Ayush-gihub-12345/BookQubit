@@ -41,6 +41,22 @@ export async function keywordBooks(env, q, lang, limit = 20) {
   }
 }
 
+/** Author name search over authors_fts. Returns [] when the table isn't migrated. */
+export async function keywordAuthors(env, q, lang, limit = 4) {
+  const match = buildFtsQuery(q);
+  if (!match || !env.CATALOG_DB) return [];
+  try {
+    const { results } = await env.CATALOG_DB.prepare(
+      `SELECT a.slug, a.name, a.image_url FROM authors_fts f JOIN authors a ON a.id = f.rowid
+       WHERE authors_fts MATCH ?1 AND a.lang = ?2 ORDER BY bm25(authors_fts) LIMIT ?3`
+    ).bind(match, lang, limit).all();
+    return results;
+  } catch (e) {
+    logError("keywordAuthors", e);
+    return [];
+  }
+}
+
 /** Keyword search over reader quotes (main DB). */
 export async function keywordQuotes(env, q, limit = 5) {
   const match = buildFtsQuery(q);

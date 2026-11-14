@@ -3,7 +3,7 @@
 // Ctrl K / "/" command palette (UI v2.1): live book and author suggestions, recent searches, every main page,
 // and actions (Surprise me, switch theme). Arrow keys + Enter. "Search all" opens the full results on /books.
 // Data: /api/search (books, from 2 characters, indexed full-text + semantic) and /api/suggest (authors, from 4
-// characters: that route is deliberately gated, see its comment).
+// characters: that route is deliberately gated, see its comment). Authors also come from /api/search (indexed, 2+ characters).
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "@/components/Icon";
@@ -44,7 +44,8 @@ export default function CommandPalette({ lang, open, onClose }) {
           fetch(`/api/search?q=${encodeURIComponent(term)}&lang=${lang}`, { signal: ctl.signal }).then((r) => (r.ok ? r.json() : { books: [] })),
           term.length >= 4 ? fetch(`/api/suggest?q=${encodeURIComponent(term)}&lang=${lang}`, { signal: ctl.signal }).then((r) => (r.ok ? r.json() : { authors: [] })) : Promise.resolve({ authors: [] }),
         ]);
-        setData({ books: b.books || [], authors: a.authors || [] }); setIdx(0);
+        // /api/search authors are indexed and work from 2 characters; /api/suggest (4+) is the fallback without the index.
+        setData({ books: b.books || [], authors: (b.authors && b.authors.length ? b.authors : a.authors) || [] }); setIdx(0);
       } catch { /* aborted or offline: keep what we have */ }
     }, 180);
     return () => { clearTimeout(timer); ctl.abort(); };

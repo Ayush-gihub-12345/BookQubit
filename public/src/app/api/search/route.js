@@ -4,7 +4,7 @@ import { rateLimit } from "@/lib/cf/cache";
 import { logEvent } from "@/lib/cf/logger";
 import { cached } from "@/lib/db";
 import { getBooksBySlug, listBooks } from "@/lib/repo";
-import { hybridBookSlugs, keywordQuotes } from "@/lib/search";
+import { hybridBookSlugs, keywordQuotes, keywordAuthors } from "@/lib/search";
 
 const COLS = "slug, title, author, cover_url, rating, category, lang";
 
@@ -41,12 +41,12 @@ export async function GET(request) {
         }));
         mode = "fallback";
       }
-      const quotes = await keywordQuotes(env, q, 4);
-      return { books, quotes, mode };
+      const [quotes, authors] = await Promise.all([keywordQuotes(env, q, 4), keywordAuthors(env, q, lang, 4)]);
+      return { books, quotes, authors, mode };
     },
     600
   );
 
-  if (!payload.books.length && !payload.quotes.length) logEvent("search_zero", { q: q.slice(0, 100), lang });
+  if (!payload.books.length && !payload.quotes.length && !(payload.authors || []).length) logEvent("search_zero", { q: q.slice(0, 100), lang });
   return NextResponse.json({ q, ...payload }, { headers: { "Cache-Control": "public, max-age=60" } });
 }
