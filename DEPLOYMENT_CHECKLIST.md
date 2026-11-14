@@ -78,3 +78,16 @@ queue or index fails the whole deploy.
 
 **Dev** mirrors this with its own resources: `scripts/deploy-dev.mjs` applies the idempotent SQL to the dev databases after
 each deploy. Dev databases are separate from production (`tests/dev-environment.test.js` enforces it).
+
+## Catalog read models (see `docs/adr/0001-data-architecture.md`)
+
+Replaces whole-table scans (facets, tag/author/publisher/format indexes) with small indexed tables. Additive and opt-in: the app
+ignores them until they exist and cover every book.
+
+```bash
+npx wrangler d1 execute catalog --remote --file=migrations/catalog/0002_read_models.sql
+node scripts/rebuild-read-models.mjs --env=prod --yes     # or Admin -> Caches -> "Rebuild read models"
+```
+
+Rebuild after every import or bulk edit. Verify in D1 Insights (catalog -> Insights, sort by rows read): rows read over 30 minutes
+should fall by 90% or more. Rollback: `DELETE FROM read_model_meta;` (the app stops using the models within a minute).

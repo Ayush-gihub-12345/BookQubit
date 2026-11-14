@@ -1,6 +1,7 @@
 import { TTL } from "@/lib/cache-policy";
 import { getDb, getCatalogDb, cached, invalidate } from "./db";
 import { sendEmail, verificationEmailHtml } from "./email";
+import { modelsCover, readModelMeta, keyFilter, keyValue } from "./read-models";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -193,6 +194,9 @@ export async function queryBooks(lang, opts = {}) {
     db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first()
   , TTL.static);
   const effLang = bounds?.hi ? lang : "en";
+  // Read models (migrations/catalog/0002): indexed lookups instead of whole-table indexes. Used only while they cover
+  // every book in this language; otherwise the original paths below run unchanged.
+  const useModel = await modelsCover(db, bounds?.hi);
 
   const where = ["lang = ?"];
   const binds = [effLang];
@@ -207,7 +211,11 @@ export async function queryBooks(lang, opts = {}) {
   // format (107 rows) but still scans the whole language for a rare one
   // (5,957 rows) — same shape as every other leading-wildcard filter fixed
   // this session.
-  if (format) {
+  if (format && useModel) {
+    const n = binds.length + 1;
+    where.push(keyFilter("format", n, true));
+    binds.push(effLang, keyValue(format, true));
+  } else if (format) {
     const formatIndex = await getFormatBookIndex(effLang);
     const needle = format.trim().toLowerCase();
     const ids = [];
@@ -232,7 +240,11 @@ export async function queryBooks(lang, opts = {}) {
   // idx_books_lang with the index present. Same fix as booksByAuthor/
   // booksByPublisher below — one shared tag->ids index built via json_each,
   // reused by every tag-filtered request instead of scanned per request.
-  if (tag) {
+  if (tag && useModel) {
+    const n = binds.length + 1;
+    where.push(keyFilter("tag", n, false));
+    binds.push(effLang, keyValue(tag, false));
+  } else if (tag) {
     const tagIndex = await getTagBookIndex(effLang);
     const ids = tagIndex[tag.trim().toLowerCase()] || [];
     if (!ids.length) return { books: [], page: Number(page), hasMore: false };
@@ -249,14 +261,22 @@ export async function queryBooks(lang, opts = {}) {
   // name, not typing one. Reuses the same shared indexes booksByAuthor/
   // booksByPublisher already built, just filtering the general browser
   // instead of a single profile page's book list.
-  if (author) {
+  if (author && useModel) {
+    const n = binds.length + 1;
+    where.push(keyFilter("author", n, false));
+    binds.push(effLang, keyValue(author, false));
+  } else if (author) {
     const authorIndex = await getAuthorBookIndex(effLang);
     const slugs = authorIndex[author.trim().toLowerCase()] || [];
     if (!slugs.length) return { books: [], page: Number(page), hasMore: false };
     where.push(`slug IN (${slugs.map((_, i) => `?${binds.length + i + 1}`).join(",")})`);
     binds.push(...slugs);
   }
-  if (publisher) {
+  if (publisher && useModel) {
+    const n = binds.length + 1;
+    where.push(keyFilter("publisher", n, true));
+    binds.push(effLang, keyValue(publisher, true));
+  } else if (publisher) {
     const publisherIndex = await getPublisherBookIndex(effLang);
     const needle = publisher.trim().toLowerCase();
     const slugs = [];
@@ -320,7 +340,9 @@ export async function queryBooks(lang, opts = {}) {
   // measured at 81% of all D1 runtime, purely to print a number. The UI now
   // says "showing 32 of many" instead, and pagination is driven by the rows
   // themselves (below), so nothing here scales with catalog size.
-  const rowsKey = JSON.stringify({ q, category, collection, tag, format, country, minRating, mood, sort, shelf });
+  // Every filter that changes the result must be in this key. `author` and `publisher` were missing, so two different
+  // authors browsed within the cache lifetime got the FIRST author's books.
+  const rowsKey = JSON.stringify({ q, category, collection, tag, format, author, publisher, country, minRating, mood, sort, shelf });
 
   // Fetches ONE row more than the page needs. If that extra row comes back,
   // there's another page — which is all "Load more" ever needed to know.
@@ -667,9 +689,25 @@ export async function relatedBooks(book, lang, limit = 4) {
 // Facet counts computed entirely in SQL (GROUP BY / json_each) — no matter
 // how large the catalog gets, this only ever returns the top N per facet,
 // never touches every row in application memory.
+// Precomputed counts (catalog_facets): four 40-60 row index range reads instead of four GROUP BY passes (one of
+// them a json_each over every tag of every book, measured at 2.8M rows per call).
+async function facetsFromModel(db, lang) {
+  const kinds = [["category", 60], ["collection", 40], ["country", 40], ["tag", 60]];
+  const parts = await db.batch(kinds.map(([k, n]) =>
+    db.prepare("SELECT name, count FROM catalog_facets WHERE lang = ?1 AND kind = ?2 ORDER BY count DESC LIMIT ?3").bind(lang, k, n)));
+  if (!parts[0].results.length) return null;
+  return { categories: parts[0].results, collections: parts[1].results, countries: parts[2].results, tags: parts[3].results };
+}
+
 export async function facets(lang) {
   return cached(`facets:${lang}`, async () => {
     const db = await getCatalogDb();
+    if (await readModelMeta(db)) {
+      try {
+        const fromModel = (await facetsFromModel(db, lang)) || (lang !== "en" ? await facetsFromModel(db, "en") : null);
+        if (fromModel) return fromModel;
+      } catch { /* fall through to the live aggregation */ }
+    }
     const runFacets = (effLang) =>
       Promise.all([
         db.prepare(
@@ -987,6 +1025,29 @@ export async function relatedComics(comic, lang, limit = 4) {
 // scan per TTL window shared across every author, then turns each author
 // page into an indexed by-slug fetch. Same trick listAuthors() already
 // uses to decide which authors have books at all.
+// Books for one author / publisher straight from the key table (one indexed range read plus the rows), or null when
+// the read models don't cover this language yet so the caller can use the in-memory index instead.
+async function modelRows(kind, name, lang, loose) {
+  const db = await getCatalogDb();
+  const run = async (l) => {
+    const bounds = await cached(`book-bounds:${l}`, () =>
+      db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(l).first(), TTL.static);
+    if (!(await modelsCover(db, bounds?.hi))) return null;
+    const { results } = await db
+      .prepare(`SELECT * FROM books WHERE lang = ?1 AND ${keyFilter(kind, 1, loose)} ORDER BY id LIMIT 200`)
+      .bind(l, keyValue(name, loose)).all();
+    return results;
+  };
+  try {
+    let rows = await run(lang);
+    if (rows === null) return null;
+    if (!rows.length && lang !== "en") rows = (await run("en")) || [];
+    return rows;
+  } catch {
+    return null; // tables missing or unreadable: use the original path
+  }
+}
+
 async function getAuthorBookIndex(lang) {
   return cached(`author-book-index:${lang}`, async () => {
     const db = await getCatalogDb();
@@ -1028,6 +1089,8 @@ export async function booksByAuthor(name, lang) {
   if (!key) return [];
   const [rows, { amazon_assoc_tag }] = await Promise.all([
     cached(`books-by-author:${lang}:${key}`, async () => {
+      const viaModel = await modelRows("author", key, lang, false);
+      if (viaModel) return viaModel;
       const index = await getAuthorBookIndex(lang);
       const slugs = (index[key] || []).slice(0, 200);
       if (!slugs.length) return [];
@@ -1096,6 +1159,8 @@ export async function booksByPublisher(name, lang) {
   // the index lookup was. TTL matches the publisher index's 3h.
   const [rows, { amazon_assoc_tag }] = await Promise.all([
     cached(`books-by-publisher:${lang}:${needle}`, async () => {
+      const viaModel = await modelRows("publisher", needle, lang, true);
+      if (viaModel) return viaModel;
       const index = await getPublisherBookIndex(lang);
       const slugs = [];
       for (const key of Object.keys(index)) {

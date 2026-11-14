@@ -59,6 +59,7 @@ const sql = [
   ["bookqubit-dev-engagement", "migrations/engagement/0001_engagement.sql"],
   ["bookqubit-dev-mindspace", "migrations/mindspace/0001_mindspace.sql"],
   ["bookqubit-dev-catalog", "migrations/catalog/0001_fts_summaries.sql"],
+  ["bookqubit-dev-catalog", "migrations/catalog/0002_read_models.sql"],
   ["bookqubit-dev-database", "migrations/main/0001_search_safety.sql"],
 ];
 for (const [db, file] of sql) {
@@ -67,3 +68,7 @@ for (const [db, file] of sql) {
   const r = spawnSync(npx, args, { stdio: "inherit", env, shell: process.platform === "win32" });
   if (r.status !== 0) console.warn("note: could not apply " + file + " to " + db + "; apply it by hand (see DEPLOYMENT_CHECKLIST.md)");
 }
+
+// Fill the catalog read models (idempotent; one pass over the dev catalog). Same SQL as Admin -> Caches -> Rebuild.
+const rebuild = spawnSync(process.execPath, ["scripts/rebuild-read-models.mjs", "--env=dev"], { stdio: "inherit", env });
+if (rebuild.status !== 0) console.warn("note: could not rebuild the read models; run scripts/rebuild-read-models.mjs --env=dev by hand");

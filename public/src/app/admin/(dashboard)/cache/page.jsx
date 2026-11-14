@@ -31,6 +31,15 @@ export default function AdminCachePage() {
     load();
   }
 
+  async function rebuild() {
+    setBusy("models"); setMsg("");
+    const r = await fetch("/api/admin/cache", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "rebuild-read-models" }) });
+    const j = await r.json().catch(() => ({}));
+    setMsg(j.ok ? `Rebuilt the read models for ${j.readModels?.books ?? "?"} books.` : j.message || "Couldn't rebuild the read models.");
+    setBusy("");
+    load();
+  }
+
   if (!data) return <p className="text-muted text-sm">Loading…</p>;
   const s = data.stats;
   const answered = s.mem + s.edge + s.kv + s.d1;
@@ -56,6 +65,20 @@ export default function AdminCachePage() {
         Since this server instance started {Math.round(s.uptimeSeconds / 60)} min ago. Refreshed behind a response: {s.swr}. Refreshed before serving: {s.refresh}.
         Fell back to an old copy after a failed refresh: {s.staleError}. KV {data.kvBound ? (s.kvPaused ? "is paused after an error" : "is on") : "is not bound here"}.
       </p>
+
+      <section className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#131c31] p-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold text-white">Catalog read models</h2>
+          <p className="text-muted text-sm">
+            Precomputed tag, author, publisher and format lookups and facet counts, so browsing never scans the whole books table.
+            {data.readModels ? ` Built ${data.readModels.built_at} UTC for ${data.readModels.books} books.` : " Not built yet: pages use the slower live queries until you rebuild."}
+            {" "}Rebuild after an import or a bulk edit.
+          </p>
+        </div>
+        <button onClick={rebuild} disabled={!!busy} className="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/15 disabled:opacity-50">
+          {busy === "models" ? "Rebuilding…" : "Rebuild"}
+        </button>
+      </section>
 
       <section className="mt-8">
         <div className="flex items-center justify-between">
