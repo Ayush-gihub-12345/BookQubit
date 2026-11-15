@@ -8,6 +8,7 @@ import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
 import ListenShelf from "@/components/listen/ListenShelf";
 import { FactsStrip, HowItWorks } from "@/components/home/HomeExtras";
+import { StartShelves, HomeFaq } from "@/components/home/HomeMore";
 import { LANGUAGES } from "@/lib/languages";
 import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, PublisherCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
 import { getFeaturedPublishers, getCollectionCovers } from "@/lib/home-data";
@@ -173,6 +174,8 @@ export default async function Home() {
 
       <HowItWorks lang={lang} />
 
+      <StartShelves lang={lang} />
+
       {quote && (
         <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
       )}
@@ -282,6 +285,8 @@ export default async function Home() {
           browse: _("browse"), surprise: _("navSurpriseMe"), ranking: _("navBookwormRanking"),
         }} />
       </section>
+
+      <HomeFaq />
 
       <section className="container-bq pb-10 pt-4">
         <NewsletterBanner lang={lang} labels={{
