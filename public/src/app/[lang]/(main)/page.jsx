@@ -7,6 +7,8 @@ import Icon from "@/components/Icon";
 import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
 import ListenShelf from "@/components/listen/ListenShelf";
+import { FactsStrip, HowItWorks } from "@/components/home/HomeExtras";
+import { LANGUAGES } from "@/lib/languages";
 import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, PublisherCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
 import { getFeaturedPublishers, getCollectionCovers } from "@/lib/home-data";
 import { cached } from "@/lib/db";
@@ -139,7 +141,14 @@ export default async function Home() {
         </nav>
       )}
 
-      <section className="container-bq py-6" aria-label="Quick links">
+      <FactsStrip items={[
+        { icon: "layers", value: genres.length ? String(f.categories.length) : "", label: "Genres to explore" },
+        { icon: "globe", value: f.countries?.length ? String(f.countries.length) : "", label: "Countries represented" },
+        { icon: "headphones", value: "Audio + text", label: "Every summary" },
+        { icon: "users", value: String(LANGUAGES.length), label: "Languages" },
+      ]} />
+
+      <section className="container-bq py-5 sm:py-6" aria-label="Quick links">
         <QuickHub lang={lang} labels={{
           library: _("browse"), books: _("booksWord"), libraryHint: "Every book we have",
           shelf: _("navLibrary"), shelfHint: "Shelves, stats and goals",
@@ -153,6 +162,16 @@ export default async function Home() {
       <ContinueReading />
       <ForYou lang={lang} fallbackBooks={popularBooks} />
       <RecentlyViewed />
+
+      {popularBooks.length >= 4 && (
+        <Section title="Trending now" subtitle="The books readers are picking up most" viewAllLabel={_("viewAll")} href={withLang("/books?sort=rating")}>
+          <HScrollRow>
+            {popularBooks.slice(0, 10).map((b, i) => <div key={b.id} className="w-[148px] shrink-0 pt-3 sm:w-[168px]"><BookCard book={b} rank={i + 1} /></div>)}
+          </HScrollRow>
+        </Section>
+      )}
+
+      <HowItWorks lang={lang} />
 
       {quote && (
         <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
@@ -195,6 +214,14 @@ export default async function Home() {
           {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
       </Section>
+
+      {topRated.length >= 4 && (
+        <Section title={_("topRated")} subtitle="Highest rated by readers" viewAllLabel={_("viewAll")} href={withLang("/books?sort=rating")}>
+          <HScrollRow>
+            {topRated.slice(0, 12).map((b) => <div key={b.id} className="w-[148px] shrink-0 sm:w-[168px]"><BookCard book={b} /></div>)}
+          </HScrollRow>
+        </Section>
+      )}
 
       {/* Audio summaries: press play on a cover, or queue the whole row. Reuses the global player. */}
       <ListenShelf
