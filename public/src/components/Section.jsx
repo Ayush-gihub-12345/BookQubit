@@ -6,7 +6,7 @@ import Link from "next/link";
 // reads as the wrong way round in right-to-left languages.
 export default function Section({ id, title, subtitle, href, viewAllLabel = "View all", eyebrow, children }) {
   return (
-    <section id={id} className="container-bq scroll-mt-24 py-8 sm:py-10">
+    <section id={id} className="container-bq scroll-mt-24 py-6 sm:py-9">
       <div className="mb-5 flex items-end justify-between gap-4">
         <div className="min-w-0">
           {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}

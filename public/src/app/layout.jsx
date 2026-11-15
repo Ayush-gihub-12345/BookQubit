@@ -89,6 +89,9 @@ export default async function RootLayout({ children }) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: SYSTEM_THEME_SCRIPT }} />
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         {/* The site already ships its own translation/transliteration for
             every language (i18n.js dictionaries, Translated/TitleTransliterated
