@@ -252,3 +252,31 @@ html[lang="ur"] body :is(p, li, a, span, button, label, blockquote, dd, dt, summ
 /* Reserve room at the end of the page for the docked mini player so it never hides content. */
 .player-spacer { height: 0; }
 body[data-player="on"] .player-spacer { height: 5.5rem; }
+
+/* Side rail: neon gradient buttons built from the active THEME's own colours (brand-500 shifted a little toward the
+   logo violet), so all nine themes and custom themes get a matching glow. Reduced-motion users get no transitions. */
+.rail-bubble {
+  position: relative;
+  transition: background .2s ease, box-shadow .25s ease, transform .2s ease, color .2s ease;
+}
+.rail-bubble[data-active="true"] {
+  color: var(--on-brand);
+  background: linear-gradient(135deg, var(--color-brand-500), color-mix(in oklab, var(--color-brand-500) 62%, var(--color-qubit-500)));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-brand-500) 55%, transparent),
+    0 0 18px -1px color-mix(in srgb, var(--color-brand-500) 70%, transparent),
+    0 4px 22px -4px color-mix(in oklab, var(--color-brand-500) 55%, var(--color-qubit-500));
+}
+.group:hover .rail-bubble:not([data-active="true"]),
+.group:focus-visible .rail-bubble:not([data-active="true"]) {
+  color: var(--fg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-brand-500) 24%, var(--surface-2)), color-mix(in oklab, var(--color-brand-500) 14%, var(--color-qubit-500) 10%));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand-500) 38%, transparent), 0 0 14px -3px color-mix(in srgb, var(--color-brand-500) 55%, transparent);
+  transform: translateY(-1px);
+}
+.rail-toggle:hover {
+  color: var(--fg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-brand-500) 26%, var(--surface-2)), var(--surface-2));
+  box-shadow: 0 0 12px -3px color-mix(in srgb, var(--color-brand-500) 55%, transparent);
+}
+@media (prefers-reduced-motion: reduce) { .rail-bubble { transition: none; } .group:hover .rail-bubble { transform: none; } }
