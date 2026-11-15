@@ -3,6 +3,7 @@ import BookCover from "./BookCover";
 import TitleTransliterated from "./TitleTransliterated";
 import Translated from "./Translated";
 import Icon from "./Icon";
+import { CoverPlay, ListenButton } from "./home/PickListen";
 
 // Today's pick (UI v2): one book, shown properly. The cover sits left, the facts and three takeaways right, and
 // "Read summary" is the primary action with "Get book" secondary, on purpose: someone arriving on the homepage
@@ -14,10 +15,13 @@ export default function FeaturedPick({ lang, book, labels, priority = true }) {
   const points = (book.keyPoints || []).slice(0, 3);
 
   return (
-    <article className="card relative grid grid-cols-[88px_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-5 sm:p-6 lg:shadow-[var(--shadow-2)]">
-      <Link href={href} className="cover mx-auto block w-full" aria-label={book.title}>
-        <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority={priority} />
-      </Link>
+    <article className="card relative grid h-full content-start grid-cols-[88px_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-5 sm:p-6 lg:shadow-[var(--shadow-2)]">
+      <div className="relative mx-auto block w-full self-start">
+        <Link href={href} className="cover block w-full" aria-label={book.title}>
+          <BookCover title={book.title} author={book.author} cover_url={book.cover_url} priority={priority} />
+        </Link>
+        <CoverPlay book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }} />
+      </div>
 
       <div className="min-w-0">
         <span className="badge badge-marker">{labels.pick}</span>
@@ -51,6 +55,7 @@ export default function FeaturedPick({ lang, book, labels, priority = true }) {
         )}
         <div className="mt-3 flex flex-wrap gap-2 sm:mt-5">
           <Link href={`${href}#summary`} className="btn-primary btn-sm"><Icon name="book" size={16} />{labels.summary}</Link>
+          <ListenButton book={{ slug: book.slug, lang, title: book.title, author: book.author, cover_url: book.cover_url }} />
           {book.buyUrl && (
             <a href={book.buyUrl} target="_blank" rel="noopener noreferrer sponsored" className="btn-ghost btn-sm">
               <Icon name="cart" size={16} />{labels.getBook}

@@ -44,9 +44,10 @@ export default function PickCarousel({ label, children }) {
       onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => { if (touch.current == null) return; const dx = e.changedTouches[0].clientX - touch.current; touch.current = null; if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1)); }}
     >
-      <div aria-live={playing ? "off" : "polite"}>
+      {/* All slides share one grid cell, so the box is as tall as the tallest pick and never changes size. */}
+      <div className="grid" aria-live={playing ? "off" : "polite"}>
         {slides.map((s, i) => (
-          <div key={i} hidden={i !== cur} role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>{s}</div>
+          <div key={i} inert={i !== cur} aria-hidden={i !== cur} className={`col-start-1 row-start-1 flex transition-opacity duration-300 [&>*]:w-full ${i === cur ? "opacity-100" : "pointer-events-none invisible opacity-0"}`} role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${n}`}>{s}</div>
         ))}
       </div>
       <div className="mt-3 flex items-center justify-center gap-2">

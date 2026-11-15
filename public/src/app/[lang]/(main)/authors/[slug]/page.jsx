@@ -9,6 +9,7 @@ import { getAuthor, booksByAuthor } from "@/lib/repo";
 import { t } from "@/lib/i18n";
 import { FollowButton, ShareButton } from "@/components/FollowButton";
 import Icon from "@/components/Icon";
+import AuthorTimeline from "@/components/authors/AuthorTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,12 @@ export default async function AuthorPage({ params }) {
           </dl>
         </div>
       </div>
+
+      <AuthorTimeline
+        author={{ name: author.name, image_url: author.image_url, country: author.country, bio: (author.bio || "").slice(0, 320) }}
+        birthYear={author.birth_year}
+        books={books.map((b) => ({ slug: b.slug, title: b.title, cover_url: b.cover_url, rating: b.rating, published: b.published, snippet: String(b.description || b.summary || "").slice(0, 260) }))}
+      />
 
       {books.length > 0 && (
         <Section title={(() => {
