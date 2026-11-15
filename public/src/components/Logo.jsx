@@ -43,7 +43,7 @@ export function Wordmark({ palette = DEFAULT_LOGO_PALETTE, className = "" }) {
   return (
     <span className={`text-[1.3rem] font-bold tracking-[-0.03em] ${className}`} style={{ fontFamily: "var(--font-sans)" }}>
       <span className="text-[var(--fg)]">book</span>
-      <span style={{ background: `linear-gradient(90deg, ${p.stops.join(", ")})`, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>qubit</span>
+      <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${p.stops.join(", ")})`, WebkitTextFillColor: "transparent" }}>qubit</span>
     </span>
   );
 }
