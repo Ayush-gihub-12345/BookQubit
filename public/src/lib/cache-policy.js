@@ -26,7 +26,7 @@ export const swrWindowSeconds = (ttl) => Math.max(600, ttl * 2);
 
 // Key prefix -> group. A group is invalidated as a unit (see cache-versions.js).
 const GROUPS = [
-  ["catalog", /^(book-row|book-row-fallback|book-bounds|book-slugs|alternates|recent-added|featured|featured-authors|author-profiles|featured-publishers|collection-covers|bestsellers|facets|authors-with-books|author-book-index|publisher-book-index|tag-book-index|format-book-index|books-by-author|books-by-publisher|rows|platform):/],
+  ["catalog", /^(book-row|book-row-fallback|book-bounds|book-slugs|alternates|recent-added|featured|featured-authors|author-profiles|coauthors|featured-publishers|collection-covers|bestsellers|facets|authors-with-books|author-book-index|publisher-book-index|tag-book-index|format-book-index|books-by-author|books-by-publisher|rows|platform):/],
   ["community", /^(community|popular-readers|leaderboard):/],
   ["feed", /^feed:/],
   ["search", /^search:/],

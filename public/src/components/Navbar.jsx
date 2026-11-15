@@ -302,6 +302,22 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
       ],
     },
     {
+      key: "authors", label: labels.authors, active: under("/authors"),
+      groups: [
+        { title: "Explore authors", links: [
+          { label: "All authors", href: "/authors", icon: "feather", desc: "Browse every author" },
+          { label: "World map", href: "/authors/explore?view=map", icon: "globe", desc: "Where authors come from" },
+          { label: "Across genres", href: "/authors/explore?view=genres", icon: "layers", desc: "Genre-benders and specialists" },
+          { label: "Co-author network", href: "/authors/explore?view=network", icon: "users", desc: "Who writes together" },
+          { label: "Born in…", href: "/authors/explore?view=eras", icon: "calendar", desc: "By decade or century" },
+        ] },
+        { title: "Comics people", links: [
+          { label: "Characters", href: "/comics/people?view=characters", icon: "users", desc: "Every comic they appear in" },
+          { label: "Creators", href: "/comics/people?view=creators", icon: "feather", desc: "Writers and artists" },
+        ] },
+      ],
+    },
+    {
       key: "collections", label: labels.collections, feature: "collection", active: under("/collections"),
       groups: [{ title: labels.collections, links: collections.map((c) => ({ label: c.name, href: `/collections/${encodeURIComponent(c.name)}` })), all: { label: tr("allCollectionsMenu"), href: "/collections" } }],
     },
@@ -362,7 +378,6 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
               {open === m.key && <MegaPanel menu={m} withLang={withLang} lang={lang} labels={labels} tr={tr} onClose={() => setOpen(null)} />}
             </div>
           ))}
-          <Link href={withLang("/authors")} prefetch={false} className="nav-link max-xl:!hidden" aria-current={under("/authors") ? "page" : undefined}>{labels.authors}</Link>
         </nav>
 
         <div className="min-w-0 flex-1">
