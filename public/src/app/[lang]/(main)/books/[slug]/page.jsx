@@ -341,7 +341,7 @@ export default async function BookPage({ params }) {
             </div>
 
             {/* ---- Sidebar (sticky on desktop) ---- */}
-            <aside className="space-y-5 lg:sticky lg:top-[8.5rem] lg:max-h-[calc(100dvh-9.5rem)] lg:self-start lg:overflow-y-auto lg:pb-2 lg:[scrollbar-width:none]">
+            <aside className="space-y-5 lg:sticky lg:top-[8.5rem] lg:self-start">
               <WhereToGet book={book} goBuy={goBuy} goAudible={goAudible} />
               <RatingCard avg={community.avg_rating} count={community.rating_count} distribution={community.distribution} />
               <ReadersCard reading={Number(community.reading) || 0} finished={Number(community.read) || 0} want={Number(community.want) || 0} />

@@ -280,3 +280,11 @@ body[data-player="on"] .player-spacer { height: 5.5rem; }
   box-shadow: 0 0 12px -3px color-mix(in srgb, var(--color-brand-500) 55%, transparent);
 }
 @media (prefers-reduced-motion: reduce) { .rail-bubble { transition: none; } .group:hover .rail-bubble { transform: none; } }
+
+/* Thin scrollbars in the active theme's colour, everywhere. */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-brand-500) 55%, transparent) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-brand-500) 50%, transparent); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-brand-500); }
+.hscroll, .hscroll-none { scrollbar-width: none; }

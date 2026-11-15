@@ -7,6 +7,7 @@ import AuthButton from "./AuthButton";
 import CommandPalette from "./search/CommandPalette";
 import Icon from "./Icon";
 import { LogoMark, Wordmark } from "./Logo";
+import { logoPaletteFor } from "@/lib/logoPalette";
 import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { authFetch } from "@/lib/authFetch";
 import CustomThemeModal from "./CustomThemeModal";
@@ -344,8 +345,8 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
 
         {/* The wordmark is hidden on a phone and the mark is aria-hidden, so the link needs its own accessible name. */}
         <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex min-h-11 shrink-0 items-center gap-2">
-          <LogoMark size={34} />
-          <Wordmark className="hidden sm:inline" />
+          <LogoMark size={32} palette={logoPaletteFor(theme)} />
+          <Wordmark palette={logoPaletteFor(theme)} className="hidden !text-[1.05rem] xl:inline" />
         </Link>
 
         <nav ref={navBox} aria-label={tr("navPrimaryLabel")} className="ml-1 hidden items-center gap-0.5 lg:flex">
@@ -375,10 +376,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           </div>
         </div>
 
-        <SurpriseLink locale={lang} className="btn-soft btn-sm hidden !min-h-[42px] 2xl:inline-flex" title={labels.surpriseMe}>
-          <Icon name="dice" size={18} />{labels.surpriseMe}
-        </SurpriseLink>
-        <SurpriseLink locale={lang} className="btn-icon hidden sm:inline-flex 2xl:!hidden" aria-label={labels.surpriseMe} title={labels.surpriseMe}>
+        <SurpriseLink locale={lang} className="btn-icon hidden sm:inline-flex" aria-label={labels.surpriseMe} title={labels.surpriseMe}>
           <Icon name="dice" size={19} />
         </SurpriseLink>
 
@@ -386,23 +384,21 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <Icon name="heart" size={18} />
         </Link>
 
-        <Link href={withLang("/library")} prefetch={false} className="nav-link max-2xl:!hidden"
-          aria-current={under("/library", "/account", "/liked") ? "page" : undefined}>
-          <Icon name="bookmark" size={16} /> {tr("navLibrary")}
+        <Link href={withLang("/notifications")} prefetch={false} className="btn-icon hidden md:inline-flex"
+          aria-label={notifCount > 0 ? `${labels.notifications} (${notifCount})` : labels.notifications} title={labels.notifications}>
+          <Icon name="bell" size={18} />
+          {notifCount > 0 && (
+            <span className="absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-extrabold ring-2 ring-[var(--bg)]"
+              style={{ background: "var(--color-marker)", color: "var(--color-marker-ink)" }}>
+              {notifCount > 9 ? "9+" : notifCount}
+            </span>
+          )}
         </Link>
 
-        {user && (
-          <Link href={withLang("/notifications")} prefetch={false} className="btn-icon hidden sm:inline-flex"
-            aria-label={notifCount > 0 ? `${labels.notifications} (${notifCount})` : labels.notifications} title={labels.notifications}>
-            <Icon name="bell" size={18} />
-            {notifCount > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-extrabold"
-                style={{ background: "var(--color-marker)", color: "var(--color-marker-ink)" }}>
-                {notifCount > 9 ? "9+" : notifCount}
-              </span>
-            )}
-          </Link>
-        )}
+        <Link href={withLang("/library")} prefetch={false} className="nav-link hidden !px-2.5 md:inline-flex"
+          aria-label={tr("navLibrary")} title={tr("navLibrary")} aria-current={under("/library", "/account", "/liked") ? "page" : undefined}>
+          <Icon name="bookmark" size={17} /><span className="hidden xl:inline">{tr("navLibrary")}</span>
+        </Link>
 
         {/* Language and theme, together: both are "how the site looks to me". */}
         <div ref={prefsBox} className="relative hidden sm:block">
