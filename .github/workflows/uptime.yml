@@ -42,7 +42,8 @@ jobs:
           set -u
           bad=0
           for path in /en /en/books /en/authors; do
-            read -r code t < <(curl -sS -m 25 -o /dev/null -w "%{http_code} %{time_total}" "$SITE$path" || echo "000 25")
+            out=$(curl -sS -m 25 -o /dev/null -w "%{http_code} %{time_total}" "$SITE$path" || echo "000 25")
+            code=${out% *}; t=${out#* }
             echo "$path -> $code in ${t}s"
             if [ "$code" != "200" ]; then echo "::error::$path returned $code"; bad=1; fi
           done
