@@ -1,14 +1,17 @@
 "use client";
 
-// Phone and tablet quick navigation (the YouTube pattern): a swipeable row of chips under the header. The current
-// section is filled and scrolled into view; the row fades at both edges so it is clear there is more to swipe.
-// It scrolls away with the page (it is not sticky) so it never shifts the offsets of sticky bars below it.
-import { useEffect, useRef } from "react";
+// Phone and tablet quick navigation (the YouTube pattern): a short row of chips under the header, ending in "More",
+// which opens the full side menu. The row never shows a scrollbar: if the chips don't fit, an arrow appears at the
+// edge, and the row can also be dragged with a finger or the mouse. The current section is filled and kept in view.
+// It scrolls away with the page (not sticky), so it never shifts the offsets of sticky bars below it.
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Icon from "./Icon";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
+
+export const OPEN_MENU_EVENT = "bq:open-menu";
 
 export default function MobileChips() {
   const lang = useLang();
@@ -16,6 +19,8 @@ export default function MobileChips() {
   const pathname = usePathname();
   const rel = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
   const box = useRef(null);
+  const drag = useRef({ down: false, x: 0, left: 0, moved: false });
+  const [edge, setEdge] = useState({ start: false, end: false });
   const starts = (...r) => r.some((p) => rel === p || rel.startsWith(`${p}/`));
 
   const CHIPS = [
@@ -23,32 +28,74 @@ export default function MobileChips() {
     { href: "/feed", icon: "flame", label: "Feed", on: starts("/feed") },
     { href: "/books", icon: "compass", label: tr("navDiscover"), on: starts("/books", "/categories", "/tags") },
     { href: "/listen", icon: "headphones", label: "Listen", on: starts("/listen") },
-    { href: "/authors", icon: "feather", label: tr("authors"), on: starts("/authors") },
-    { href: "/comics", icon: "layers", label: tr("comics"), on: starts("/comics") },
-    { href: "/collections", icon: "bookmark", label: tr("collections"), on: starts("/collections") },
-    { href: "/community", icon: "users", label: tr("navCommunity"), on: starts("/community", "/connect", "/readers") },
-    { href: "/leaderboard", icon: "trophy", label: tr("navRankingShort"), on: starts("/leaderboard") },
   ];
 
-  // Keep the active chip in view after navigation.
-  useEffect(() => {
-    const el = box.current?.querySelector('[aria-current="page"]');
-    el?.scrollIntoView({ inline: "center", block: "nearest" });
-  }, [pathname]);
+  const measure = useCallback(() => {
+    const el = box.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const x = Math.abs(el.scrollLeft); // abs: scrollLeft is negative in right-to-left
+    setEdge({ start: x > 4, end: max > 4 && x < max - 4 });
+  }, []);
 
+  useEffect(() => {
+    measure();
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  useEffect(() => {
+    box.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest" });
+    measure();
+  }, [pathname, measure]);
+
+  const nudge = (dir) => box.current?.scrollBy({ left: dir * 160, behavior: "smooth" });
+  const openMenu = () => window.dispatchEvent(new Event(OPEN_MENU_EVENT));
+
+  // Drag to scroll (mouse; touch already scrolls natively). A drag never counts as a click on a chip.
+  const onDown = (e) => { if (e.pointerType !== "mouse") return; drag.current = { down: true, x: e.clientX, left: box.current.scrollLeft, moved: false }; };
+  const onMove = (e) => {
+    const d = drag.current;
+    if (!d.down) return;
+    const dx = e.clientX - d.x;
+    if (Math.abs(dx) > 4) d.moved = true;
+    box.current.scrollLeft = d.left - dx;
+  };
+  const onUp = () => { drag.current.down = false; };
+  const stopClick = (e) => { if (drag.current.moved) { e.preventDefault(); e.stopPropagation(); drag.current.moved = false; } };
+
+  const chip = "inline-flex h-9 select-none items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold transition-colors";
   return (
     <nav aria-label="Quick sections" className="relative border-b border-[var(--line)] lg:hidden">
-      <ul ref={box} className="flex gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul ref={box} onScroll={measure} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onClickCapture={stopClick}
+        className="flex cursor-grab gap-2 overflow-x-auto px-3 py-2.5 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {CHIPS.map((c) => (
           <li key={c.href} className="shrink-0">
-            <Link href={`/${lang}${c.href === "/" ? "" : c.href}`} prefetch={false} aria-current={c.on ? "page" : undefined}
-              className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold transition-colors ${c.on ? "bg-[var(--fg)] text-[var(--bg)]" : "bg-[var(--surface-2)] text-[var(--fg)] hover:bg-[var(--surface-3)]"}`}>
+            <Link href={`/${lang}${c.href === "/" ? "" : c.href}`} prefetch={false} draggable={false} aria-current={c.on ? "page" : undefined}
+              className={`${chip} ${c.on ? "bg-[var(--fg)] text-[var(--bg)]" : "bg-[var(--surface-2)] text-[var(--fg)] hover:bg-[var(--surface-3)]"}`}>
               <Icon name={c.icon} size={15} />{c.label}
             </Link>
           </li>
         ))}
+        <li className="shrink-0">
+          <button type="button" onClick={openMenu} aria-haspopup="dialog" className={`${chip} bg-[var(--surface-2)] text-[var(--fg)] hover:bg-[var(--surface-3)]`}>
+            <Icon name="menu" size={15} />More
+          </button>
+        </li>
       </ul>
-      <span aria-hidden className="pointer-events-none absolute inset-y-0 end-0 w-8 bg-gradient-to-l from-[var(--bg)] to-transparent" />
+      {edge.start && (
+        <button type="button" onClick={() => nudge(-1)} aria-label="Scroll left" className="absolute inset-y-0 start-0 grid w-10 place-items-center bg-gradient-to-r from-[var(--bg)] via-[var(--bg)] to-transparent">
+          <span className="grid h-7 w-7 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)]"><Icon name="chevronLeft" size={16} className="rtl:rotate-180" /></span>
+        </button>
+      )}
+      {edge.end && (
+        <button type="button" onClick={() => nudge(1)} aria-label="Scroll right" className="absolute inset-y-0 end-0 grid w-10 place-items-center bg-gradient-to-l from-[var(--bg)] via-[var(--bg)] to-transparent">
+          <span className="grid h-7 w-7 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)]"><Icon name="chevronRight" size={16} className="rtl:rotate-180" /></span>
+        </button>
+      )}
     </nav>
   );
 }

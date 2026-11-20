@@ -137,6 +137,11 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
 
   useDismiss(!!open, () => setOpen(null), [navBox]);
   useDismiss(prefsOpen, () => setPrefsOpen(false), [prefsBox], prefsBtn);
+  useEffect(() => {
+    const open = () => setDrawerOpen(true);
+    window.addEventListener("bq:open-menu", open);
+    return () => window.removeEventListener("bq:open-menu", open);
+  }, []);
   useDismiss(drawerOpen, () => setDrawerOpen(false), [drawerPanel, drawerBtn], drawerBtn);
 
   // Any navigation closes whatever was open, so a panel never lingers over the page it just led to.
@@ -354,15 +359,10 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   return (
     <header className="glass sticky top-0 z-50 border-b border-[var(--line)]">
       <div className="mx-auto flex h-16 max-w-[88rem] items-center gap-2 px-3 sm:gap-3 sm:px-5">
-        <button ref={drawerBtn} type="button" onClick={() => setDrawerOpen((o) => !o)} className="btn-icon lg:hidden"
-          aria-label={drawerOpen ? tr("navCloseMenu") : labels.menu} aria-expanded={drawerOpen} aria-controls="site-menu">
-          <Icon name={drawerOpen ? "x" : "menu"} size={20} />
-        </button>
-
         {/* The wordmark is hidden on a phone and the mark is aria-hidden, so the link needs its own accessible name. */}
         <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex min-h-11 shrink-0 items-center gap-2">
           <LogoMark size={32} palette={logoPaletteFor(theme)} />
-          <Wordmark palette={logoPaletteFor(theme)} className="hidden !text-[1.05rem] xl:inline" />
+          <Wordmark palette={logoPaletteFor(theme)} className="!text-[1.05rem] lg:hidden xl:inline" />
         </Link>
 
         <nav ref={navBox} aria-label={tr("navPrimaryLabel")} className="ml-1 hidden items-center gap-0.5 lg:flex">
@@ -395,11 +395,11 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <Icon name="dice" size={19} />
         </SurpriseLink>
 
-        <Link href={withLang("/liked")} prefetch={false} className="btn-icon hidden md:inline-flex" aria-label={labels.likedBooks} title={labels.likedBooks}>
+        <Link href={withLang("/liked")} prefetch={false} className="btn-icon hidden min-[400px]:inline-flex" aria-label={labels.likedBooks} title={labels.likedBooks}>
           <Icon name="heart" size={18} />
         </Link>
 
-        <Link href={withLang("/notifications")} prefetch={false} className="btn-icon hidden md:inline-flex"
+        <Link href={withLang("/notifications")} prefetch={false} className="btn-icon"
           aria-label={notifCount > 0 ? `${labels.notifications} (${notifCount})` : labels.notifications} title={labels.notifications}>
           <Icon name="bell" size={18} />
           {notifCount > 0 && (
@@ -462,9 +462,13 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
 
       {/* Phone and tablet: a full-height sheet with the same structure */}
       {drawerOpen && (
-        <div className="absolute inset-x-0 top-full z-50 h-[calc(100dvh-7.4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
+        <div className="absolute inset-x-0 top-full z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
           <div id="site-menu" ref={drawerPanel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={labels.menu}
             className="animate-pop flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
+            <div className="flex items-center justify-between px-4 pt-3">
+              <span className="flex items-center gap-2"><LogoMark size={28} palette={logoPaletteFor(theme)} /><Wordmark palette={logoPaletteFor(theme)} className="!text-[1.05rem]" /></span>
+              <button type="button" onClick={() => setDrawerOpen(false)} className="btn-icon" aria-label={tr("navCloseMenu")}><Icon name="x" size={20} /></button>
+            </div>
             <div className="px-3 pt-3">
               <SurpriseLink locale={lang} onNavigate={() => setDrawerOpen(false)} className="btn-primary mb-3 w-full"><Icon name="dice" size={18} />{labels.surpriseMe}</SurpriseLink>
               {!user && firebaseEnabled && (
