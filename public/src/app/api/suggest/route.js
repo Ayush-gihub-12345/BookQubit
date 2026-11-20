@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { listBooks, listAuthors, listPublications, facets, getBooksBySlug } from "@/lib/repo";
+import { listBooks, facets, getBooksBySlug } from "@/lib/repo";
+import { getCatalogDb, cached } from "@/lib/db";
+import { keywordAuthors } from "@/lib/search";
 import { getCf } from "@/lib/cf/env";
 import { hybridBookSlugs } from "@/lib/search";
 
@@ -32,19 +34,22 @@ export async function GET(request) {
     } catch { /* fall through to LIKE search */ }
     return listBooks(lang, { q, limit: 5 });
   };
-  const [books, authors, pubs, f] = await Promise.all([
-    searchBooks(),
-    listAuthors(lang),
-    listPublications(lang),
-    facets(lang),
-  ]);
+  // Authors through the full-text index, publishers by name prefix (indexed); neither reads a whole table.
+  const searchAuthors = async () => {
+    try { const { env } = await getCf(); return await keywordAuthors(env, q, lang, 3); } catch { return []; }
+  };
+  const searchPublishers = () => cached(`suggest-pubs:${lang}:${s}`, async () => {
+    const db = await getCatalogDb();
+    const esc = s.replace(/[\\%_]/g, (c) => "\\" + c);
+    const { results } = await db.prepare("SELECT slug, name, logo_url FROM publications WHERE lang = ?1 AND name LIKE ?2 ESCAPE '\\' LIMIT 3").bind(lang, esc + "%").all();
+    return results;
+  }, 3600).catch(() => []);
+  const [books, authors, pubs, f] = await Promise.all([searchBooks(), searchAuthors(), searchPublishers(), facets(lang)]);
 
   return NextResponse.json({
     books: books.map((b) => ({ slug: b.slug, title: b.title, author: b.author, cover_url: b.cover_url, rating: b.rating })),
-    authors: authors.filter((a) => a.name.toLowerCase().includes(s)).slice(0, 3)
-      .map((a) => ({ slug: a.slug, name: a.name, image_url: a.image_url })),
-    publishers: pubs.filter((p) => p.name.toLowerCase().includes(s)).slice(0, 3)
-      .map((p) => ({ slug: p.slug, name: p.name, logo_url: p.logo_url })),
+    authors: authors.slice(0, 3).map((a) => ({ slug: a.slug, name: a.name, image_url: a.image_url })),
+    publishers: pubs.map((p) => ({ slug: p.slug, name: p.name, logo_url: p.logo_url })),
     categories: f.categories.filter((c) => c.name.toLowerCase().includes(s)).slice(0, 4),
     tags: f.tags.filter((t) => t.name.toLowerCase().includes(s)).slice(0, 5),
   });

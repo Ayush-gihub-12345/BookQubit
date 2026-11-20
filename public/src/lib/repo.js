@@ -2,6 +2,7 @@ import { TTL } from "@/lib/cache-policy";
 import { getDb, getCatalogDb, cached, invalidate } from "./db";
 import { sendEmail, verificationEmailHtml } from "./email";
 import { modelsCover, readModelMeta, keyFilter, keyValue } from "./read-models";
+import { pageAuthors, authorCountries, similarBooks, otherEditions, seriesOf } from "./catalog-lists";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -175,7 +176,9 @@ export async function listBooks(lang, { category, collection, tag, q, sort, limi
 // SQL-level catalog query with real pagination — scales to very large catalogs
 // (never loads the full table). Used by the /books browser.
 export async function queryBooks(lang, opts = {}) {
-  const { q, category, collection, tag, format, author, publisher, country, minRating, mood, sort, shelf, page = 1 } = opts;
+  const { q, category, collection, tag, format, author, publisher, country, minRating, mood, sort, shelf } = opts;
+  // Deep OFFSETs read every skipped row, so paging stops at 200 pages (6,400 books at the default size); search and filters take over.
+  const page = Math.min(200, Math.max(1, Number(opts.page) || 1));
   // Clamped regardless of caller — protects against an accidental (or
   // malicious) request for perPage=1000000 forcing a huge unbounded read.
   const perPage = Math.min(Math.max(1, Number(opts.perPage) || 32), 200);
@@ -862,7 +865,24 @@ export const listComics = (lang) => listEntity("comics", lang, ["characters", "c
 // listAuthors() itself is untouched and still fully cached (3h) — this adds
 // zero DB reads, it just filters/sorts/slices that in-memory array per
 // request instead of serializing all of it to every visitor.
-export async function queryAuthors(lang, { q, country, sort, page = 1, perPage = 60 } = {}) {
+// True when the read models exist and cover every book of this language (cheap: memoised meta + the cached id bounds).
+export async function catalogModelReady(db, lang) {
+  const bounds = await cached(`book-bounds:${lang}`, () =>
+    db.prepare("SELECT MIN(id) AS lo, MAX(id) AS hi FROM books WHERE lang=?1").bind(lang).first(), TTL.static);
+  return modelsCover(db, bounds?.hi);
+}
+
+export async function queryAuthors(lang, opts = {}) {
+  const { q, country, sort, page = 1, perPage = 60 } = opts;
+  // Indexed, paged, bounded: about perPage+1 rows however many authors there are (see lib/catalog-lists.js).
+  try {
+    const db = await getCatalogDb();
+    if (await catalogModelReady(db, lang)) {
+      const r = await cached(`authors-page:${lang}:${JSON.stringify([q || "", country || "", sort || "", Number(page), Number(perPage)])}`,
+        () => pageAuthors(db, lang, { q, country, sort, page, perPage }), TTL.lists);
+      if (r) return r;
+    }
+  } catch { /* fall back to the in-memory list below */ }
   const all = await listAuthors(lang);
   let list = all;
   if (country) list = list.filter((a) => a.country === country);
@@ -889,6 +909,11 @@ export async function queryAuthors(lang, { q, country, sort, page = 1, perPage =
 // list, unaffected by the current search/filter (matches the pills' old
 // client-side behavior of always reflecting the full catalog).
 export async function getAuthorCountries(lang) {
+  try {
+    const db = await getCatalogDb();
+    const rows = await cached(`author-countries:${lang}`, () => authorCountries(db, lang, 14), TTL.static);
+    if (rows) return rows;
+  } catch { /* fall back */ }
   const all = await listAuthors(lang);
   const counts = new Map();
   for (const a of all) if (a.country) counts.set(a.country, (counts.get(a.country) || 0) + 1);
@@ -962,7 +987,45 @@ export const getPublication = (slug, lang) =>
 export async function getAuthorByName(name, lang) {
   if (!name) return null;
   const first = name.split(",")[0].trim().toLowerCase();
-  return (await listAuthors(lang)).find((a) => a.name.trim().toLowerCase() === first) || null;
+  return cached(`author-by-name:${lang}:${first}`, async () => {
+    const db = await getCatalogDb();
+    const run = (l) => db.prepare("SELECT id, slug, name, country, birth_year, image_url FROM authors WHERE lang = ?1 AND lower(trim(name)) = ?2 LIMIT 1").bind(l, first).first();
+    return (await run(lang)) || (lang !== "en" ? await run("en") : null) || null;
+  }, TTL.static);
+}
+
+// Books like this one, with the reason for each. Cached per book for an hour (the ranking reads a few hundred index rows).
+export async function getSimilarBooks(book, lang, limit = 12) {
+  if (!book) return [];
+  const picks = await cached(`similar:${lang}:${book.id}:${limit}`, async () => {
+    const db = await getCatalogDb();
+    return (await similarBooks(db, lang, book, { limit })) || [];
+  }, TTL.static);
+  if (!picks.length) return [];
+  const rows = await getBooksBySlugIds(picks.map((p) => p.id), lang);
+  const { amazon_assoc_tag } = await getSiteSettings();
+  return picks.map((p) => rows.get(p.id) && { ...mapBook(rows.get(p.id), amazon_assoc_tag), why: p }).filter(Boolean);
+}
+
+async function getBooksBySlugIds(ids, lang) {
+  const db = await getCatalogDb();
+  const map = new Map();
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    const { results } = await db.prepare(`SELECT * FROM books WHERE id IN (${part.map((_, k) => `?${k + 1}`).join(",")})`).bind(...part).all();
+    for (const r of results) map.set(r.id, r);
+  }
+  return map;
+}
+
+// Other editions of the same work (same language, same title and first author) and the book's series.
+export async function getOtherEditions(book, lang) {
+  if (!book) return [];
+  return cached(`editions:${lang}:${book.id}`, async () => otherEditions(await getCatalogDb(), lang, book.id, 12), TTL.static);
+}
+export async function getSeriesOf(book, lang) {
+  if (!book) return null;
+  return cached(`series-of:${lang}:${book.id}`, async () => seriesOf(await getCatalogDb(), lang, book.id), TTL.static);
 }
 export async function getPublicationByName(name, lang) {
   if (!name) return null;

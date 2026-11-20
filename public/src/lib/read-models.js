@@ -1,4 +1,4 @@
-import { REBUILD_STATEMENTS } from "./read-models-sql.js";
+import { REBUILD_STATEMENTS, rebuildPlan } from "./read-models-sql.js";
 
 // Runtime side of the catalog read models (migrations/catalog/0002_read_models.sql).
 // Rule: a model is only ever used when it exists AND covers every book (max_id >= the newest id being queried), so
@@ -27,9 +27,18 @@ export async function modelsCover(db, hi = 0) {
   return !!meta && Number(meta.max_id) >= Number(hi || 0);
 }
 
-/** Rebuild every model in one atomic batch. Returns the new meta row. */
-export async function rebuildReadModels(db) {
-  await db.batch(REBUILD_STATEMENTS.map((sql) => db.prepare(sql)));
+/**
+ * Rebuild every model. Up to ~20,000 books: one atomic batch. Larger catalogs: id-range chunks (see rebuildPlan), with the
+ * models marked not-ready until the last step so readers never see a partial model. Returns the new meta row.
+ */
+export async function rebuildReadModels(db, { chunk = 5000 } = {}) {
+  const top = await db.prepare("SELECT COALESCE(MAX(id), 0) AS m FROM books").first();
+  const maxId = Number(top?.m || 0);
+  if (maxId <= 4 * chunk) {
+    await db.batch(REBUILD_STATEMENTS.map((sql) => db.prepare(sql)));
+  } else {
+    for (const step of rebuildPlan(maxId, chunk)) await db.batch(step.map((sql) => db.prepare(sql)));
+  }
   memo = { at: 0, value: null };
   return readModelMeta(db);
 }

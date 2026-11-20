@@ -41,7 +41,7 @@ export async function POST(request) {
       await bumpGroup(env, "catalog");
       return NextResponse.json({ ok: true, readModels: meta });
     } catch (e) {
-      return NextResponse.json({ ok: false, message: "Couldn't rebuild: apply migrations/catalog/0002_read_models.sql first." }, { status: 500 });
+      return NextResponse.json({ ok: false, message: "Couldn't rebuild: apply migrations/catalog/0002 and 0003 first." }, { status: 500 });
     }
   }
   if (group !== "all" && !CACHE_GROUPS.includes(group)) return NextResponse.json({ error: "unknown group" }, { status: 400 });

@@ -32,6 +32,7 @@ beforeAll(() => {
   const mig = fs.readFileSync(new URL("../migrations/catalog/0002_read_models.sql", import.meta.url), "utf8");
   sqlite.exec(mig);
   sqlite.exec(mig); // idempotent
+  sqlite.exec(fs.readFileSync(new URL("../migrations/catalog/0003_scale_series_works.sql", import.meta.url), "utf8"));
   db = d1(sqlite);
   sqlite.exec(`INSERT INTO books(slug,lang,title,author,publisher,format,category,collection,country,tags) VALUES
     ('a','en','A','Ken Follett, John Lee','Penguin Books','Paperback','Fiction','Epics','UK','["History","Fiction"]'),
@@ -123,5 +124,30 @@ describe("read models: rebuild", () => {
     expect(plan).not.toMatch(/SCAN catalog_facets(?! USING)/);
     const tagPlan = sqlite.prepare("EXPLAIN QUERY PLAN SELECT book_id FROM book_keys WHERE lang='en' AND kind='tag' AND key='history'").all().map((r) => r.detail).join(" ");
     expect(tagPlan).toMatch(/PRIMARY KEY|USING (COVERING )?INDEX/);
+  });
+});
+
+describe("read models: chunked rebuild equals the single-batch rebuild", () => {
+  it("produces identical keys, works and facet counts", async () => {
+    const make = () => {
+      const q = new DatabaseSync(":memory:");
+      q.exec(fs.readFileSync(new URL("../sql/catalog_schema.sql", import.meta.url), "utf8"));
+      for (const m of ["0002_read_models", "0003_scale_series_works"]) q.exec(fs.readFileSync(new URL(`../migrations/catalog/${m}.sql`, import.meta.url), "utf8"));
+      const ins = q.prepare("INSERT INTO books(slug,lang,title,author,publisher,format,category,country,tags) VALUES (?,?,?,?,?,?,?,?,?)");
+      for (let i = 0; i < 53; i++) ins.run(`b${i}`, i % 7 ? "en" : "hi", `Title ${i % 40}`, i % 3 ? `Au ${i % 9}` : `Au ${i % 9}, Co ${i % 4}`, `Pub ${i % 5}`, i % 2 ? "Paperback" : "Hardcover", `Cat ${i % 6}`, "UK", JSON.stringify([`Tag${i % 8}`, `tag${i % 8}`, `Rare${i}`]));
+      return q;
+    };
+    const dump = (q) => ({
+      keys: q.prepare("SELECT lang,kind,key,book_id FROM book_keys ORDER BY 1,2,3,4").all().map((r) => Object.values(r).join("|")),
+      works: q.prepare("SELECT lang,work_key,book_id FROM book_works ORDER BY 1,2,3").all().map((r) => Object.values(r).join("|")),
+      facets: q.prepare("SELECT lang,kind,name,count FROM catalog_facets ORDER BY 1,2,3").all().map((r) => Object.values(r).join("|")),
+    });
+    const a = make(), b = make();
+    await rebuildReadModels(d1(a), { chunk: 1_000_000 }); // single batch
+    await rebuildReadModels(d1(b), { chunk: 5 });          // many chunks
+    expect(dump(b)).toEqual(dump(a));
+    expect(dump(a).keys.length).toBeGreaterThan(100);
+    resetReadModelMemo();
+    expect((await readModelMeta(d1(b))).books).toBe(53);
   });
 });

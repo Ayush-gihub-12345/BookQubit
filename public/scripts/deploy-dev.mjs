@@ -60,6 +60,7 @@ const sql = [
   ["bookqubit-dev-mindspace", "migrations/mindspace/0001_mindspace.sql"],
   ["bookqubit-dev-catalog", "migrations/catalog/0001_fts_summaries.sql"],
   ["bookqubit-dev-catalog", "migrations/catalog/0002_read_models.sql"],
+  ["bookqubit-dev-catalog", "migrations/catalog/0003_scale_series_works.sql"],
   ["bookqubit-dev-database", "migrations/main/0001_search_safety.sql"],
 ];
 // These steps run AFTER the site is deployed, so they must never be able to hold the build open: no stdin (a prompt can
