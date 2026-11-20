@@ -67,22 +67,22 @@ export default function MobileChips() {
   const onUp = () => { drag.current.down = false; };
   const stopClick = (e) => { if (drag.current.moved) { e.preventDefault(); e.stopPropagation(); drag.current.moved = false; } };
 
-  const chip = "inline-flex h-9 select-none items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold transition-colors";
+  const chip = "inline-flex h-8 select-none items-center rounded-lg px-3 text-[13px] font-semibold transition-colors";
   return (
     <nav aria-label="Quick sections" className="relative border-b border-[var(--line)] lg:hidden">
       <ul ref={box} onScroll={measure} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onClickCapture={stopClick}
-        className="flex cursor-grab gap-2 overflow-x-auto px-3 py-2.5 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        className="flex cursor-grab gap-1.5 overflow-x-auto px-3 py-2 active:cursor-grabbing no-scrollbar ">
         {CHIPS.map((c) => (
           <li key={c.href} className="shrink-0">
             <Link href={`/${lang}${c.href === "/" ? "" : c.href}`} prefetch={false} draggable={false} aria-current={c.on ? "page" : undefined}
               className={`${chip} ${c.on ? "bg-[var(--fg)] text-[var(--bg)]" : "bg-[var(--surface-2)] text-[var(--fg)] hover:bg-[var(--surface-3)]"}`}>
-              <Icon name={c.icon} size={15} />{c.label}
+              {c.label}
             </Link>
           </li>
         ))}
         <li className="shrink-0">
           <button type="button" onClick={openMenu} aria-haspopup="dialog" className={`${chip} bg-[var(--surface-2)] text-[var(--fg)] hover:bg-[var(--surface-3)]`}>
-            <Icon name="menu" size={15} />More
+            More
           </button>
         </li>
       </ul>

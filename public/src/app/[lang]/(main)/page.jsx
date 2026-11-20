@@ -132,7 +132,7 @@ export default async function Home() {
       {/* Genre chips straight under the hero: a one-tap way into the catalog. Only genres that really have books. */}
       {genres.length > 0 && (
         <nav aria-label={_("genresAndCategories")} className="container-bq pt-6">
-          <ul className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+          <ul className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {genres.slice(0, 9).map((g) => (
               <li key={g.category} className="shrink-0">
                 <Link href={withLang(`/books?category=${encodeURIComponent(g.category)}`)} prefetch={false} className="pill">{g.label}</Link>

@@ -275,10 +275,17 @@ body[data-player="on"] .player-spacer { height: 5.5rem; }
 }
 @media (prefers-reduced-motion: reduce) { .rail-bubble { transition: none; } .group:hover .rail-bubble { transform: none; } }
 
-/* Thin scrollbars in the active theme's colour, everywhere. */
+/* Thin scrollbars in the active theme's colour, everywhere. Inside @layer base so any utility (for example
+   no-scrollbar on a swipe row) wins over it instead of being overridden by an unlayered rule. */
+@layer base {
 * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-brand-500) 55%, transparent) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-brand-500) 50%, transparent); border-radius: 999px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-brand-500); }
+}
 .hscroll, .hscroll-none { scrollbar-width: none; }
+
+/* Hide the scrollbar entirely (swipe rows, chip rows). !important so it beats the themed thin scrollbar above. */
+.no-scrollbar { scrollbar-width: none !important; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
