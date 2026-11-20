@@ -1,0 +1,49 @@
+name: Uptime check
+
+# Pings the live site every 5 minutes. A failed run is the alert: GitHub emails the person who last edited this schedule
+# (and shows a red mark in the Actions tab). It reads only public URLs and uses no secrets.
+#
+# What counts as down:
+#   - /api/health is not HTTP 200 or does not say "ok": true  (accounts or catalog database failing)
+#   - the catalog read models are not ready (slow browse pages; fix: Admin, Caches, Rebuild)
+#   - the home page or a book list does not answer 200 within 25 seconds
+# Run it by hand any time from the Actions tab (Run workflow).
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SITE: https://www.bookqubit.com
+    steps:
+      - name: Health endpoint
+        run: |
+          set -u
+          fail=0
+          for attempt in 1 2 3; do
+            code=$(curl -sS -m 20 -o health.json -w "%{http_code}" "$SITE/api/health" || echo 000)
+            if [ "$code" = "200" ] && grep -q '"ok":true' health.json; then fail=0; break; fi
+            fail=1; sleep 10
+          done
+          echo "--- /api/health ($code)"; cat health.json 2>/dev/null || true; echo
+          if [ "$fail" = "1" ]; then echo "::error::/api/health failed after 3 tries (status $code)"; exit 1; fi
+          # A ready catalog read model is what keeps browse pages cheap; warn loudly when it is not.
+          if grep -q '"readModels":{"ok":false' health.json; then echo "::error::catalog read models are not ready"; exit 1; fi
+
+      - name: Pages answer
+        run: |
+          set -u
+          bad=0
+          for path in /en /en/books /en/authors; do
+            read -r code t < <(curl -sS -m 25 -o /dev/null -w "%{http_code} %{time_total}" "$SITE$path" || echo "000 25")
+            echo "$path -> $code in ${t}s"
+            if [ "$code" != "200" ]; then echo "::error::$path returned $code"; bad=1; fi
+          done
+          exit $bad
