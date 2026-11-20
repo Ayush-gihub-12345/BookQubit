@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { authFetch } from "@/lib/authFetch";
 import Icon from "@/components/Icon";
+import ReportContent from "@/components/ReportContent";
 
 // Vote (everyone but the owner) and delete (owner). The page itself is cached for a minute and has no viewer state,
 // so whether you already voted comes from the API on mount.
@@ -50,6 +51,7 @@ export default function ListActions({ lang, id, ownerId, votes }) {
           <Icon name="thumbsUp" size={15} />{voted ? "Voted" : "Vote"} · {count}
         </button>
       )}
+      {!mine && <ReportContent targetType="list" targetId={id} label="Report this list" />}
       {mine && <span className="text-muted inline-flex items-center gap-1 text-sm"><Icon name="thumbsUp" size={14} />{count} votes</span>}
       {mine && <button type="button" onClick={remove} className="text-sm font-semibold text-red-500 hover:underline">Delete list</button>}
       {err && <p role="alert" className="text-sm text-red-500">{err}</p>}

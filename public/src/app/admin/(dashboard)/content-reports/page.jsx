@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/Icon";
 
-const LABEL = { discussion_post: "Chat message", user: "Reader", quote: "Quote", review: "Review", mindspace: "MindSpace" };
+const LABEL = { discussion_post: "Chat message", user: "Reader", quote: "Quote", review: "Review", mindspace: "MindSpace", list: "Reader list", review_reply: "Review reply" };
+
+const MODERATED_NOTE = (r) => (r.target_type === "list" || r.target_type === "review_reply" ? " (already removed)" : "");
 
 export default function AdminContentReportsPage() {
   const [rows, setRows] = useState([]);
@@ -37,13 +39,18 @@ export default function AdminContentReportsPage() {
                 <span className="text-muted ml-2 text-xs">{r.created_at?.slice(0, 10)} · reported {r.times_reported}×</span></span>
               <span className="flex gap-3 text-xs">
                 <button onClick={() => post("PATCH", { id: r.id, resolved: !r.resolved })} className="text-brand-400 hover:underline">{r.resolved ? "Reopen" : "Mark resolved"}</button>
+                {r.content && (
+                  <button onClick={() => post("POST", { action: r.content.hidden ? "unhide" : "hide", id: r.id })} className={r.content.hidden ? "text-brand-400 hover:underline" : "text-red-400 hover:underline"}>{r.content.hidden ? "Restore" : "Hide"}</button>
+                )}
                 {r.target_type === "discussion_post" && r.post_body != null && !r.resolved && (
                   <button onClick={() => confirm("Delete this message? This can't be undone.") && post("POST", { action: "remove", id: r.id })} className="text-red-400 hover:underline">Delete message</button>
                 )}
               </span>
             </div>
             {r.post_body != null && <p className="mt-2 rounded-lg bg-black/20 p-3 text-sm text-slate-200">&ldquo;{r.post_body}&rdquo; <span className="text-muted">— {r.post_user_name || "Reader"}</span></p>}
-            {r.post_body == null && <p className="text-muted mt-2 text-xs">Target: {r.target_id}</p>}
+            {r.content?.kind === "list" && <p className="mt-2 rounded-lg bg-black/20 p-3 text-sm text-slate-200"><b>{r.content.title}</b>{r.content.description ? <> — {r.content.description}</> : null} <span className="text-muted">· {r.content.item_count} books · by {r.content.user_name || "Reader"}{r.content.hidden ? " · HIDDEN" : ""}</span></p>}
+            {r.content?.kind === "review_reply" && <p className="mt-2 rounded-lg bg-black/20 p-3 text-sm text-slate-200">&ldquo;{r.content.body}&rdquo; <span className="text-muted">— {r.content.user_name || "Reader"} on {r.content.book_slug}{r.content.hidden ? " · HIDDEN" : ""}</span></p>}
+            {r.post_body == null && !r.content && <p className="text-muted mt-2 text-xs">Target: {r.target_id}{MODERATED_NOTE(r)}</p>}
             {r.reason && <p className="mt-2 text-sm text-slate-300">Reason: {r.reason}</p>}
           </div>
         ))}

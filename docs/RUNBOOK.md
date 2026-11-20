@@ -52,5 +52,5 @@ orphan authors). It reads each book once, so it runs on demand and is cached for
 ## Known gaps
 
 - Importer bookkeeping tables are still in the catalog database (ADR-0002, follow-up).
-- No reporting or moderation tools for reader lists and review replies yet.
+- Reader lists and review replies can be reported (Report links) and hidden or restored in Admin, Community reports. Hidden items are kept, not deleted. Index and book pages catch up within a minute (cache TTL).
 - Public HTML is not edge-cached (see ADR-0002 for why).

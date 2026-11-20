@@ -57,14 +57,15 @@ network latency per query, so the number of queries per page matters as much as 
 
 ## Consequences
 
-- Production needs, in order: `migrations/catalog/0002`, `0003`, `migrations/engagement/0002`, then the read-model rebuild
+- Production needs, in order: `migrations/catalog/0002`, `0003`, `migrations/engagement/0002` and `0003`, then the read-model rebuild
   (`node scripts/rebuild-read-models.mjs --env=prod --yes`). `npm run preflight -- --env=prod` lists anything missing without changing it.
 - The importer tables still live in the catalog database. Moving them (and `book_summaries`) to an ops database is a follow-up: it
   means changing the importer Worker's bindings, which is outside this change.
 - Series are curated by hand (`POST /api/admin/series`); the data has no reliable series field to infer them from. Editions are
   inferred (same language, same title, same first author) and stored in `book_works`.
 - Reader lists, votes and replies are user-generated content. Basic limits exist (100 lists per reader, 200 books per list, 20
-  replies per hour); moderation tooling (reporting a list or reply) is not built yet.
+  replies per hour). Readers can report a list or reply; an admin hides or restores it in Community reports (`hidden_content`,
+  `migrations/engagement/0003_moderation.sql`).
 - Public HTML is **not** cached at the edge: server renders read the `theme` and `bq_rail` cookies, so one shared copy would show
   the wrong theme to some visitors. Public JSON endpoints do send `s-maxage` headers. Edge-caching HTML would first need the theme
   and rail to move client-side, or a cache key that includes those cookies.

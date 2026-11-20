@@ -24,7 +24,7 @@ const bo = { uid: "bo", name: "Bo" };
 
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
-  for (const m of ["0001_engagement", "0002_lists_votes_challenges"]) sqlite.exec(fs.readFileSync(new URL(`../migrations/engagement/${m}.sql`, import.meta.url), "utf8"));
+  for (const m of ["0001_engagement", "0002_lists_votes_challenges", "0003_moderation"]) sqlite.exec(fs.readFileSync(new URL(`../migrations/engagement/${m}.sql`, import.meta.url), "utf8"));
   db = d1(sqlite);
 });
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { authFetch } from "@/lib/authFetch";
+import ReportContent from "@/components/ReportContent";
 import Icon from "@/components/Icon";
 import StarRow from "./StarRow";
 import { useLang } from "@/lib/useLang";
@@ -64,7 +65,10 @@ function Social({ r, slug, social, me, onChange }) {
             <div key={q.id} className="rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm">
               <p className="font-semibold">{q.user_name || "Reader"} <time className="text-muted ms-1 text-xs font-normal">{String(q.created_at).slice(0, 10)}</time></p>
               <p className="whitespace-pre-line">{q.body}</p>
-              {(me?.uid === q.user_id || me?.uid === r.user_id) && <button type="button" onClick={() => remove(q.id)} disabled={busy} className="text-muted mt-1 text-xs hover:underline">Delete</button>}
+              <div className="mt-1 flex gap-3">
+                {(me?.uid === q.user_id || me?.uid === r.user_id) && <button type="button" onClick={() => remove(q.id)} disabled={busy} className="text-muted text-xs hover:underline">Delete</button>}
+                {me?.uid !== q.user_id && <ReportContent targetType="review_reply" targetId={q.id} />}
+              </div>
             </div>
           ))}
           <form onSubmit={reply} className="flex gap-2">

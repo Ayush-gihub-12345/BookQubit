@@ -1,6 +1,8 @@
 // Reader-made lists. All reads and writes go to ENGAGEMENT_DB (never the catalog). Every query is indexed and bounded:
 // the index pages read idx_lists_popular / idx_lists_recent with LIMIT, a list's items read idx_list_items_order, and
 // "lists containing this book" reads idx_list_items_book. Counts are denormalised on `lists`, so no page ever counts rows.
+import { notHidden } from "./moderation.js";
+
 export const LIMITS = { listsPerUser: 100, itemsPerList: 200, title: 120, description: 600, note: 280, perPage: 24 };
 
 const clip = (v, n) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -73,8 +75,8 @@ export async function toggleListVote(db, user, id) {
 }
 
 /** A list with its books in order. `viewerId` adds `voted`. Returns null when it does not exist. */
-export async function getList(db, id, viewerId) {
-  const list = await db.prepare("SELECT * FROM lists WHERE id = ?1").bind(id).first();
+export async function getList(db, id, viewerId, { includeHidden = false } = {}) {
+  const list = await db.prepare(`SELECT * FROM lists WHERE id = ?1${includeHidden ? "" : ` AND ${notHidden("list", "lists.id")}`}`).bind(id).first();
   if (!list) return null;
   const [items, vote] = await Promise.all([
     db.prepare("SELECT book_slug, position, note FROM list_items WHERE list_id = ?1 ORDER BY position LIMIT ?2").bind(id, LIMITS.itemsPerList).all(),
@@ -87,7 +89,7 @@ export async function getList(db, id, viewerId) {
 export async function browseLists(db, { sort = "popular", page = 1, perPage = LIMITS.perPage } = {}) {
   const p = Math.min(50, Math.max(1, Number(page) || 1));
   const order = sort === "recent" ? "created_at DESC" : "vote_count DESC, created_at DESC";
-  const { results } = await db.prepare(`SELECT id, user_name, title, description, item_count, vote_count, created_at FROM lists WHERE item_count > 0 ORDER BY ${order} LIMIT ?1 OFFSET ?2`)
+  const { results } = await db.prepare(`SELECT id, user_name, title, description, item_count, vote_count, created_at FROM lists WHERE item_count > 0 AND ${notHidden("list", "lists.id")} ORDER BY ${order} LIMIT ?1 OFFSET ?2`)
     .bind(perPage + 1, (p - 1) * perPage).all();
   return { lists: results.slice(0, perPage), hasMore: results.length > perPage, page: p };
 }
@@ -101,6 +103,6 @@ export async function myLists(db, uid) {
 export async function listsForBook(db, slug, limit = 6) {
   const { results } = await db.prepare(
     `SELECT l.id, l.title, l.user_name, l.item_count, l.vote_count FROM list_items i JOIN lists l ON l.id = i.list_id
-     WHERE i.book_slug = ?1 ORDER BY l.vote_count DESC LIMIT ?2`).bind(slug, limit).all();
+     WHERE i.book_slug = ?1 AND ${notHidden("list", "l.id")} ORDER BY l.vote_count DESC LIMIT ?2`).bind(slug, limit).all();
   return results;
 }

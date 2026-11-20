@@ -4,7 +4,7 @@ export class SafetyError extends Error {
   constructor(code, status = 400) { super(code); this.code = code; this.status = status; }
 }
 
-const TARGETS = new Set(["discussion_post", "user", "quote", "review", "mindspace"]);
+const TARGETS = new Set(["discussion_post", "user", "quote", "review", "mindspace", "list", "review_reply"]);
 const clip = (v, n) => (v == null ? null : String(v).trim().slice(0, n) || null);
 
 export async function listSafety(db, uid) {

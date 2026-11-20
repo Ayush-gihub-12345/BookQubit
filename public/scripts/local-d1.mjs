@@ -94,8 +94,11 @@ export function openWithSchema(name, schemaFiles) {
   const file = join(DIR, `${name}.sqlite`);
   const fresh = !existsSync(file);
   const d1 = new LocalD1(file);
-  if (fresh) {
+  // Base schema files apply once, to a fresh file. migrations/ files are idempotent (CREATE ... IF NOT EXISTS), so they are applied
+  // on every start and a database made before a new migration existed picks it up.
+  {
     for (const f of schemaFiles) {
+      if (!fresh && !f.startsWith("migrations/")) continue;
       const path = f.startsWith("migrations/") ? join(ROOT, f) : join(ROOT, "sql", f);
       // The schema files end with bare ALTERs for columns the CREATEs lack;
       // on a fresh file they apply once. Failures are reported, not hidden.
@@ -118,7 +121,7 @@ export function installLocalCloudflareContext() {
   const catalog = openWithSchema("catalog", ["catalog_schema.sql"]);
   const main = openWithSchema("database", ["main_schema.sql"]);
   // Reader data (lists, votes, replies, challenges, reading log) lives in its own database, as in production.
-  const engagement = openWithSchema("engagement", ["migrations/engagement/0001_engagement.sql", "migrations/engagement/0002_lists_votes_challenges.sql"]);
+  const engagement = openWithSchema("engagement", ["migrations/engagement/0001_engagement.sql", "migrations/engagement/0002_lists_votes_challenges.sql", "migrations/engagement/0003_moderation.sql"]);
   globalThis[Symbol.for("__cloudflare-context__")] = {
     env: {
       DB: main,

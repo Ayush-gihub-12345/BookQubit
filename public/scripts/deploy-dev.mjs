@@ -58,6 +58,7 @@ run(["opennextjs-cloudflare", "deploy", "--env=dev"]);
 const sql = [
   ["bookqubit-dev-engagement", "migrations/engagement/0001_engagement.sql"],
   ["bookqubit-dev-engagement", "migrations/engagement/0002_lists_votes_challenges.sql"],
+  ["bookqubit-dev-engagement", "migrations/engagement/0003_moderation.sql"],
   ["bookqubit-dev-mindspace", "migrations/mindspace/0001_mindspace.sql"],
   ["bookqubit-dev-catalog", "migrations/catalog/0001_fts_summaries.sql"],
   ["bookqubit-dev-catalog", "migrations/catalog/0002_read_models.sql"],

@@ -1,6 +1,8 @@
 // Helpful votes and replies on reviews, in ENGAGEMENT_DB. A review is the (book_slug, author_id) pair (the accounts database's
 // shelf row); nothing here copies review text. Reads use the book_slug prefix of the primary keys / idx_review_replies_review,
 // so one book page costs two small indexed queries however many reviews the catalog holds overall.
+import { notHidden } from "./moderation.js";
+
 export const REVIEW_LIMITS = { reply: 1000, repliesPerBook: 150, repliesPerHour: 20 };
 
 const clip = (v, n) => String(v ?? "").trim().slice(0, n);
@@ -9,7 +11,7 @@ const clip = (v, n) => String(v ?? "").trim().slice(0, n);
 export async function reviewSocial(db, slug, viewerId) {
   const [votes, replies, mine] = await Promise.all([
     db.prepare("SELECT author_id, COUNT(*) AS n FROM review_votes WHERE book_slug = ?1 GROUP BY author_id").bind(slug).all(),
-    db.prepare("SELECT id, author_id, user_id, user_name, body, created_at FROM review_replies WHERE book_slug = ?1 ORDER BY created_at LIMIT ?2").bind(slug, REVIEW_LIMITS.repliesPerBook).all(),
+    db.prepare("SELECT id, author_id, user_id, user_name, body, created_at FROM review_replies WHERE book_slug = ?1 AND " + notHidden("review_reply", "review_replies.id") + " ORDER BY created_at LIMIT ?2").bind(slug, REVIEW_LIMITS.repliesPerBook).all(),
     viewerId ? db.prepare("SELECT author_id FROM review_votes WHERE book_slug = ?1 AND voter_id = ?2").bind(slug, viewerId).all() : { results: [] },
   ]);
   const out = { helpful: {}, replies: {}, voted: mine.results.map((r) => r.author_id) };
