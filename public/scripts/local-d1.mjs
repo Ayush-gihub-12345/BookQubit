@@ -96,9 +96,10 @@ export function openWithSchema(name, schemaFiles) {
   const d1 = new LocalD1(file);
   if (fresh) {
     for (const f of schemaFiles) {
+      const path = f.startsWith("migrations/") ? join(ROOT, f) : join(ROOT, "sql", f);
       // The schema files end with bare ALTERs for columns the CREATEs lack;
       // on a fresh file they apply once. Failures are reported, not hidden.
-      for (const stmt of readFileSync(join(ROOT, "sql", f), "utf8").split(/;\s*(?:\r?\n|$)/)) {
+      for (const stmt of readFileSync(path, "utf8").split(/;\s*(?:\r?\n|$)/)) {
         const s = stmt.replace(/^\s*--.*$/gm, "").trim();
         if (!s) continue;
         try { d1.db.exec(s); } catch (e) { console.warn(`[local-d1] ${name}: ${f}: ${e.message}`); }
@@ -116,10 +117,13 @@ export function installLocalCloudflareContext() {
   if (!globalThis.AsyncLocalStorage) return;
   const catalog = openWithSchema("catalog", ["catalog_schema.sql"]);
   const main = openWithSchema("database", ["main_schema.sql"]);
+  // Reader data (lists, votes, replies, challenges, reading log) lives in its own database, as in production.
+  const engagement = openWithSchema("engagement", ["migrations/engagement/0001_engagement.sql", "migrations/engagement/0002_lists_votes_challenges.sql"]);
   globalThis[Symbol.for("__cloudflare-context__")] = {
     env: {
       DB: main,
       CATALOG_DB: catalog,
+      ENGAGEMENT_DB: engagement,
       RUN_SCHEMA: "0",
       // IMPORT_CRON (the importer service binding) does not exist locally;
       // admin import routes will report it as not configured, which is accurate.

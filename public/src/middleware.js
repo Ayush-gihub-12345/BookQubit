@@ -42,7 +42,9 @@ export function middleware(request) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-bq-lang", first);
     const res = NextResponse.next({ request: { headers: requestHeaders } });
-    res.cookies.set("lang", first, { path: "/", maxAge: COOKIE_MAX_AGE });
+    // Only write the cookie when it changes. A Set-Cookie on every page view makes each response look personal to shared caches
+    // and costs bytes on every request; the common case (cookie already right) now sends none.
+    if (request.cookies.get("lang")?.value !== first) res.cookies.set("lang", first, { path: "/", maxAge: COOKIE_MAX_AGE });
     return res;
   }
 

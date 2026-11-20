@@ -24,6 +24,10 @@ import SummaryReader from "@/components/player/SummaryReader";
 import AddToShelf from "@/components/library/AddToShelf";
 import SaveToMindSpace from "@/components/mindspace/SaveToMindSpace";
 import { getCf } from "@/lib/cf/env";
+import { cached } from "@/lib/db";
+import { TTL } from "@/lib/cache-policy";
+import { listsForBook } from "@/lib/lists";
+import AddToList from "@/components/lists/AddToList";
 import { baselineSummary, resolveSummary } from "@/lib/summary";
 import { LANGUAGES } from "@/lib/languages";
 import { t } from "@/lib/i18n";
@@ -72,7 +76,7 @@ export default async function BookPage({ params }) {
   if (!book) notFound();
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
   const firstAuthor = (book.author || "").split(",")[0].trim();
-  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection, alternates, byAuthor, otherEditions, seriesInfo] = await Promise.all([
+  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection, alternates, byAuthor, otherEditions, seriesInfo, readerLists] = await Promise.all([
     // Tag-weighted similar books (rare shared tags count most) with the real reason; falls back to genre + author on a small or unindexed catalog.
     getSimilarBooks(book, lang, 12).then((r) => (r.length ? r : relatedBooks(book, lang, 8))).catch(() => relatedBooks(book, lang)),
     getBookCommunity(book.slug),
@@ -86,6 +90,8 @@ export default async function BookPage({ params }) {
     firstAuthor ? booksByAuthor(firstAuthor, lang).catch(() => []) : [],
     getOtherEditions(book, lang).catch(() => []),
     getSeriesOf(book, lang).catch(() => null),
+    // Reader-made lists that include this book (engagement database; one indexed read, cached; empty if the database is absent).
+    getCf().then(({ env }) => (env.ENGAGEMENT_DB ? cached(`book-lists:${book.slug}`, () => listsForBook(env.ENGAGEMENT_DB, book.slug, 6), TTL.lists) : [])).catch(() => []),
   ]);
   const moreInCollectionFiltered = moreInCollection.filter((b) => b.slug !== book.slug).slice(0, 4);
   const moreByAuthor = byAuthor.filter((b) => b.slug !== book.slug).slice(0, 12);
@@ -303,11 +309,28 @@ export default async function BookPage({ params }) {
               <section id="reviews" aria-labelledby="reviews-h" className="scroll-mt-36">
                 <SectionHead id="reviews" eyebrow={reviewCount ? `${reviewCount} ${reviewCount === 1 ? _("reviewWord") : _("reviewsWord")}` : undefined}>{_("readerReviews")}</SectionHead>
                 <div id="write-review" className="scroll-mt-24"><ShelfControls slug={book.slug} /></div>
-                <ReviewList reviews={community.reviews} />
+                <ReviewList reviews={community.reviews} bookSlug={book.slug} />
               </section>
 
               {/* ---- Quotes ---- */}
               <section id="quotes" aria-label="Quotes" className="scroll-mt-36"><QuotesSection bookSlug={book.slug} /></section>
+
+              {/* ---- Reader lists ---- */}
+              <section aria-labelledby="lists-h" className="scroll-mt-36">
+                <SectionHead id="lists" eyebrow={readerLists.length ? `${readerLists.length} ${readerLists.length === 1 ? "list" : "lists"}` : undefined} right={<AddToList slug={book.slug} lang={lang} />}>On reader lists</SectionHead>
+                {readerLists.length > 0 ? (
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    {readerLists.map((l) => (
+                      <li key={l.id}>
+                        <Link href={withLang(`/lists/${l.id}`)} prefetch={false} className="card flex h-full items-center gap-3 p-4">
+                          <Icon name="list" size={18} className="text-brand-700" />
+                          <span className="min-w-0 flex-1"><b className="line-clamp-1">{l.title}</b><span className="text-muted block text-xs">{l.item_count} books{l.user_name ? ` · by ${l.user_name}` : ""} · {l.vote_count} votes</span></span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-muted text-sm">No reader has put this book on a list yet.</p>}
+              </section>
 
               <EditionsList editions={editions} lang={lang} languageName={languageName} />
 

@@ -270,6 +270,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
       links: [
         { label: "Feed", href: "/feed", icon: "flame", desc: "Books, quotes and summaries" },
         { label: tr("communityTitle"), href: "/community", icon: "users", desc: "Threads and book clubs" },
+        { label: "Reader lists", href: "/lists", icon: "list", desc: "Best-of lists made by readers" },
         { label: "Connect", href: "/connect", icon: "heart", desc: "Find readers like you" },
       ],
     },

@@ -14,7 +14,8 @@
     "backup": "node scripts/backup-d1.mjs",
     "dev:local": "node scripts/dev-local.mjs",
     "seed:local": "node scripts/seed-local-from-prod.mjs",
-    "deploy:dev": "node scripts/deploy-dev.mjs"
+    "deploy:dev": "node scripts/deploy-dev.mjs",
+    "preflight": "node scripts/prod-preflight.mjs"
   },
   "dependencies": {
     "firebase": "^12.0.0",

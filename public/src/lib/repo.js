@@ -2181,3 +2181,10 @@ export async function getSeriesPage(slug, lang) {
   const books = found.order.map((o) => rows.get(o.id) && { ...mapBook(rows.get(o.id), amazon_assoc_tag), position: o.position }).filter(Boolean);
   return { series: found.series, books };
 }
+
+// Books for a list of slugs, in the order given (as cards: mapped rows). Missing slugs are skipped.
+export async function getBooksInOrder(slugs, lang = "en") {
+  const rows = await getBooksBySlug(slugs, lang);
+  const { amazon_assoc_tag } = await getSiteSettings();
+  return slugs.map((s) => rows.get(s) && mapBook(rows.get(s), amazon_assoc_tag)).filter(Boolean);
+}

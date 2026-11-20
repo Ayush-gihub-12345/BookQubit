@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PUBLIC_SHORT, PUBLIC_LONG } from "@/lib/http-cache";
 import { queryBooks } from "@/lib/repo";
 
 // Powers instant client-side filtering on /books and collection pages —
@@ -23,5 +24,5 @@ export async function GET(request) {
     perPage: parseInt(searchParams.get("perPage")) || 32,
   };
   const result = await queryBooks(lang, opts);
-  return NextResponse.json(result);
+  return NextResponse.json(result, { headers: PUBLIC_SHORT });
 }

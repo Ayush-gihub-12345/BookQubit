@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PUBLIC_SHORT, PUBLIC_LONG } from "@/lib/http-cache";
 import { listBooks, facets, getBooksBySlug } from "@/lib/repo";
 import { getCatalogDb, cached } from "@/lib/db";
 import { keywordAuthors } from "@/lib/search";
@@ -52,5 +53,5 @@ export async function GET(request) {
     publishers: pubs.map((p) => ({ slug: p.slug, name: p.name, logo_url: p.logo_url })),
     categories: f.categories.filter((c) => c.name.toLowerCase().includes(s)).slice(0, 4),
     tags: f.tags.filter((t) => t.name.toLowerCase().includes(s)).slice(0, 5),
-  });
+  }, { headers: PUBLIC_SHORT });
 }

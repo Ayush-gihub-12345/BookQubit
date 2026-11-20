@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PUBLIC_SHORT, PUBLIC_LONG } from "@/lib/http-cache";
 import { queryPublishers, getPublisherTypes } from "@/lib/repo";
 
 // Same reasoning as /api/authors — powers /publications' search/filter/sort/
@@ -17,5 +18,5 @@ export async function GET(request) {
     queryPublishers(lang, opts),
     getPublisherTypes(lang),
   ]);
-  return NextResponse.json({ ...result, types });
+  return NextResponse.json({ ...result, types }, { headers: PUBLIC_SHORT });
 }

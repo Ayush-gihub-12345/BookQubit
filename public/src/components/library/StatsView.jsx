@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { BarChart, Heatmap, Ring, ShareBars } from "@/components/charts";
+import ChallengesPanel from "./ChallengesPanel";
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const Card = ({ title, children, className = "" }) => (
@@ -47,6 +48,8 @@ export default function StatsView() {
           <div><p className="font-editorial text-4xl font-semibold">{s.streak.longest}</p><p className="text-muted text-sm">longest</p></div>
         </div>
       </Card>
+
+      <ChallengesPanel year={year} className="sm:col-span-2" />
 
       <Card title="Books finished per month" className="sm:col-span-1">
         <BarChart values={s.monthly.books} labels={MONTHS} ariaLabel="Books finished per month" />
