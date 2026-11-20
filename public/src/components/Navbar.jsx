@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AuthButton from "./AuthButton";
 import CommandPalette from "./search/CommandPalette";
+import MobileChips from "./MobileChips";
 import Icon from "./Icon";
 import { LogoMark, Wordmark } from "./Logo";
 import { logoPaletteFor } from "@/lib/logoPalette";
@@ -130,6 +131,21 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navBox = useRef(null);
+  // Phones: the header and the chip row leave together when scrolling down and return as soon as you scroll up (like YouTube).
+  const [hideBar, setHideBar] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const d = y - last;
+      if (y < 80) setHideBar(false);
+      else if (d > 8) setHideBar(true);
+      else if (d < -8) setHideBar(false);
+      if (Math.abs(d) > 8) last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const prefsBox = useRef(null);
   const prefsBtn = useRef(null);
   const drawerPanel = useRef(null);
@@ -357,7 +373,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   );
 
   return (
-    <header className="glass sticky top-0 z-50 border-b border-[var(--line)]">
+    <header className={`glass sticky top-0 z-50 border-b border-[var(--line)] max-lg:transition-transform max-lg:duration-300 ${hideBar && !drawerOpen && !paletteOpen ? "max-lg:-translate-y-full" : ""}`}>
       <div className="mx-auto flex h-16 max-w-[88rem] items-center gap-2 px-3 sm:gap-3 sm:px-5">
         {/* The wordmark is hidden on a phone and the mark is aria-hidden, so the link needs its own accessible name. */}
         <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex min-h-11 shrink-0 items-center gap-2">
@@ -395,7 +411,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <Icon name="dice" size={19} />
         </SurpriseLink>
 
-        <Link href={withLang("/liked")} prefetch={false} className="btn-icon hidden min-[400px]:inline-flex" aria-label={labels.likedBooks} title={labels.likedBooks}>
+        <Link href={withLang("/liked")} prefetch={false} className="btn-icon hidden md:inline-flex" aria-label={labels.likedBooks} title={labels.likedBooks}>
           <Icon name="heart" size={18} />
         </Link>
 
@@ -460,39 +476,21 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
         </div>
       </div>
 
+      <MobileChips />
+
       {/* Phone and tablet: a full-height sheet with the same structure */}
       {drawerOpen && (
-        <div className="absolute inset-x-0 top-full z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
+        <div className="absolute inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
           <div id="site-menu" ref={drawerPanel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={labels.menu}
             className="animate-pop flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
             <div className="flex items-center justify-between px-4 pt-3">
-              <span className="flex items-center gap-2"><LogoMark size={28} palette={logoPaletteFor(theme)} /><Wordmark palette={logoPaletteFor(theme)} className="!text-[1.05rem]" /></span>
+              <span className="font-display text-lg font-semibold">{labels.menu}</span>
               <button type="button" onClick={() => setDrawerOpen(false)} className="btn-icon" aria-label={tr("navCloseMenu")}><Icon name="x" size={20} /></button>
             </div>
-            <div className="px-3 pt-3">
-              <SurpriseLink locale={lang} onNavigate={() => setDrawerOpen(false)} className="btn-primary mb-3 w-full"><Icon name="dice" size={18} />{labels.surpriseMe}</SurpriseLink>
-              {!user && firebaseEnabled && (
-                <Link href={withLang("/login")} prefetch={false} className="btn-ghost mb-2 w-full">{labels.signIn}</Link>
-              )}
-              <Link href={withLang("/library")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/library", "/account") ? "page" : undefined}>
-                <Icon name="bookmark" size={17} className="text-brand-700" /> {tr("navLibrary")}
+            <div className="px-3 pt-2">
+              <Link href={withLang("/liked")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/liked") ? "page" : undefined}>
+                <Icon name="heart" size={17} className="text-brand-700" /> {labels.likedBooks}
               </Link>
-              {PRIMARY.map((p) => (
-                <Link key={p.href} href={withLang(p.href)} prefetch={false} className="menu-item !min-h-11" aria-current={p.active ? "page" : undefined}>
-                  <Icon name={p.href === "/authors" ? "feather" : "layers"} size={17} className="text-brand-700" /> {p.label}
-                </Link>
-              ))}
-              {user && (
-                <>
-                  <Link href={withLang("/notifications")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/notifications") ? "page" : undefined}>
-                    <Icon name="bell" size={17} className="text-brand-700" /> {labels.notifications}
-                    {notifCount > 0 && <span className="tab-count ml-auto">{notifCount > 9 ? "9+" : notifCount}</span>}
-                  </Link>
-                  <Link href={withLang("/liked")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/liked") ? "page" : undefined}>
-                    <Icon name="heart" size={17} className="text-brand-700" /> {labels.likedBooks}
-                  </Link>
-                </>
-              )}
             </div>
 
             <div className="mt-2 border-t border-[var(--line)] px-3 pt-2">

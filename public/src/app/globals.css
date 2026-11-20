@@ -289,3 +289,7 @@ body[data-player="on"] .player-spacer { height: 5.5rem; }
 /* Hide the scrollbar entirely (swipe rows, chip rows). !important so it beats the themed thin scrollbar above. */
 .no-scrollbar { scrollbar-width: none !important; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+/* Text fields: no coloured outline or glow when focused (the field's border darkens instead). */
+input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+.input:focus { border-color: var(--line-strong) !important; box-shadow: none !important; }
