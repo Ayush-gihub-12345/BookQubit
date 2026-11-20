@@ -70,7 +70,7 @@ export default function MobileChips() {
 
   const chip = "flex h-8 w-full select-none items-center justify-center whitespace-nowrap rounded-lg px-1.5 text-[13px] font-semibold transition-colors";
   return (
-    <nav aria-label="Quick sections" className="relative border-b border-[var(--line)] lg:hidden">
+    <nav aria-label="Quick sections" className="relative lg:hidden">
       <ul ref={box} onScroll={measure} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onClickCapture={stopClick}
         className="flex cursor-grab gap-1 overflow-x-auto px-2 py-2 active:cursor-grabbing no-scrollbar ">
         {CHIPS.map((c) => (
