@@ -6,7 +6,7 @@ Short, practical. For design reasons see [ADR-0001](adr/0001-data-architecture.m
 
 `GET /api/health` returns 200 when the accounts and catalog databases answer, 503 when either does not. It also reports timings for
 the engagement and mindspace databases, KV, and whether the catalog read models are built (those never fail the check; the site
-degrades gracefully without them). Put an external uptime monitor on it (check every minute, alert after 2 failures).
+degrades gracefully without them). An uptime check is already running: `.github/workflows/uptime.yml` calls it (and the home, books and authors pages) every 5 minutes from GitHub Actions. A failed run is the alert: GitHub emails whoever last edited the schedule and shows a red mark under the repository's Actions tab. GitHub may delay scheduled runs by a few minutes, so this is a 5 to 10 minute check, not a per-minute one. Run it by hand from the Actions tab (Run workflow).
 
 Reading the output: `readModels.ok = false` means browse pages are on the slower fallback path. Fix: Admin, Caches, Rebuild, or
 `node scripts/rebuild-read-models.mjs --env=prod --yes`.
@@ -19,7 +19,11 @@ Reading the output: `readModels.ok = false` means browse pages are on the slower
 
 Migrations are idempotent (`CREATE ... IF NOT EXISTS`), so applying one twice is safe.
 
-## Alerts to set up in the Cloudflare dashboard
+## Alerts
+
+Set up (2026-11-20): a Cloudflare usage alert emails the account owner when D1 rows read for the billing period passes 5 billion (the plan includes 25 billion; the site was reading about 0.9 billion before the read models were applied), plus Cloudflare's default budget alert. The uptime check above covers outages and the read models. Not available on the free zone plan: Cloudflare Health Checks (0 included; needs Pro). Cloudflare has no built-in alert for Workers Builds failures: look at Workers & Pages, bookqubitdev, Builds after a push to `main`.
+
+## More alerts worth adding in the Cloudflare dashboard
 
 | Alert | Why |
 |---|---|
