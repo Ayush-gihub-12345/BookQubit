@@ -381,7 +381,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
         </nav>
 
         <div className="min-w-0 flex-1">
-          <div className="mx-auto max-w-xl">
+          <div className="mx-auto max-w-xl max-sm:hidden">
             <button type="button" onClick={() => setPaletteOpen(true)} aria-haspopup="dialog" aria-keyshortcuts="Control+K"
               className="input flex !min-h-[42px] w-full items-center gap-3 !rounded-full !border-transparent !bg-[var(--surface-2)] !py-0 text-start text-[15px] text-[var(--muted)] hover:!bg-[var(--surface-3)]">
               <Icon name="search" size={18} className="shrink-0" />
@@ -451,14 +451,18 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           )}
         </div>
 
-        <div className="hidden shrink-0 sm:block">
+        <button type="button" onClick={() => setPaletteOpen(true)} className="btn-icon sm:hidden" aria-label={labels.search} aria-haspopup="dialog">
+          <Icon name="search" size={20} />
+        </button>
+
+        <div className="shrink-0">
           <AuthButton labels={labels} notifCount={notifCount} />
         </div>
       </div>
 
       {/* Phone and tablet: a full-height sheet with the same structure */}
       {drawerOpen && (
-        <div className="absolute inset-x-0 top-full z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
+        <div className="absolute inset-x-0 top-full z-50 h-[calc(100dvh-7.4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
           <div id="site-menu" ref={drawerPanel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={labels.menu}
             className="animate-pop flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
             <div className="px-3 pt-3">

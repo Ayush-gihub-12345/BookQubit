@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import ConditionalFooter from "@/components/ConditionalFooter";
 import MobileTabBar from "@/components/MobileTabBar";
 import SideRail from "@/components/SideRail";
+import MobileChips from "@/components/MobileChips";
 import PlayerProvider from "@/components/player/PlayerProvider";
 import MiniPlayer from "@/components/player/MiniPlayer";
 import { SurpriseProvider } from "@/components/surprise/SurpriseMe";
@@ -38,6 +39,7 @@ export default async function PublicLayout({ children }) {
       <a href="#main-content" className="skip-link">{labels.skipToContent}</a>
       <Navbar lang={lang} theme={theme} languages={LANGUAGES} themes={THEMES} labels={labels}
         genres={genres} countries={countries} collections={collections} />
+      <MobileChips />
       {/* The rail (lg+) sits in a flex row beside the page. The footer carries the bottom padding for the
           mobile tab bar, and the spacer keeps the mini player from covering the end of the page. */}
       <div className="flex flex-1">

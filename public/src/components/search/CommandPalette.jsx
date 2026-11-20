@@ -106,17 +106,18 @@ export default function CommandPalette({ lang, open, onClose }) {
   };
   let lastGroup = "";
   return (
-    <div className="fixed inset-0 z-[85] flex items-start justify-center p-3 pt-[10vh]" role="presentation">
+    <div className="fixed inset-0 z-[85] flex items-start justify-center sm:p-3 sm:pt-[10vh]" role="presentation">
       <button type="button" aria-label="Close search" className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label="Search" className="panel animate-pop relative w-full max-w-2xl overflow-hidden" onKeyDown={onKey}>
-        <div className="flex items-center gap-3 border-b border-[var(--line)] px-4">
-          <Icon name="search" size={20} className="text-[var(--muted)]" />
-          <input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search books, authors… or type a command"
+      <div role="dialog" aria-modal="true" aria-label="Search" className="panel animate-pop relative flex w-full max-w-2xl flex-col overflow-hidden max-sm:h-dvh max-sm:max-w-none max-sm:!rounded-none max-sm:border-0" onKeyDown={onKey}>
+        <div className="flex items-center gap-2 border-b border-[var(--line)] px-3 sm:gap-3 sm:px-4 max-sm:pt-[env(safe-area-inset-top)]">
+          <button type="button" className="btn-icon sm:hidden" onClick={onClose} aria-label="Back"><Icon name="arrowRight" size={20} className="rotate-180 rtl:rotate-0" /></button>
+          <Icon name="search" size={20} className="text-[var(--muted)] max-sm:hidden" />
+          <input ref={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search books, authors…" enterKeyHint="search"
             role="combobox" aria-expanded="true" aria-controls="cmdk-list" aria-activedescendant={items[idx]?.id} autoComplete="off"
             className="h-14 flex-1 bg-transparent text-[17px] outline-none placeholder:text-[var(--muted)]" />
-          <button type="button" className="btn-icon !h-8 !w-8 !min-h-8" onClick={onClose} aria-label="Close"><Icon name="x" size={16} /></button>
+          <button type="button" className={`btn-icon !h-8 !w-8 !min-h-8 ${q ? "" : "max-sm:hidden"}`} onClick={q ? () => { setQ(""); input.current?.focus(); } : onClose} aria-label={q ? "Clear search" : "Close"}><Icon name="x" size={16} /></button>
         </div>
-        <ul id="cmdk-list" role="listbox" className="max-h-[55dvh] overflow-y-auto p-2">
+        <ul id="cmdk-list" role="listbox" className="max-h-[55dvh] overflow-y-auto p-2 max-sm:max-h-none max-sm:flex-1 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {items.map((it, i) => {
             const head = it.group !== lastGroup ? (lastGroup = it.group) : null;
             return (
@@ -137,7 +138,7 @@ export default function CommandPalette({ lang, open, onClose }) {
             );
           })}
         </ul>
-        <div className="flex gap-4 border-t border-[var(--line)] px-4 py-2.5 text-xs text-[var(--muted)]">
+        <div className="flex gap-4 border-t border-[var(--line)] px-4 py-2.5 text-xs text-[var(--muted)] max-sm:hidden">
           <span><kbd className="kbd">↑</kbd> <kbd className="kbd">↓</kbd> move</span><span><kbd className="kbd">Enter</kbd> open</span><span><kbd className="kbd">Esc</kbd> close</span>
         </div>
       </div>
