@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/reports", icon: "shieldCheck", label: "Reports" },
   { href: "/admin/content-reports", icon: "users", label: "Community reports" },
   { href: "/admin/cache", icon: "zap", label: "Caches" },
+  { href: "/admin/quality", icon: "shieldCheck", label: "Data quality" },
   { href: "/admin/contact", icon: "feather", label: "Contact" },
   { href: "/admin/requests", icon: "bookmark", label: "Book Requests" },
   { href: "/admin/settings", icon: "grid", label: "Settings" },

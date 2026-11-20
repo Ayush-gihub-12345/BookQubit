@@ -137,3 +137,34 @@ export async function seriesOf(db, lang, bookId) {
     return null;
   }
 }
+
+/** A series page: { series, books: [{...book row, position}] } ordered by position, or null. Bounded to 200 books. */
+export async function seriesBySlug(db, lang, slug) {
+  try {
+    const series = await db.prepare("SELECT id, slug, name, description FROM series WHERE slug = ?1 AND lang = ?2").bind(slug, lang).first();
+    if (!series) return null;
+    const { results } = await db
+      .prepare(`SELECT b.id, bs.position FROM book_series bs JOIN books b ON b.id = bs.book_id
+                WHERE bs.series_id = ?1 ORDER BY bs.position, b.id LIMIT 200`)
+      .bind(series.id).all();
+    return { series, order: results };
+  } catch {
+    return null;
+  }
+}
+
+/** Admin: create a series (or update its name/description) and replace its book list. `books` is [{ id, position }]. */
+export async function saveSeries(db, lang, { slug, name, description = null, books = [] }) {
+  const clean = String(slug || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+  if (!clean || !String(name || "").trim()) throw new Error("slug and name are required");
+  await db.prepare(
+    `INSERT INTO series(slug, lang, name, description) VALUES (?1, ?2, ?3, ?4)
+     ON CONFLICT(slug, lang) DO UPDATE SET name = excluded.name, description = excluded.description`
+  ).bind(clean, lang, String(name).trim().slice(0, 160), description ? String(description).slice(0, 1000) : null).run();
+  const row = await db.prepare("SELECT id FROM series WHERE slug = ?1 AND lang = ?2").bind(clean, lang).first();
+  const list = books.slice(0, 200).map((b) => ({ id: Number(b.id), position: Number(b.position) })).filter((b) => b.id > 0 && Number.isFinite(b.position));
+  const stmts = [db.prepare("DELETE FROM book_series WHERE series_id = ?1").bind(row.id)];
+  for (const b of list) stmts.push(db.prepare("INSERT OR REPLACE INTO book_series(series_id, book_id, position) VALUES (?1, ?2, ?3)").bind(row.id, b.id, b.position));
+  await db.batch(stmts);
+  return { id: row.id, slug: clean, count: list.length };
+}

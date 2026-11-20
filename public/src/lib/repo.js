@@ -2,7 +2,7 @@ import { TTL } from "@/lib/cache-policy";
 import { getDb, getCatalogDb, cached, invalidate } from "./db";
 import { sendEmail, verificationEmailHtml } from "./email";
 import { modelsCover, readModelMeta, keyFilter, keyValue } from "./read-models";
-import { pageAuthors, authorCountries, similarBooks, otherEditions, seriesOf } from "./catalog-lists";
+import { pageAuthors, authorCountries, similarBooks, otherEditions, seriesOf, seriesBySlug } from "./catalog-lists";
 
 const J = (v) => {
   try { return v ? JSON.parse(v) : []; } catch { return []; }
@@ -2170,4 +2170,14 @@ async function computeRecommendations(uid, lang, limit) {
 
   const topCategory = [...categoryScores.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
   return { picks: scored, basis: topCategory };
+}
+
+// A series page: the series and its books in order (one indexed read, cached).
+export async function getSeriesPage(slug, lang) {
+  const found = await cached(`series-page:${lang}:${slug}`, async () => seriesBySlug(await getCatalogDb(), lang, slug), TTL.lists);
+  if (!found) return null;
+  const rows = await getBooksBySlugIds(found.order.map((o) => o.id), lang);
+  const { amazon_assoc_tag } = await getSiteSettings();
+  const books = found.order.map((o) => rows.get(o.id) && { ...mapBook(rows.get(o.id), amazon_assoc_tag), position: o.position }).filter(Boolean);
+  return { series: found.series, books };
 }

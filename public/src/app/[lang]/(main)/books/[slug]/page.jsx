@@ -17,7 +17,7 @@ import ReviewList from "@/components/book/v3/ReviewList";
 import { SectionHead, TakeawayCards, ReadersFelt, EditionsList, RatingCard, ReadersCard, AuthorCard } from "@/components/book/v3/Sections";
 import { TrackView } from "@/components/RecentlyViewed";
 import {
-  getBook, relatedBooks, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles,
+  getBook, relatedBooks, getSimilarBooks, getOtherEditions, getSeriesOf, getBookAlternates, getBookCommunity, getDiscussionsForBook, getAuthorLineProfiles,
   getPublicationByName, listBooks, booksByAuthor,
 } from "@/lib/repo";
 import SummaryReader from "@/components/player/SummaryReader";
@@ -72,8 +72,9 @@ export default async function BookPage({ params }) {
   if (!book) notFound();
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
   const firstAuthor = (book.author || "").split(",")[0].trim();
-  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection, alternates, byAuthor] = await Promise.all([
-    relatedBooks(book, lang),
+  const [related, community, bookDiscussions, publisherProfile, authorLine, moreInCollection, alternates, byAuthor, otherEditions, seriesInfo] = await Promise.all([
+    // Tag-weighted similar books (rare shared tags count most) with the real reason; falls back to genre + author on a small or unindexed catalog.
+    getSimilarBooks(book, lang, 12).then((r) => (r.length ? r : relatedBooks(book, lang, 8))).catch(() => relatedBooks(book, lang)),
     getBookCommunity(book.slug),
     getDiscussionsForBook(book.slug, 3),
     getPublicationByName(book.publisher, lang),
@@ -83,6 +84,8 @@ export default async function BookPage({ params }) {
     book.collection ? listBooks(lang, { collection: book.collection, limit: 5 }) : [],
     getBookAlternates(book).catch(() => []),
     firstAuthor ? booksByAuthor(firstAuthor, lang).catch(() => []) : [],
+    getOtherEditions(book, lang).catch(() => []),
+    getSeriesOf(book, lang).catch(() => null),
   ]);
   const moreInCollectionFiltered = moreInCollection.filter((b) => b.slug !== book.slug).slice(0, 4);
   const moreByAuthor = byAuthor.filter((b) => b.slug !== book.slug).slice(0, 12);
@@ -206,7 +209,13 @@ export default async function BookPage({ params }) {
     ...(related.length || moreByAuthor.length ? [["similar", "Similar"]] : []),
     ["details", "Details"],
   ];
-  const reasonFor = (b) => (b.author && b.author === book.author ? "Same author" : b.category && b.category === book.category ? `More ${b.category}` : undefined);
+  const reasonFor = (b) => {
+    const w = b.why;
+    if (w?.shared?.length) return `Both about ${w.shared.slice(0, 2).join(" and ")}`;
+    if (b.author && b.author === book.author) return "Same author";
+    if (b.category && b.category === book.category) return `More ${b.category}`;
+    return undefined;
+  };
 
   return (
     <>
@@ -224,6 +233,17 @@ export default async function BookPage({ params }) {
 
           <div className="container-bq grid gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14 lg:py-10">
             <div className="min-w-0 space-y-12 lg:space-y-16">
+              {seriesInfo && (
+                <nav aria-label="Series" className="card flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 text-sm hover:!translate-y-0">
+                  <Icon name="layers" size={16} className="text-brand-700" />
+                  <span><Link href={withLang(`/series/${seriesInfo.series.slug}`)} className="font-semibold hover:underline">{seriesInfo.series.name}</Link>{seriesInfo.position != null && <span className="text-muted"> · book {seriesInfo.position} of {seriesInfo.total}</span>}</span>
+                  <span className="ms-auto flex gap-3">
+                    {seriesInfo.prev && <Link href={withLang(`/books/${encodeURIComponent(seriesInfo.prev.slug)}`)} className="text-brand-700 hover:underline">← {seriesInfo.prev.title}</Link>}
+                    {seriesInfo.next && <Link href={withLang(`/books/${encodeURIComponent(seriesInfo.next.slug)}`)} className="text-brand-700 hover:underline">{seriesInfo.next.title} →</Link>}
+                  </span>
+                </nav>
+              )}
+
               {/* ---- About ---- */}
               <section id="overview" aria-labelledby="overview-h" className="scroll-mt-36">
                 <SectionHead id="overview">About the book</SectionHead>
@@ -296,7 +316,7 @@ export default async function BookPage({ params }) {
                 <div id="similar" className="scroll-mt-36 space-y-10">
                   {related.length > 0 && (
                     <section aria-labelledby="similar-h">
-                      <SectionHead id="similar" eyebrow="Matched on genre and author">Readers also loved</SectionHead>
+                      <SectionHead id="similar" eyebrow="Matched on shared themes">Readers also loved</SectionHead>
                       <HScrollRow>
                         {related.map((b) => <div key={b.id} className="w-[142px] shrink-0 sm:w-[158px]"><BookCard book={b} hrefBase={withLang("/books")} note={reasonFor(b)} /></div>)}
                       </HScrollRow>
@@ -319,6 +339,23 @@ export default async function BookPage({ params }) {
                     </section>
                   )}
                 </div>
+              )}
+
+              {otherEditions.length > 0 && (
+                <section aria-labelledby="other-editions-h" className="scroll-mt-36">
+                  <SectionHead id="other-editions" eyebrow={`${otherEditions.length} more`}>Other editions</SectionHead>
+                  <ul className="card divide-y divide-[var(--line)] overflow-hidden hover:!translate-y-0">
+                    {otherEditions.map((e) => (
+                      <li key={e.id}>
+                        <Link href={withLang(`/books/${encodeURIComponent(e.slug)}`)} prefetch={false} className="flex items-center gap-3 px-5 py-3 text-sm hover:bg-[var(--surface-2)]">
+                          <b className="min-w-0 flex-1 truncate">{e.publisher || "Edition"}</b>
+                          <span className="text-muted shrink-0">{[e.published && String(e.published).slice(0, 4), e.format, e.page_count && `${e.page_count} pages`].filter(Boolean).join(" · ")}</span>
+                          <Icon name="arrowRight" size={15} className="text-[var(--muted)] rtl:rotate-180" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               )}
 
               {/* ---- Details ---- */}

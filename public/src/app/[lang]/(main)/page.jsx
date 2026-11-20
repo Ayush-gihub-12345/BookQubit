@@ -3,6 +3,7 @@ import BookCard from "@/components/BookCard";
 import Section from "@/components/Section";
 import FeaturedPick from "@/components/FeaturedPick";
 import ContinueReading from "@/components/ContinueReading";
+import BecauseYouLiked from "@/components/BecauseYouLiked";
 import Icon from "@/components/Icon";
 import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
@@ -163,6 +164,7 @@ export default async function Home() {
           "popular right now" shelf for signed-out visitors. */}
       <ContinueReading />
       <ForYou lang={lang} fallbackBooks={popularBooks} />
+      <BecauseYouLiked lang={lang} />
       <RecentlyViewed />
 
       {popularBooks.length >= 4 && (

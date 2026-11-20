@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import fs from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { rebuildReadModels, resetReadModelMemo } from "@/lib/read-models";
-import { pageAuthors, authorCountries, similarBooks, otherEditions, seriesOf } from "@/lib/catalog-lists";
+import { pageAuthors, authorCountries, similarBooks, otherEditions, seriesOf, seriesBySlug, saveSeries } from "@/lib/catalog-lists";
 
 function d1(sqlite) {
   const stmt = (sql, args = []) => ({
@@ -112,5 +112,19 @@ describe("editions and series", () => {
     expect(s.prev).toBeNull();
     expect(s.next.slug).toBe("a2");
     expect(await seriesOf(db, "en", id("a5"))).toBeNull();
+  });
+});
+
+describe("series admin save", () => {
+  it("creates a series, replaces its books, and serves it in order", async () => {
+    const id = (slug) => sqlite.prepare("SELECT id FROM books WHERE slug=?").get(slug).id;
+    const out = await saveSeries(db, "en", { slug: "Foundation Saga!", name: "Foundation Saga", books: [{ id: id("a3"), position: 2 }, { id: id("a1"), position: 1 }] });
+    expect(out.slug).toBe("foundation-saga");
+    const page = await seriesBySlug(db, "en", "foundation-saga");
+    expect(page.order.map((o) => o.id)).toEqual([id("a1"), id("a3")]);
+    await saveSeries(db, "en", { slug: "foundation-saga", name: "Foundation Saga", books: [{ id: id("a3"), position: 1 }] });
+    expect((await seriesBySlug(db, "en", "foundation-saga")).order).toHaveLength(1);
+    await expect(saveSeries(db, "en", { slug: "", name: "x" })).rejects.toThrow();
+    expect(await seriesBySlug(db, "en", "nope")).toBeNull();
   });
 });
