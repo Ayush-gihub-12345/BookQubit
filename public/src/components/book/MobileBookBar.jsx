@@ -36,7 +36,7 @@ export default function MobileBookBar({ book, buyHref }) {
     <div aria-hidden={!show} inert={!show}
       className={`fixed inset-x-0 z-[34] px-3 transition-all duration-300 lg:hidden ${show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"}`}
       style={{ bottom: p?.track ? "calc(9.6rem + env(safe-area-inset-bottom))" : "calc(5.6rem + env(safe-area-inset-bottom))" }}>
-      <div className="glass mx-auto flex max-w-md items-center gap-2 rounded-full border border-[var(--line)] p-1.5 shadow-[var(--shadow-2)]">
+      <div className="bg-[var(--surface)] mx-auto flex max-w-md items-center gap-2 rounded-full border border-[var(--line)] p-1.5 shadow-[var(--shadow-2)]">
         {a && <ShelfButton a={a} compact />}
         <button type="button" onClick={listen} aria-busy={busy} aria-label={playing ? "Pause" : "Listen"} className="btn-icon !border-transparent">
           {busy ? <span className="spinner" /> : <Icon name={playing ? "pause" : "headphones"} size={18} />}

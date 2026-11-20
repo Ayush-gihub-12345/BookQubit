@@ -33,7 +33,7 @@ export default function MiniPlayer() {
   return (
     <>
       <div
-        className="border-line bg-surface/95 fixed inset-x-0 z-[35] border-t shadow-[0_-6px_24px_rgba(0,0,0,.08)] backdrop-blur-lg lg:start-auto lg:end-4 lg:bottom-4 lg:w-96 lg:rounded-2xl lg:border"
+        className="border-line bg-[var(--surface)] fixed inset-x-0 z-[35] border-t shadow-[0_-6px_24px_rgba(0,0,0,.08)] lg:start-auto lg:end-4 lg:bottom-4 lg:w-96 lg:rounded-2xl lg:border"
         style={{ bottom: chat ? 0 : "calc(5.5rem + env(safe-area-inset-bottom))" }}
         role="region"
         aria-label="Audio player"

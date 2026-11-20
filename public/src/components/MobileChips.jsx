@@ -45,6 +45,7 @@ export default function MobileChips() {
     if (!el) return;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    document.fonts?.ready?.then(measure); // fonts change the content width after first paint
     return () => ro.disconnect();
   }, [measure]);
 
@@ -68,7 +69,7 @@ export default function MobileChips() {
   const onUp = () => { drag.current.down = false; };
   const stopClick = (e) => { if (drag.current.moved) { e.preventDefault(); e.stopPropagation(); drag.current.moved = false; } };
 
-  const chip = "flex h-8 w-full select-none items-center justify-center whitespace-nowrap rounded-lg px-1.5 text-[13px] font-semibold transition-colors";
+  const chip = "flex h-8 w-full select-none items-center justify-center whitespace-nowrap rounded-lg px-1.5 text-[clamp(11.5px,3.3vw,13px)] font-semibold transition-colors";
   return (
     <nav aria-label="Quick sections" className="relative lg:hidden">
       <ul ref={box} onScroll={measure} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onClickCapture={stopClick}

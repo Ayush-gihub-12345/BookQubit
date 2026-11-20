@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import SwipeRow from "@/components/SwipeRow";
 import { FILTERS } from "@/lib/feed";
 import { useLang } from "@/lib/useLang";
 import { useSafety } from "@/lib/safety-client";
@@ -56,11 +57,13 @@ export default function FeedClient({ initial }) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-10">
-      <div role="tablist" aria-label="Feed filter" className="bg-[var(--bg)]/90 sticky top-0 z-20 -mx-4 flex gap-2 overflow-x-auto px-4 py-3 backdrop-blur lg:top-16">
+      <div className="bg-[var(--bg)] -mx-4 px-4 lg:sticky lg:top-16 lg:z-20">
+      <SwipeRow role="tablist" aria-label="Feed filter" className="gap-2 py-3">
         {FILTERS.map(([id, label]) => (
           <button key={id} role="tab" type="button" aria-selected={filter === id} onClick={() => pick(id)}
             className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${filter === id ? "border-brand-600 bg-brand-600 text-[var(--on-brand)]" : "border-line bg-surface"}`}>{label}</button>
         ))}
+      </SwipeRow>
       </div>
 
       <div className="mt-2 space-y-4" aria-live="polite" aria-busy={loading}>

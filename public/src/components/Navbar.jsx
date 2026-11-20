@@ -372,7 +372,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   );
 
   return (
-    <header className={`glass sticky top-0 z-50 border-b border-[var(--line)] max-lg:border-b-0 max-lg:transition-transform max-lg:duration-300 ${hideBar && !drawerOpen && !paletteOpen ? "max-lg:-translate-y-full" : ""}`}>
+    <header className={`glass sticky top-0 z-50 border-b border-[var(--line)] max-lg:!bg-[var(--bg)] max-lg:![backdrop-filter:none] max-lg:border-b-0 max-lg:transition-transform max-lg:duration-300 ${hideBar && !drawerOpen && !paletteOpen ? "max-lg:-translate-y-full" : ""}`}>
       <div className="mx-auto flex h-16 max-w-[88rem] items-center gap-2 px-3 sm:gap-3 sm:px-5">
         {/* The wordmark is hidden on a phone and the mark is aria-hidden, so the link needs its own accessible name. */}
         <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex min-h-11 shrink-0 items-center gap-2">

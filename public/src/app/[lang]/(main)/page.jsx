@@ -7,6 +7,7 @@ import Icon from "@/components/Icon";
 import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
 import ListenShelf from "@/components/listen/ListenShelf";
+import SwipeRow from "@/components/SwipeRow";
 import { FactsStrip, HowItWorks } from "@/components/home/HomeExtras";
 import { StartShelves, HomeFaq } from "@/components/home/HomeMore";
 import { LANGUAGES } from "@/lib/languages";
@@ -132,13 +133,13 @@ export default async function Home() {
       {/* Genre chips straight under the hero: a one-tap way into the catalog. Only genres that really have books. */}
       {genres.length > 0 && (
         <nav aria-label={_("genresAndCategories")} className="container-bq pt-6">
-          <ul className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <SwipeRow role="list" aria-label={_("genresAndCategories")} className="gap-2 pb-1">
             {genres.slice(0, 9).map((g) => (
-              <li key={g.category} className="shrink-0">
+              <div role="listitem" key={g.category} className="shrink-0">
                 <Link href={withLang(`/books?category=${encodeURIComponent(g.category)}`)} prefetch={false} className="pill">{g.label}</Link>
-              </li>
+              </div>
             ))}
-          </ul>
+          </SwipeRow>
         </nav>
       )}
 

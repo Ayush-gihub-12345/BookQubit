@@ -29,7 +29,7 @@ export default function MobileTabBar() {
   ];
 
   return (
-    <nav aria-label={tr("navMenu")} className="glass fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav aria-label={tr("navMenu")} className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--bg)] pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto grid h-16 max-w-lg grid-cols-5">
         {TABS.map((tab) => (
           <li key={tab.href} className="flex">
