@@ -6,7 +6,9 @@ import Icon from "./Icon";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
-// Mobile bottom bar (< lg): Home · Discover · Listen · Community · Shelf, safe-area aware. Every item is a real page.
+// Mobile bottom bar (< lg): the everyday destinations, with Feed raised in the centre.
+// Home · Listen · [Feed] · Shelf · Community. The content sections (Discover, Authors, Comics, Collections) live in the
+// chip row under the header, so nothing appears in both places. Safe-area aware; every item is a real page.
 export default function MobileTabBar() {
   const lang = useLang();
   const tr = t(lang);
@@ -20,10 +22,10 @@ export default function MobileTabBar() {
 
   const TABS = [
     { href: "/", icon: "home", label: tr("homeWord"), active: rel === "/" },
-    { href: "/books", icon: "compass", label: tr("navDiscover"), active: under("/books", "/categories", "/collections", "/tags", "/authors", "/publications", "/comics", "/compare") },
     { href: "/listen", icon: "headphones", label: "Listen", active: under("/listen") },
-    { href: "/community", icon: "users", label: tr("navCommunity"), active: under("/connect", "/readers", "/leaderboard") },
+    { href: "/feed", icon: "flame", label: "Feed", active: under("/feed"), fab: true },
     { href: "/library", icon: "bookmark", label: tr("shelfWord"), active: under("/library", "/account", "/liked", "/achievements", "/wrapped", "/mindspace") },
+    { href: "/community", icon: "users", label: tr("navCommunity"), active: under("/connect", "/readers", "/leaderboard") },
   ];
 
   return (
@@ -32,13 +34,23 @@ export default function MobileTabBar() {
         {TABS.map((tab) => (
           <li key={tab.href} className="flex">
             <Link href={`/${lang}${tab.href === "/" ? "" : tab.href}`} prefetch={false} aria-current={tab.active ? "page" : undefined} aria-label={tab.label}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${tab.active ? "text-brand-700" : "text-[var(--muted)]"}`}>
-              <>
+              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${tab.active || tab.fab ? "text-[var(--fg)]" : "text-[var(--muted)]"}`}>
+              {tab.fab ? (
+                <>
+                  <span className={`-mt-6 grid h-12 w-12 place-items-center rounded-full text-[var(--on-brand)] shadow-[var(--shadow-2)] ring-4 ring-[var(--bg)] ${tab.active ? "scale-105" : ""}`}
+                    style={{ background: "linear-gradient(135deg, var(--color-brand-500), color-mix(in oklab, var(--color-brand-500) 62%, var(--color-qubit-500)))" }}>
+                    <Icon name={tab.icon} size={22} filled={tab.active} />
+                  </span>
+                  <span className="-mt-0.5">{tab.label}</span>
+                </>
+              ) : (
+                <>
                   <span className={`grid h-7 w-12 place-items-center rounded-full ${tab.active ? "bg-brand-50" : ""}`}>
                     <Icon name={tab.icon} size={21} strokeWidth={tab.active ? 2.4 : 2} />
                   </span>
                   <span className="max-w-full truncate px-0.5">{tab.label}</span>
-              </>
+                </>
+              )}
             </Link>
           </li>
         ))}

@@ -23,11 +23,12 @@ export default function MobileChips() {
   const [edge, setEdge] = useState({ start: false, end: false });
   const starts = (...r) => r.some((p) => rel === p || rel.startsWith(`${p}/`));
 
+  // Content sections only. The everyday destinations (Home, Listen, Feed, Shelf, Community) are in the bottom bar.
   const CHIPS = [
-    { href: "/", icon: "home", label: tr("homeWord"), on: rel === "/" },
-    { href: "/feed", icon: "flame", label: "Feed", on: starts("/feed") },
-    { href: "/books", icon: "compass", label: tr("navDiscover"), on: starts("/books", "/categories", "/tags") },
-    { href: "/listen", icon: "headphones", label: "Listen", on: starts("/listen") },
+    { href: "/books", label: tr("navDiscover"), on: starts("/books", "/categories", "/tags") },
+    { href: "/authors", label: tr("authors"), on: starts("/authors") },
+    { href: "/comics", label: tr("comics"), on: starts("/comics") },
+    { href: "/collections", label: tr("collections"), on: starts("/collections") },
   ];
 
   const measure = useCallback(() => {
@@ -67,11 +68,11 @@ export default function MobileChips() {
   const onUp = () => { drag.current.down = false; };
   const stopClick = (e) => { if (drag.current.moved) { e.preventDefault(); e.stopPropagation(); drag.current.moved = false; } };
 
-  const chip = "flex h-8 w-full select-none items-center justify-center whitespace-nowrap rounded-lg px-2 text-[13px] font-semibold transition-colors";
+  const chip = "flex h-8 w-full select-none items-center justify-center whitespace-nowrap rounded-lg px-1.5 text-[13px] font-semibold transition-colors";
   return (
     <nav aria-label="Quick sections" className="relative border-b border-[var(--line)] lg:hidden">
       <ul ref={box} onScroll={measure} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} onClickCapture={stopClick}
-        className="flex cursor-grab gap-1.5 overflow-x-auto px-3 py-2 active:cursor-grabbing no-scrollbar ">
+        className="flex cursor-grab gap-1 overflow-x-auto px-2 py-2 active:cursor-grabbing no-scrollbar ">
         {CHIPS.map((c) => (
           <li key={c.href} className="min-w-fit flex-1">
             <Link href={`/${lang}${c.href === "/" ? "" : c.href}`} prefetch={false} draggable={false} aria-current={c.on ? "page" : undefined}
