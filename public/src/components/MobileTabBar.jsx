@@ -3,17 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Icon from "./Icon";
+import { useEffect, useState } from "react";
+import { getFirebaseAuth, firebaseEnabled } from "@/lib/firebase";
 import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
 // Mobile bottom bar (< lg): the everyday destinations, with Feed raised in the centre.
-// Home · Listen · [Feed] · Shelf · Community. The content sections (Discover, Authors, Comics, Collections) live in the
+// Home · Listen · [Feed] · Community · You (the reader's own space: shelf, stats, settings; "Sign in" when signed out). The content sections (Discover, Authors, Comics, Collections) live in the
 // chip row under the header, so nothing appears in both places. Safe-area aware; every item is a real page.
 export default function MobileTabBar() {
   const lang = useLang();
   const tr = t(lang);
   const pathname = usePathname();
   const rel = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    const auth = getFirebaseAuth();
+    if (!auth) return;
+    return auth.onAuthStateChanged(setUser);
+  }, []);
   const under = (...roots) => roots.some((r) => rel === r || rel.startsWith(`${r}/`));
 
   // Community is a full-height chat surface with its own composer pinned to the bottom (ConditionalFooter hides
@@ -24,8 +33,9 @@ export default function MobileTabBar() {
     { href: "/", icon: "home", label: tr("homeWord"), active: rel === "/" },
     { href: "/listen", icon: "headphones", label: "Listen", active: under("/listen") },
     { href: "/feed", icon: "flame", label: "Feed", active: under("/feed"), fab: true },
-    { href: "/library", icon: "bookmark", label: tr("shelfWord"), active: under("/library", "/account", "/liked", "/achievements", "/wrapped", "/mindspace") },
-    { href: "/community", icon: "users", label: tr("navCommunity"), active: under("/connect", "/readers", "/leaderboard") },
+    { href: "/community", icon: "users", label: tr("navCommunity"), active: under("/connect", "/leaderboard") },
+    { href: user ? "/library" : "/login", icon: "user", label: user ? "You" : tr("signIn"), you: true,
+      active: user ? under("/library", "/account", "/liked", "/achievements", "/wrapped", "/mindspace", "/readers", "/notifications") : under("/login") },
   ];
 
   return (
@@ -46,7 +56,14 @@ export default function MobileTabBar() {
               ) : (
                 <>
                   <span className={`grid h-7 w-12 place-items-center rounded-full ${tab.active ? "bg-brand-50" : ""}`}>
-                    <Icon name={tab.icon} size={21} strokeWidth={tab.active ? 2.4 : 2} />
+                    {tab.you && user ? (
+                      user.photoURL
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className={`h-6 w-6 rounded-full object-cover ${tab.active ? "ring-2 ring-[var(--fg)]" : ""}`} />
+                        : <span className={`grid h-6 w-6 place-items-center rounded-full bg-brand-600 text-[11px] font-bold ${tab.active ? "ring-2 ring-[var(--fg)]" : ""}`} style={{ color: "var(--on-brand, #fff)" }}>{(user.displayName || user.email || "U")[0].toUpperCase()}</span>
+                    ) : (
+                      <Icon name={tab.icon} size={21} strokeWidth={tab.active ? 2.4 : 2} />
+                    )}
                   </span>
                   <span className="max-w-full truncate px-0.5">{tab.label}</span>
                 </>

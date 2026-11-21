@@ -375,7 +375,7 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
   return (
     <header className={`glass sticky top-0 z-50 border-b border-[var(--line)] max-lg:!bg-[var(--bg)] max-lg:![backdrop-filter:none] max-lg:border-b-0 max-lg:transition-transform max-lg:duration-300 ${hideBar && !drawerOpen && !paletteOpen ? "max-lg:-translate-y-full" : ""}`}>
       <div className="mx-auto flex h-16 max-w-[88rem] items-center gap-2 px-3 sm:gap-3 sm:px-5">
-        {/* The wordmark is hidden on a phone and the mark is aria-hidden, so the link needs its own accessible name. */}
+                {/* The wordmark is hidden on a phone and the mark is aria-hidden, so the link needs its own accessible name. */}
         <Link href={withLang("/")} prefetch={false} aria-label="BookQubit — home" className="flex min-h-11 shrink-0 items-center gap-2">
           <LogoMark size={32} />
           <Wordmark className="!text-[1.05rem] lg:hidden xl:inline" />
@@ -471,7 +471,23 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <Icon name="search" size={20} />
         </button>
 
-        <div className="shrink-0">
+        {/* The menu button (phone and tablet), far right. Not a hamburger: a 2x2 "qubit" grid in the brand colours inside a
+            gradient-ringed tile. When the menu is open the grid turns on its corner and opens up into a diamond. */}
+        <button ref={drawerBtn} type="button" onClick={() => setDrawerOpen((o) => !o)} aria-expanded={drawerOpen} aria-controls="site-menu" aria-haspopup="dialog" aria-label={labels.menu}
+          className="group relative shrink-0 rounded-[14px] p-[1.5px] shadow-[0_6px_16px_-8px_var(--color-brand-500)] transition active:scale-95 lg:hidden"
+          style={{ background: "linear-gradient(135deg, var(--color-brand-500), var(--color-qubit-500, #8b6cff))" }}>
+          <span className="grid h-[38px] w-[38px] place-items-center rounded-[12.5px] bg-[var(--bg)]">
+            <span aria-hidden className={"grid grid-cols-2 transition-all duration-300 ease-out " + (drawerOpen ? "rotate-45 gap-[5px]" : "gap-[3px] group-hover:gap-[4px]")}>
+              <i className="h-[9px] w-[9px] rounded-[3px]" style={{ background: "var(--color-brand-500)" }} />
+              <i className={"h-[9px] w-[9px] transition-all duration-300 " + (drawerOpen ? "rounded-full" : "rounded-[3px]")} style={{ background: "var(--color-qubit-500, #8b6cff)" }} />
+              <i className="h-[9px] w-[9px] rounded-[3px] opacity-55" style={{ background: "var(--color-brand-500)" }} />
+              <i className="h-[9px] w-[9px] rounded-[3px]" style={{ background: "color-mix(in oklab, var(--color-brand-500) 55%, var(--color-qubit-500, #8b6cff))" }} />
+            </span>
+          </span>
+        </button>
+
+        {/* Account lives in the bottom bar ("You") on a phone or tablet, like YouTube; the header keeps it from lg up. */}
+        <div className="shrink-0 max-lg:hidden">
           <AuthButton labels={labels} notifCount={notifCount} />
         </div>
       </div>
@@ -482,15 +498,40 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
       {drawerOpen && (
         <div className="absolute inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
           <div id="site-menu" ref={drawerPanel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={labels.menu}
-            className="animate-pop flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
+            className="animate-pop ms-auto flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
             <div className="flex items-center justify-between px-4 pt-3">
               <span className="font-display text-lg font-semibold">{labels.menu}</span>
               <button type="button" onClick={() => setDrawerOpen(false)} className="btn-icon" aria-label={tr("navCloseMenu")}><Icon name="x" size={20} /></button>
             </div>
             <div className="px-3 pt-2">
-              <Link href={withLang("/liked")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/liked") ? "page" : undefined}>
-                <Icon name="heart" size={17} className="text-brand-700" /> {labels.likedBooks}
+              <Link href={withLang("/")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/") ? "page" : undefined}>
+                <Icon name="home" size={17} className="text-brand-700" /> {tr("homeWord")}
               </Link>
+              {firebaseEnabled && !user && (
+                <Link href={withLang("/login")} prefetch={false} className="btn-primary mb-2 !min-h-11 w-full justify-center">{labels.signIn}</Link>
+              )}
+              {user && (
+                <>
+                  <p className="eyebrow px-3 py-1 !text-[var(--muted)]">{user.displayName || user.email}</p>
+                  {[
+                    ["/account", "bookmark", tr("navSettings")],
+                    ["/liked", "heart", labels.likedBooks],
+                    ["/achievements", "award", tr("navAchievements")],
+                    ["/wrapped", "barChart", tr("navWrapped")],
+                    ["/leaderboard", "trophy", tr("navBookwormRanking")],
+                    [`/readers/${user.uid}`, "user", tr("navPublicProfile")],
+                  ].map(([href, icon, label]) => (
+                    <Link key={href} href={withLang(href)} prefetch={false} className="menu-item !min-h-11" aria-current={under(href) ? "page" : undefined}>
+                      <Icon name={icon} size={17} className="text-brand-700" /> {label}
+                    </Link>
+                  ))}
+                </>
+              )}
+              {!user && (
+                <Link href={withLang("/liked")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/liked") ? "page" : undefined}>
+                  <Icon name="heart" size={17} className="text-brand-700" /> {labels.likedBooks}
+                </Link>
+              )}
             </div>
 
             <div className="mt-2 border-t border-[var(--line)] px-3 pt-2">

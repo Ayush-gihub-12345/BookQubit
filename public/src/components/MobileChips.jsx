@@ -1,7 +1,7 @@
 "use client";
 
-// Phone and tablet quick navigation (the YouTube pattern): a short row of chips under the header, ending in "More",
-// which opens the full side menu. The row never shows a scrollbar: if the chips don't fit, an arrow appears at the
+// Phone and tablet quick navigation (the YouTube pattern): a short row of chips under the header. The full side menu is
+// opened by the brand button at the top-left of the header (see Navbar). The row never shows a scrollbar: if the chips don't fit, an arrow appears at the
 // edge, and the row can also be dragged with a finger or the mouse. The current section is filled and kept in view.
 // It scrolls away with the page (not sticky), so it never shifts the offsets of sticky bars below it.
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,8 +23,9 @@ export default function MobileChips() {
   const [edge, setEdge] = useState({ start: false, end: false });
   const starts = (...r) => r.some((p) => rel === p || rel.startsWith(`${p}/`));
 
-  // Content sections only. The everyday destinations (Home, Listen, Feed, Shelf, Community) are in the bottom bar.
+  // Home first, then the content sections. (Home is also in the bottom bar and the menu: it is the one thing people reach for most.)
   const CHIPS = [
+    { href: "/", label: tr("homeWord"), on: rel === "/" },
     { href: "/books", label: tr("navDiscover"), on: starts("/books", "/categories", "/tags") },
     { href: "/authors", label: tr("authors"), on: starts("/authors") },
     { href: "/comics", label: tr("comics"), on: starts("/comics") },
@@ -55,7 +56,6 @@ export default function MobileChips() {
   }, [pathname, measure]);
 
   const nudge = (dir) => box.current?.scrollBy({ left: dir * 160, behavior: "smooth" });
-  const openMenu = () => window.dispatchEvent(new Event(OPEN_MENU_EVENT));
 
   // Drag to scroll (mouse; touch already scrolls natively). A drag never counts as a click on a chip.
   const onDown = (e) => { if (e.pointerType !== "mouse") return; drag.current = { down: true, x: e.clientX, left: box.current.scrollLeft, moved: false }; };
@@ -82,11 +82,6 @@ export default function MobileChips() {
             </Link>
           </li>
         ))}
-        <li className="min-w-fit flex-1">
-          <button type="button" onClick={openMenu} aria-haspopup="dialog" className={`${chip} bg-[var(--surface-2)] text-[var(--fg)] hover:bg-[var(--surface-3)]`}>
-            More
-          </button>
-        </li>
       </ul>
       {edge.start && (
         <button type="button" onClick={() => nudge(-1)} aria-label="Scroll left" className="absolute inset-y-0 start-0 grid w-10 place-items-center bg-gradient-to-r from-[var(--bg)] via-[var(--bg)] to-transparent">
