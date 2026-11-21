@@ -9,11 +9,11 @@ import { SurpriseLink } from "@/components/surprise/SurpriseMe";
 import PickCarousel from "@/components/home/PickCarousel";
 import ListenShelf from "@/components/listen/ListenShelf";
 import SwipeRow from "@/components/SwipeRow";
-import { FactsStrip, HowItWorks } from "@/components/home/HomeExtras";
-import { StartShelves, HomeFaq } from "@/components/home/HomeMore";
-import { LANGUAGES } from "@/lib/languages";
-import { QuickHub, DiscoverStrip, QuoteOfTheDay, CollectionCard, PublisherCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
-import { getFeaturedPublishers, getCollectionCovers } from "@/lib/home-data";
+import { HomeFaq } from "@/components/home/HomeMore";
+import ExploreGrid from "@/components/home/ExploreGrid";
+import { QuoteOfTheDay, CollectionCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
+import { getCollectionCovers } from "@/lib/home-data";
+import { makeTaker } from "@/lib/home-dedupe";
 import { cached } from "@/lib/db";
 import { TTL } from "@/lib/cache-policy";
 import { getCf } from "@/lib/cf/env";
@@ -64,16 +64,15 @@ export default async function Home() {
   const _ = t(lang);
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
 
-  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods, quote, publishers] = await Promise.all([
+  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods, quote] = await Promise.all([
     getFeaturedBooks(lang, 5),
-    getBestsellerBooks(lang, 12),
-    listBooks(lang, { sort: "rating", limit: 12 }),
-    listBooks(lang, { sort: "new", limit: 6 }),
+    getBestsellerBooks(lang, 16),
+    listBooks(lang, { sort: "rating", limit: 40 }),
+    listBooks(lang, { sort: "new", limit: 16 }),
     facets(lang),
     getFeaturedAuthors(lang, 10),
     getMoodCounts(),
     quoteOfTheDay(),
-    getFeaturedPublishers(lang, 8).catch(() => []),
   ]);
 
   // Today's pick rotates daily through the curated featured books (or the
@@ -98,7 +97,15 @@ export default async function Home() {
   // Chained fallback rather than trusting `bestseller` alone: that flag is
   // admin-set and unset on every book in the catalog at the time of writing,
   // so querying it alone would leave signed-out visitors an empty section.
-  const popularBooks = bestsellers.length ? bestsellers : featuredBooks.length ? featuredBooks : topRated.slice(0, 12);
+  // One book, one row. The home page reads top to bottom, so a book that already appeared (today's picks, Popular, New
+  // releases, Top rated, Listen) is skipped in every later row instead of showing up again and again. `take` returns
+  // the first `n` books of a list that have not been shown yet and marks them as shown.
+  const take = makeTaker(picks.map((b) => b.slug));
+  const popularPool = bestsellers.length ? bestsellers : featuredBooks.length ? featuredBooks : topRated;
+  const popularBooks = take(popularPool, 12);
+  const newBooks = take(newReleases, 6);
+  const topBooks = take(topRated, 12);
+  const listenBooks = take(topRated, 10);
 
   // Genres are validated against what the catalog really contains, so none of
   // these tiles can lead to an empty page (see lib/genres.js).
@@ -144,21 +151,7 @@ export default async function Home() {
         </nav>
       )}
 
-      <FactsStrip items={[
-        { icon: "layers", value: genres.length ? String(f.categories.length) : "", label: "Genres to explore" },
-        { icon: "globe", value: f.countries?.length ? String(f.countries.length) : "", label: "Countries represented" },
-        { icon: "headphones", value: "Audio + text", label: "Every summary" },
-        { icon: "users", value: String(LANGUAGES.length), label: "Languages" },
-      ]} />
-
-      <section className="container-bq py-5 sm:py-6" aria-label="Quick links">
-        <QuickHub lang={lang} labels={{
-          library: _("browse"), books: _("booksWord"), libraryHint: "Every book we have",
-          shelf: _("navLibrary"), shelfHint: "Shelves, stats and goals",
-          comics: _("comics"), comicsHint: "Marvel, DC, manga",
-          community: _("navCommunity"), communityHint: "Discuss and connect",
-        }} />
-      </section>
+      <ExploreGrid lang={lang} labels={{ books: _("books"), listen: "Listen", authors: _("authors"), comics: _("comics"), collections: _("collections"), community: _("navCommunity"), shelf: _("shelfWord"), genres: "Genres" }} />
 
       {/* Signed-in only: each renders nothing otherwise. ForYou doubles as the
           "popular right now" shelf for signed-out visitors. */}
@@ -167,64 +160,16 @@ export default async function Home() {
       <BecauseYouLiked lang={lang} />
       <RecentlyViewed />
 
-      {popularBooks.length >= 4 && (
-        <Section title="Trending now" subtitle="The books readers are picking up most" viewAllLabel={_("viewAll")} href={withLang("/books?sort=rating")}>
-          <HScrollRow>
-            {popularBooks.slice(0, 10).map((b, i) => <div key={b.id} className="w-[148px] shrink-0 pt-3 sm:w-[168px]"><BookCard book={b} rank={i + 1} /></div>)}
-          </HScrollRow>
-        </Section>
-      )}
-
-      <HowItWorks lang={lang} />
-
-      <StartShelves lang={lang} />
-
-      {quote && (
-        <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
-      )}
-
-      {genres.length > 0 && (
-        <Section title={_("genresAndCategories")} viewAllLabel={_("viewAll")} href={withLang("/categories")}>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {genres.map((g) => (
-              <li key={g.category}>
-                <Link
-                  href={withLang(`/books?category=${encodeURIComponent(g.category)}`)}
-                  className="card flex min-h-16 flex-col justify-center px-4 py-3"
-                >
-                  <span className="font-semibold">{g.label}</span>
-                  <span className="text-muted text-sm">{g.count} {_("booksWord")}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {/* Self-hides until readers have tagged enough books with a mood. */}
-      {moods.length >= 3 && (
-        <Section title={_("moodQuestionTitle")} subtitle={_("moodQuestionSub")}>
-          <div className="flex flex-wrap gap-2.5">
-            {moods.slice(0, 10).map((m) => (
-              <Link key={m.name} href={withLang(`/books?mood=${encodeURIComponent(m.name)}`)}
-                className="pill !min-h-11 !px-4 !text-sm hover:!bg-brand-600 hover:!text-[var(--on-brand)]">
-                {m.name} <span className="ms-1.5 opacity-70">{m.count}</span>
-              </Link>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      <Section title={_("newReleases")} subtitle={_("newReleasesSub")} viewAllLabel={_("viewAll")} href={withLang("/books?sort=new")}>
+      {newBooks.length > 0 && <Section title={_("newReleases")} subtitle={_("newReleasesSub")} viewAllLabel={_("viewAll")} href={withLang("/books?sort=new")}>
         <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-6 max-sm:[&>*:nth-child(n+5)]:hidden">
-          {newReleases.map((b) => <BookCard key={b.id} book={b} />)}
+          {newBooks.map((b) => <BookCard key={b.id} book={b} />)}
         </div>
-      </Section>
+      </Section>}
 
-      {topRated.length >= 4 && (
+      {topBooks.length >= 4 && (
         <Section title={_("topRated")} subtitle="Highest rated by readers" viewAllLabel={_("viewAll")} href={withLang("/books?sort=rating")}>
           <HScrollRow>
-            {topRated.slice(0, 12).map((b) => <div key={b.id} className="w-[148px] shrink-0 sm:w-[168px]"><BookCard book={b} /></div>)}
+            {topBooks.map((b) => <div key={b.id} className="w-[148px] shrink-0 sm:w-[168px]"><BookCard book={b} /></div>)}
           </HScrollRow>
         </Section>
       )}
@@ -232,7 +177,7 @@ export default async function Home() {
       {/* Audio summaries: press play on a cover, or queue the whole row. Reuses the global player. */}
       <ListenShelf
         title="Listen now" subtitle="Short audio summaries you can start with one tap"
-        books={topRated.slice(0, 10).map((b) => ({ slug: b.slug, title: b.title, author: b.author, cover_url: b.cover_url, lang: b.lang, rating: b.rating }))}
+        books={listenBooks.map((b) => ({ slug: b.slug, title: b.title, author: b.author, cover_url: b.cover_url, lang: b.lang, rating: b.rating }))}
         lang={lang} href={withLang("/listen")} viewAll={_("viewAll")}
       />
 
@@ -260,6 +205,24 @@ export default async function Home() {
         </Section>
       )}
 
+      {quote && (
+        <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
+      )}
+
+      {/* Self-hides until readers have tagged enough books with a mood. */}
+      {moods.length >= 3 && (
+        <Section title={_("moodQuestionTitle")} subtitle={_("moodQuestionSub")}>
+          <div className="flex flex-wrap gap-2.5">
+            {moods.slice(0, 10).map((m) => (
+              <Link key={m.name} href={withLang(`/books?mood=${encodeURIComponent(m.name)}`)}
+                className="pill !min-h-11 !px-4 !text-sm hover:!bg-brand-600 hover:!text-[var(--on-brand)]">
+                {m.name} <span className="ms-1.5 opacity-70">{m.count}</span>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
+
       {collections.length > 0 && (
         <Section title={_("featuredCollectionsTitle")} viewAllLabel={_("viewAll")} href={withLang("/collections")}>
           <HScrollRow>
@@ -268,26 +231,11 @@ export default async function Home() {
         </Section>
       )}
 
-      {publishers.length > 0 && (
-        <Section title={_("publishers")} viewAllLabel={_("viewAll")} href={withLang("/publications")}>
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {publishers.map((p) => <li key={p.slug}><PublisherCard lang={lang} p={p} /></li>)}
-          </ul>
-        </Section>
-      )}
-
       {f.tags?.length >= 6 && (
         <Section title="Popular tags" subtitle="Jump straight to a topic">
           <TagCloud lang={lang} tags={f.tags.slice(0, 16)} />
         </Section>
       )}
-
-      <section className="container-bq py-8">
-        <DiscoverStrip lang={lang} labels={{
-          title: _("heroHeadlinePrefix") + " " + _("heroHeadlineHighlight"), sub: "Browse the shelves, let us pick for you, or see what top readers are into.",
-          browse: _("browse"), surprise: _("navSurpriseMe"), ranking: _("navBookwormRanking"),
-        }} />
-      </section>
 
       <HomeFaq />
 
