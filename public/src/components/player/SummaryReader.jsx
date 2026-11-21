@@ -109,16 +109,6 @@ export default function SummaryReader({ book, initial, initialAudioUrl, fullText
         {voice === false && <p className="text-muted text-sm">Audio isn&apos;t available for this language on your device. You can still read it below.</p>}
       </div>
 
-      {/* Audience angle */}
-      <div role="tablist" aria-label="Summary angle" className="border-line mt-5 flex gap-5 overflow-x-auto border-b">
-        {INTENTS.map(([id, label]) => (
-          <button key={id} role="tab" type="button" aria-selected={intent === id} onClick={() => pick(id)}
-            className={`-mb-px shrink-0 border-b-2 pb-2 text-sm font-medium transition ${intent === id ? "border-brand-600 text-brand-700" : "text-muted hover:text-fg border-transparent"}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* Depth */}
       <div role="tablist" aria-label="Summary depth" className="bg-brand-50 mt-4 inline-flex rounded-full p-1 text-sm">
         {DEPTHS.map(([id, label]) => (
