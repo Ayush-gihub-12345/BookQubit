@@ -43,12 +43,13 @@ const urdu = Noto_Nastaliq_Urdu({ display: "swap", preload: false, subsets: ["ar
 const literata = Literata({ display: "swap", subsets: ["latin", "latin-ext"], variable: "--font-literata" });
 const FONT_VARS = [literata, noto, deva, beng, taml, telu, gujr, knda, mlym, guru, arab, urdu].map((f) => f.variable).join(" ");
 import { getLang, RTL } from "@/lib/lang";
-import { getTheme, getCustomThemeColors, SYSTEM_THEME_SCRIPT } from "@/lib/theme";
+import { getTheme, getCustomThemeColors, SYSTEM_THEME_SCRIPT, THEMES } from "@/lib/theme";
 import { paletteToCssVars } from "@/lib/customTheme";
 import { ToastProvider } from "@/components/Toast";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import EnvBanner from "@/components/EnvBanner";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import ThemeColorSync from "@/components/ThemeColorSync";
 import { isDevEnv } from "@/lib/env";
 import { SITE_URL } from "@/lib/site";
 
@@ -61,10 +62,18 @@ export const metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-export const viewport = {
-  themeColor: "#1f4d3b",
-  viewportFit: "cover", // lets env(safe-area-inset-*) work on notched phones
-};
+// The browser/app chrome (status bar, and the bottom bar of an installed app) takes the page's own background colour,
+// like YouTube does, instead of a fixed brand colour. "Match device" follows the OS light/dark setting.
+export async function generateViewport() {
+  const id = await getTheme();
+  const t = THEMES.find((x) => x.id === id);
+  return {
+    themeColor: id === "system"
+      ? [{ media: "(prefers-color-scheme: light)", color: "#f7f3ea" }, { media: "(prefers-color-scheme: dark)", color: "#121110" }]
+      : t ? t.bg : "#f7f3ea",
+    viewportFit: "cover", // lets env(safe-area-inset-*) work on notched phones
+  };
+}
 
 export default async function RootLayout({ children }) {
   // The dev deployment must not feed the production Google Analytics property:
@@ -129,6 +138,7 @@ export default async function RootLayout({ children }) {
         </Script>
         <GoogleAnalytics />
         <ServiceWorkerRegister />
+        <ThemeColorSync />
           </>
         )}
         <ToastProvider>{children}</ToastProvider>

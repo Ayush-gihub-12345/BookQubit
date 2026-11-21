@@ -140,11 +140,6 @@ html[lang="ur"] body :is(p, li, a, span, button, label, blockquote, dd, dt, summ
 
 ::selection { background: color-mix(in srgb, var(--color-brand-500) 30%, transparent); }
 
-/* refined scrollbars */
-* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg) 20%, transparent) transparent; }
-::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--fg) 18%, transparent); border-radius: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
 
 .skip-link {
   position: absolute; left: -9999px; top: 0; z-index: 100;
@@ -253,36 +248,38 @@ html[lang="ur"] body :is(p, li, a, span, button, label, blockquote, dd, dt, summ
 .player-spacer { height: 0; }
 body[data-player="on"] .player-spacer { height: 5.5rem; }
 
-/* Side rail: neon gradient buttons built from the active THEME's own colours (brand-500 shifted a little toward the
-   logo violet), so all nine themes and custom themes get a matching glow. Reduced-motion users get no transitions. */
+/* Side rail: flat buttons in the active THEME's own colour (no gradients or glow: this is a reading site). */
 .rail-bubble {
   position: relative;
   transition: background .2s ease, box-shadow .25s ease, transform .2s ease, color .2s ease;
 }
 .rail-bubble[data-active="true"] {
   color: var(--on-brand);
-  background: linear-gradient(135deg, var(--color-brand-500), color-mix(in oklab, var(--color-brand-500) 62%, var(--color-qubit-500)));
+  background: var(--color-brand-500);
 }
 .group:hover .rail-bubble:not([data-active="true"]),
 .group:focus-visible .rail-bubble:not([data-active="true"]) {
   color: var(--fg);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-brand-500) 24%, var(--surface-2)), color-mix(in oklab, var(--color-brand-500) 14%, var(--color-qubit-500) 10%));
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--color-brand-500) 18%, var(--surface-2));
 }
 .rail-toggle:hover {
   color: var(--fg);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-brand-500) 26%, var(--surface-2)), var(--surface-2));
+  background: color-mix(in srgb, var(--color-brand-500) 14%, var(--surface-2));
 }
 @media (prefers-reduced-motion: reduce) { .rail-bubble { transition: none; } .group:hover .rail-bubble { transform: none; } }
 
 /* Thin scrollbars in the active theme's colour, everywhere. Inside @layer base so any utility (for example
    no-scrollbar on a swipe row) wins over it instead of being overridden by an unlayered rule. */
 @layer base {
-* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-brand-500) 55%, transparent) transparent; }
-*::-webkit-scrollbar { width: 8px; height: 8px; }
+/* Thin (4px) rounded scrollbars in the active theme colour. Chrome and Safari use the ::-webkit-scrollbar rules (so the
+   width can be thinner than scrollbar-width: thin allows); Firefox has no such rules and gets scrollbar-width: thin. */
+*::-webkit-scrollbar { width: 4px; height: 4px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-brand-500) 50%, transparent); border-radius: 999px; }
+*::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-brand-500) 55%, transparent); border-radius: 999px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-brand-500); }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-brand-500) 55%, transparent) transparent; }
+}
 }
 .hscroll, .hscroll-none { scrollbar-width: none; }
 

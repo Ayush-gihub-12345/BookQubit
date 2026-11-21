@@ -8,11 +8,11 @@ export const THEME_CHOICES = [
   { id: "light", name: "Paper" },
   { id: "dark", name: "Night" },
   { id: "sepia", name: "Sepia" },
-  { id: "midnight", name: "Midnight" },
-  { id: "ocean", name: "Ocean" },
-  { id: "forest", name: "Forest" },
-  { id: "rose", name: "Rose" },
-  { id: "imperial", name: "Imperial" },
+  { id: "midnight", name: "Ink" },
+  { id: "ocean", name: "Sea" },
+  { id: "forest", name: "Moss" },
+  { id: "rose", name: "Pink" },
+  { id: "imperial", name: "Leather" },
 ];
 
 export function applyTheme(id, router) {
