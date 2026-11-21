@@ -29,17 +29,16 @@ export function HowItWorks({ lang }) {
   ];
   return (
     <section className="border-y border-[var(--line)] bg-[color-mix(in_srgb,var(--surface-2)_55%,transparent)]" aria-labelledby="how-h">
-      <div className="container-bq py-8 sm:py-12">
+      <div className="container-bq py-6 sm:py-9">
         <p className="eyebrow">How it works</p>
-        <h2 id="how-h" className="mt-1.5 text-2xl font-bold sm:text-[1.9rem]">From “what should I read?” to “I’ve got this” in minutes</h2>
-        <ol className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-          {steps.map((s, i) => (
-            <li key={s.title} className="card card-hover relative flex flex-col overflow-hidden p-5">
-              <span aria-hidden className="font-display absolute -end-1 -top-3 text-[4.5rem] font-black leading-none text-brand-500/15">{i + 1}</span>
-              <span className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-[var(--surface-2)] text-brand-700"><Icon name={s.icon} size={21} /></span>
-              <b className="font-display text-lg leading-tight">{s.title}</b>
-              <p className="text-muted mt-1.5 flex-1 text-sm leading-relaxed">{s.text}</p>
-              <Link href={`/${lang}${s.href}`} prefetch={false} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">{s.cta}<Icon name="arrowRight" size={14} className="rtl:rotate-180" /></Link>
+        <h2 id="how-h" className="mt-1 text-lg font-bold leading-snug sm:text-[1.5rem]">From “what should I read?” to “I’ve got this” in minutes</h2>
+        <ol className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
+          {steps.map((s) => (
+            <li key={s.title} className="card relative flex flex-col p-3.5 hover:!translate-y-0">
+              <span className="mb-2 grid h-9 w-9 place-items-center rounded-lg bg-[var(--surface-2)] text-brand-700"><Icon name={s.icon} size={18} /></span>
+              <b className="font-display text-[15px] leading-tight">{s.title}</b>
+              <p className="text-muted mt-1 line-clamp-3 flex-1 text-[12.5px] leading-snug">{s.text}</p>
+              <Link href={`/${lang}${s.href}`} prefetch={false} className="mt-2.5 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline">{s.cta}<Icon name="arrowRight" size={13} className="rtl:rotate-180" /></Link>
             </li>
           ))}
         </ol>

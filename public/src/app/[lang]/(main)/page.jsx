@@ -11,8 +11,9 @@ import ListenShelf from "@/components/listen/ListenShelf";
 import SwipeRow from "@/components/SwipeRow";
 import { HomeFaq } from "@/components/home/HomeMore";
 import ExploreGrid from "@/components/home/ExploreGrid";
-import { QuoteOfTheDay, CollectionCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
-import { getCollectionCovers } from "@/lib/home-data";
+import { HowItWorks } from "@/components/home/HomeExtras";
+import { QuoteOfTheDay, CollectionCard, PublisherCard, TagCloud, NewsletterBanner } from "@/components/home/HomeSections";
+import { getCollectionCovers, getFeaturedPublishers } from "@/lib/home-data";
 import { makeTaker } from "@/lib/home-dedupe";
 import { cached } from "@/lib/db";
 import { TTL } from "@/lib/cache-policy";
@@ -22,8 +23,9 @@ import ForYou from "@/components/ForYou";
 import RecentlyViewed from "@/components/RecentlyViewed";
 import TitleTransliterated from "@/components/TitleTransliterated";
 import HScrollRow from "@/components/HScrollRow";
+import BookCover from "@/components/BookCover";
 import {
-  listBooks, queryBooks, facets, getFeaturedAuthors, getMoodCounts, getFeaturedBooks, getBestsellerBooks,
+  listBooks, facets, getFeaturedAuthors, getFeaturedBooks, getBestsellerBooks,
 } from "@/lib/repo";
 import { resolveGenres } from "@/lib/genres";
 import { getLang } from "@/lib/lang";
@@ -64,16 +66,15 @@ export default async function Home() {
   const _ = t(lang);
   const withLang = (href) => `/${lang}${href === "/" ? "" : href}`;
 
-  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, moods, quote, classicPool] = await Promise.all([
+  const [featuredBooks, bestsellers, topRated, newReleases, f, authors, quote, publishers] = await Promise.all([
     getFeaturedBooks(lang, 5),
     getBestsellerBooks(lang, 16),
     listBooks(lang, { sort: "rating", limit: 80 }),
     listBooks(lang, { sort: "new", limit: 16 }),
     facets(lang),
     getFeaturedAuthors(lang, 10),
-    getMoodCounts(),
     quoteOfTheDay(),
-    queryBooks(lang, { shelf: "classics", sort: "rating", perPage: 24 }).then((r) => r.books).catch(() => []),
+    getFeaturedPublishers(lang, 8).catch(() => []),
   ]);
 
   // Today's pick rotates daily through the curated featured books (or the
@@ -107,20 +108,19 @@ export default async function Home() {
   const newBooks = take(newReleases, 6);
   const topBooks = take(topRated, 12);
   const listenBooks = take(topRated, 10);
-  // Two more shelves: the classics, and short reads (250 pages or fewer, best rated first).
-  const classicBooks = take(classicPool, 10);
+  // One more shelf: short reads (250 pages or fewer, best rated first).
   const shortBooks = take(topRated.filter((b) => Number(b.page_count) > 0 && Number(b.page_count) <= 250), 10);
 
   // Genres are validated against what the catalog really contains, so none of
   // these tiles can lead to an empty page (see lib/genres.js).
   const genres = resolveGenres(f.categories, { limit: 12 });
   const collections = f.collections.filter((c) => c.count >= 3).slice(0, 8);
-  // Content first: after the general rows, a shelf for each of the four biggest genres (best rated first). Each shelf only
+  // Content first: after the general rows, a shelf for each of the two biggest genres (best rated first). Each shelf only
   // shows books that no row above has shown, so nothing repeats (see `take`).
   const genreLists = await Promise.all(
-    genres.slice(0, 6).map((g) => listBooks(lang, { category: g.category, sort: "rating", limit: 30 }).catch(() => [])),
+    genres.slice(0, 2).map((g) => listBooks(lang, { category: g.category, sort: "rating", limit: 30 }).catch(() => [])),
   );
-  const genreShelves = genres.slice(0, 6)
+  const genreShelves = genres.slice(0, 2)
     .map((g, i) => ({ g, books: take(genreLists[i], 10) }))
     .filter((x) => x.books.length >= 4);
   const covers = await getCollectionCovers(lang, collections.map((c) => c.name)).catch(() => ({}));
@@ -166,9 +166,16 @@ export default async function Home() {
       {/* Signed-in only: each renders nothing otherwise. ForYou doubles as the
           "popular right now" shelf for signed-out visitors. */}
       <ContinueReading />
-      <ForYou lang={lang} fallbackBooks={popularBooks} />
       <BecauseYouLiked lang={lang} />
       <RecentlyViewed />
+
+      <ExploreGrid lang={lang} labels={{ books: _("books"), listen: "Listen", authors: _("authors"), comics: _("comics"), collections: _("collections"), community: _("navCommunity"), shelf: _("shelfWord"), genres: "Genres" }} />
+
+      <ForYou lang={lang} fallbackBooks={popularBooks} />
+
+      {quote && (
+        <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
+      )}
 
       {newBooks.length > 0 && <Section title={_("newReleases")} subtitle={_("newReleasesSub")} viewAllLabel={_("viewAll")} href={withLang("/books?sort=new")}>
         <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-6 max-sm:[&>*:nth-child(n+5)]:hidden">
@@ -184,18 +191,28 @@ export default async function Home() {
         </Section>
       )}
 
-      {classicBooks.length >= 4 && (
-        <Section title="Classics" subtitle="Books that have lasted" viewAllLabel={_("viewAll")} href={withLang("/books?shelf=classics")}>
-          <HScrollRow>
-            {classicBooks.map((b) => <div key={b.id} className="w-[148px] shrink-0 sm:w-[168px]"><BookCard book={b} /></div>)}
-          </HScrollRow>
-        </Section>
-      )}
+      <HowItWorks lang={lang} />
+
 
       {shortBooks.length >= 4 && (
         <Section title="Short reads" subtitle="Finish one in a sitting: 250 pages or fewer" viewAllLabel={_("viewAll")} href={withLang("/books?sort=rating")}>
           <HScrollRow>
-            {shortBooks.map((b) => <div key={b.id} className="w-[148px] shrink-0 sm:w-[168px]"><BookCard book={b} /></div>)}
+            {shortBooks.map((b) => (
+              <Link key={b.id} href={withLang(`/books/${encodeURIComponent(b.slug)}`)} prefetch={false}
+                className="card flex w-[250px] shrink-0 items-center gap-3 p-3 hover:!translate-y-0 sm:w-[280px]">
+                <div className="cover h-[84px] w-[56px] shrink-0">
+                  <BookCover title={b.title} author={b.author} cover_url={b.cover_url} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-sm font-semibold leading-snug"><TitleTransliterated text={b.title} /></p>
+                  <p className="text-muted line-clamp-1 text-xs"><TitleTransliterated text={b.author} /></p>
+                  <p className="mt-1.5 flex items-center gap-2 text-xs">
+                    <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 font-semibold">{b.page_count} pages</span>
+                    {b.rating ? <span className="text-muted">★ {Number(b.rating).toFixed(1)}</span> : null}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </HScrollRow>
         </Section>
       )}
@@ -239,31 +256,19 @@ export default async function Home() {
         </Section>
       )}
 
-      <ExploreGrid lang={lang} labels={{ books: _("books"), listen: "Listen", authors: _("authors"), comics: _("comics"), collections: _("collections"), community: _("navCommunity"), shelf: _("shelfWord"), genres: "Genres" }} />
-
-      {quote && (
-        <section className="container-bq py-8"><QuoteOfTheDay lang={lang} quote={quote} label="Quote of the day" /></section>
-      )}
-
-      {/* Self-hides until readers have tagged enough books with a mood. */}
-      {moods.length >= 3 && (
-        <Section title={_("moodQuestionTitle")} subtitle={_("moodQuestionSub")}>
-          <div className="flex flex-wrap gap-2.5">
-            {moods.slice(0, 10).map((m) => (
-              <Link key={m.name} href={withLang(`/books?mood=${encodeURIComponent(m.name)}`)}
-                className="pill !min-h-11 !px-4 !text-sm hover:!bg-brand-600 hover:!text-[var(--on-brand)]">
-                {m.name} <span className="ms-1.5 opacity-70">{m.count}</span>
-              </Link>
-            ))}
-          </div>
-        </Section>
-      )}
-
       {collections.length > 0 && (
         <Section title={_("featuredCollectionsTitle")} viewAllLabel={_("viewAll")} href={withLang("/collections")}>
           <HScrollRow>
             {collections.map((c) => <CollectionCard key={c.name} lang={lang} c={c} covers={covers[c.name]} booksLabel={_("booksWord")} />)}
           </HScrollRow>
+        </Section>
+      )}
+
+      {publishers.length > 0 && (
+        <Section title={_("publishers")} viewAllLabel={_("viewAll")} href={withLang("/publications")}>
+          <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {publishers.map((p) => <li key={p.slug}><PublisherCard lang={lang} p={p} /></li>)}
+          </ul>
         </Section>
       )}
 
