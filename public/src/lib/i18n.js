@@ -335,7 +335,7 @@ const en = {
   discussionStartedToast: "Discussion started",
   couldntStartDiscussionMsg: "Couldn't start the discussion",
   noMessagesYetSayHello: "No messages yet — say hello.",
-  somethingWentWrongMsg: "Something went wrong",
+  somethingWentWrongMsg: "We couldn't do that just now. Please try again",
   bookCountInCollection: "{n} {word} in this collection",
   browseAllInCollectionLabel: "Browse all books in this collection",
   filtersLabel: "Filters",

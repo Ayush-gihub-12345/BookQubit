@@ -28,7 +28,7 @@ function Social({ r, slug, social, me, onChange }) {
     try {
       const res = await authFetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) }, u);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data.error || "Something went wrong."); return null; }
+      if (!res.ok) { setErr(data.error || "We couldn't do that just now. Please try again in a moment."); return null; }
       return data;
     } finally { setBusy(false); }
   };

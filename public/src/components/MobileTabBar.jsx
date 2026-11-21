@@ -9,7 +9,7 @@ import { useLang } from "@/lib/useLang";
 import { t } from "@/lib/i18n";
 
 // Mobile bottom bar (< lg): the everyday destinations, with Feed raised in the centre.
-// Home · Listen · [Feed] · Community · You (the reader's own space: shelf, stats, settings; "Sign in" when signed out). The content sections (Discover, Authors, Comics, Collections) live in the
+// Home · Listen · [Feed] · Community · You ("Account": profile and settings; "Sign in" when signed out). The content sections (Discover, Authors, Comics, Collections) live in the
 // chip row under the header, so nothing appears in both places. Safe-area aware; every item is a real page.
 export default function MobileTabBar() {
   const lang = useLang();
@@ -34,8 +34,8 @@ export default function MobileTabBar() {
     { href: "/listen", icon: "headphones", label: "Listen", active: under("/listen") },
     { href: "/feed", icon: "flame", label: "Feed", active: under("/feed"), fab: true },
     { href: "/community", icon: "users", label: tr("navCommunity"), active: under("/connect", "/leaderboard") },
-    { href: user ? "/library" : "/login", icon: "user", label: user ? "You" : tr("signIn"), you: true,
-      active: user ? under("/library", "/account", "/liked", "/achievements", "/wrapped", "/mindspace", "/readers", "/notifications") : under("/login") },
+    { href: user ? "/account" : "/login", icon: "user", label: user ? "Account" : tr("signIn"), you: true,
+      active: user ? under("/account", "/library", "/liked", "/achievements", "/wrapped", "/mindspace", "/readers", "/notifications") : under("/login") },
   ];
 
   return (

@@ -8,13 +8,13 @@ export default function GlobalError({ reset }) {
     <html>
       <body style={{ display: "grid", placeItems: "center", minHeight: "100vh", fontFamily: "system-ui, sans-serif", textAlign: "center", padding: 24 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700 }}>Something went wrong</h1>
-          <p style={{ marginTop: 8, color: "#6b7280" }}>BookQubit hit an unexpected error. Please try again.</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700 }}>We&apos;ll be right back</h1>
+          <p style={{ marginTop: 8, color: "#6b7280", maxWidth: 360 }}>BookQubit is taking a short break. Please try again in a little while.</p>
           <button
             onClick={reset}
-            style={{ marginTop: 20, padding: "10px 20px", borderRadius: 999, background: "#0f5b57", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}
+            style={{ marginTop: 20, padding: "10px 20px", borderRadius: 999, background: "#c9951c", color: "#1a1305", border: "none", fontWeight: 600, cursor: "pointer" }}
           >
-            Try Again
+            Try again
           </button>
         </div>
       </body>

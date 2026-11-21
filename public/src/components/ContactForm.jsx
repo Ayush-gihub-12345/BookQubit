@@ -24,14 +24,14 @@ export default function ContactForm() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Something went wrong. Please try again.");
+        setError(data.error || "We couldn't send that just now. Please try again in a moment.");
         setState("error");
         return;
       }
       setState("done");
       setName(""); setEmail(""); setMessage("");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("We couldn't send that just now. Please try again in a moment.");
       setState("error");
     }
   };

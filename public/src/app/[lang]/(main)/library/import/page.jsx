@@ -1,8 +1,7 @@
-import LibraryShell from "@/components/library/LibraryShell";
-import ImportView from "@/components/library/ImportView";
+import { LibraryImport } from "@/components/library/LibraryPages";
 
 export const metadata = { title: "Import from Goodreads", robots: { index: false } };
 
 export default function LibraryImportPage() {
-  return <LibraryShell>{() => <ImportView />}</LibraryShell>;
+  return <LibraryImport />;
 }

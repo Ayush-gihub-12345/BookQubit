@@ -508,7 +508,8 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
                 <>
                   <p className="eyebrow px-3 py-1 !text-[var(--muted)]">{user.displayName || user.email}</p>
                   {[
-                    ["/account", "bookmark", tr("navSettings")],
+                    ["/account", "user", tr("navSettings")],
+                    ["/library", "bookmark", "Your library"],
                     ["/liked", "heart", labels.likedBooks],
                     ["/achievements", "award", tr("navAchievements")],
                     ["/wrapped", "barChart", tr("navWrapped")],

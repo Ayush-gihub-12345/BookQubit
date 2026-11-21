@@ -26,17 +26,16 @@ export default function Error({ error, reset }) {
   return (
     <div className="grid min-h-[60vh] place-items-center px-4 text-center">
       <div>
-        <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-red-500/10 text-red-500">
-          <Icon name="eyeOff" size={28} />
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--surface-2)] text-brand-700">
+          <Icon name="clock" size={28} />
         </span>
-        <h1 className="mt-4 text-2xl font-bold">Something went wrong</h1>
-        <p className="text-muted mt-2 max-w-sm text-sm">
-          This page hit an unexpected error. It's been logged — try again, or head back home.
+        <h1 className="mt-4 text-2xl font-bold">We&apos;ll be right back</h1>
+        <p className="text-muted mx-auto mt-2 max-w-sm text-sm">
+          This page is taking a short break. It is a temporary hiccup on our side and we have been told about it. Please try again in a little while.
         </p>
-        {error?.message && <p className="text-muted mx-auto mt-3 max-w-sm break-words text-xs opacity-70">{String(error.message).slice(0, 160)}</p>}
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <button onClick={reset} className="btn-primary"><Icon name="trendingUp" size={15} /> Try Again</button>
-          <Link href={`/${lang}`} className="btn-ghost">Back to Home</Link>
+          <button onClick={reset} className="btn-primary"><Icon name="refresh" size={15} /> Try again</button>
+          <Link href={`/${lang}`} className="btn-ghost">Back to home</Link>
         </div>
       </div>
     </div>

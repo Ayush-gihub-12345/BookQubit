@@ -1,8 +1,7 @@
-import LibraryShell from "@/components/library/LibraryShell";
-import LibraryView from "@/components/library/LibraryView";
+import { LibraryHome } from "@/components/library/LibraryPages";
 
 export const metadata = { title: "Your library", robots: { index: false } };
 
 export default function LibraryPage() {
-  return <LibraryShell>{(user) => <LibraryView user={user} />}</LibraryShell>;
+  return <LibraryHome />;
 }
