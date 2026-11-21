@@ -29,7 +29,7 @@ export async function challengeStatus({ accounts, engagement, loadBooks }, uid, 
     engagement.prepare("SELECT kind, target FROM reading_challenges WHERE user_id = ?1 AND year = ?2").bind(uid, year).all(),
     accounts
       ? accounts.prepare(
-          `SELECT book_slug FROM shelf WHERE user_id = ?1 AND status = 'finished'
+          `SELECT book_slug FROM shelf WHERE user_id = ?1 AND status = 'read'
            AND COALESCE(finished_at, updated_at) >= ?2 AND COALESCE(finished_at, updated_at) < ?3 LIMIT 1000`).bind(uid, `${year}-01-01`, `${year + 1}-01-01`).all()
       : { results: [] },
   ]);

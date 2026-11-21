@@ -35,7 +35,7 @@ describe("reading challenges", () => {
     eng.exec(fs.readFileSync(new URL("../migrations/engagement/0002_lists_votes_challenges.sql", import.meta.url), "utf8"));
     const acc = new DatabaseSync(":memory:");
     acc.exec("CREATE TABLE shelf (user_id TEXT, book_slug TEXT, status TEXT, finished_at TEXT, updated_at TEXT)");
-    acc.exec(`INSERT INTO shelf VALUES ('u','a','finished','2026-03-01',NULL),('u','b','finished','2026-05-01',NULL),('u','old','finished','2025-12-31',NULL),('u','w','want',NULL,'2026-01-01')`);
+    acc.exec(`INSERT INTO shelf VALUES ('u','a','read','2026-03-01',NULL),('u','b','read','2026-05-01',NULL),('u','old','read','2025-12-31',NULL),('u','w','want',NULL,'2026-01-01')`);
     const deps = { accounts: wrap(acc), engagement: wrap(eng), loadBooks: async (slugs) => new Map(books.filter((b) => slugs.includes(b.slug)).map((b) => [b.slug, b])) };
     await expect(joinChallenge(deps.engagement, "u", 2026, "bogus", 5)).rejects.toThrow(/Unknown/);
     await joinChallenge(deps.engagement, "u", 2026, "books", 3);

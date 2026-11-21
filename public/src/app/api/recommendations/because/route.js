@@ -17,7 +17,7 @@ export async function GET(request) {
     if (!env.DB) return NextResponse.json({ picks: [] });
     const [{ results: liked }, { results: onShelf }] = await Promise.all([
       env.DB.prepare(
-        `SELECT book_slug FROM shelf WHERE user_id = ?1 AND (rating >= 4 OR status = 'finished')
+        `SELECT book_slug FROM shelf WHERE user_id = ?1 AND (rating >= 4 OR status = 'read')
          ORDER BY (rating >= 4) DESC, COALESCE(finished_at, updated_at) DESC LIMIT 1`).bind(user.uid).all(),
       env.DB.prepare("SELECT book_slug FROM shelf WHERE user_id = ?1 LIMIT 500").bind(user.uid).all(),
     ]);
