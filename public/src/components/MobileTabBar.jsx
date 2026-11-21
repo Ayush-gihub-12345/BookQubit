@@ -48,7 +48,7 @@ export default function MobileTabBar() {
               {tab.fab ? (
                 <>
                   <span className={`-mt-6 grid h-12 w-12 place-items-center rounded-full text-[var(--on-brand)] shadow-[var(--shadow-2)] ring-4 ring-[var(--bg)] ${tab.active ? "scale-105" : ""}`}
-                    style={{ background: "linear-gradient(135deg, var(--color-brand-500), color-mix(in oklab, var(--color-brand-500) 62%, var(--color-qubit-500)))" }}>
+                    style={{ background: "var(--color-brand-500)" }}>
                     <Icon name={tab.icon} size={22} filled={tab.active} />
                   </span>
                   <span className="-mt-0.5">{tab.label}</span>

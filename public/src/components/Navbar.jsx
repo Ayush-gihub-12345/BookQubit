@@ -471,19 +471,14 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
           <Icon name="search" size={20} />
         </button>
 
-        {/* The menu button (phone and tablet), far right. Not a hamburger: a 2x2 "qubit" grid in the brand colours inside a
-            gradient-ringed tile. When the menu is open the grid turns on its corner and opens up into a diamond. */}
-        <button ref={drawerBtn} type="button" onClick={() => setDrawerOpen((o) => !o)} aria-expanded={drawerOpen} aria-controls="site-menu" aria-haspopup="dialog" aria-label={labels.menu}
-          className="group relative shrink-0 rounded-[14px] p-[1.5px] shadow-[0_6px_16px_-8px_var(--color-brand-500)] transition active:scale-95 lg:hidden"
-          style={{ background: "linear-gradient(135deg, var(--color-brand-500), var(--color-qubit-500, #8b6cff))" }}>
-          <span className="grid h-[38px] w-[38px] place-items-center rounded-[12.5px] bg-[var(--bg)]">
-            <span aria-hidden className={"grid grid-cols-2 transition-all duration-300 ease-out " + (drawerOpen ? "rotate-45 gap-[5px]" : "gap-[3px] group-hover:gap-[4px]")}>
-              <i className="h-[9px] w-[9px] rounded-[3px]" style={{ background: "var(--color-brand-500)" }} />
-              <i className={"h-[9px] w-[9px] transition-all duration-300 " + (drawerOpen ? "rounded-full" : "rounded-[3px]")} style={{ background: "var(--color-qubit-500, #8b6cff)" }} />
-              <i className="h-[9px] w-[9px] rounded-[3px] opacity-55" style={{ background: "var(--color-brand-500)" }} />
-              <i className="h-[9px] w-[9px] rounded-[3px]" style={{ background: "color-mix(in oklab, var(--color-brand-500) 55%, var(--color-qubit-500, #8b6cff))" }} />
-            </span>
-          </span>
+        {/* The menu button (phone and tablet), far right: the familiar three lines, no background, in the text colour. The lines become a close mark while the menu is open. */}
+        <button ref={drawerBtn} type="button" onClick={() => setDrawerOpen((o) => !o)} aria-expanded={drawerOpen} aria-controls="site-menu" aria-haspopup="dialog" aria-label={drawerOpen ? tr("navCloseMenu") : labels.menu}
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[var(--fg)] bg-transparent active:opacity-60 lg:hidden">
+          {drawerOpen ? (
+            <Icon name="x" size={20} strokeWidth={2.2} />
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          )}
         </button>
 
         {/* Account lives in the bottom bar ("You") on a phone or tablet, like YouTube; the header keeps it from lg up. */}
@@ -498,10 +493,9 @@ export default function Navbar({ lang, theme, languages, themes, labels, genres 
       {drawerOpen && (
         <div className="absolute inset-x-0 top-16 z-50 h-[calc(100dvh-4rem)] bg-black/50 backdrop-blur-sm lg:hidden">
           <div id="site-menu" ref={drawerPanel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={labels.menu}
-            className="animate-pop ms-auto flex h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
+            className="animate-pop flex h-full w-full flex-col overflow-y-auto overscroll-contain bg-[var(--surface)] pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl outline-none">
             <div className="flex items-center justify-between px-4 pt-3">
               <span className="font-display text-lg font-semibold">{labels.menu}</span>
-              <button type="button" onClick={() => setDrawerOpen(false)} className="btn-icon" aria-label={tr("navCloseMenu")}><Icon name="x" size={20} /></button>
             </div>
             <div className="px-3 pt-2">
               <Link href={withLang("/")} prefetch={false} className="menu-item !min-h-11" aria-current={under("/") ? "page" : undefined}>
